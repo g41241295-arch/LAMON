@@ -126,7 +126,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 2),
                   const Text(
-                    'Pemantauan Kesehatan Lambung',
+                    'Lambung Awareness & MONitoring',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,

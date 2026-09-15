@@ -113,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 2),
                   const Text(
-                    'Pemantauan Kesehatan Lambung',
+                    'Lambung Awareness & MONitoring',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -236,7 +236,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
-                          'Masuk dengan',
+                          'atau',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -255,35 +255,51 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 14),
 
-                  // Google Button
-                  Center(
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.pushNamed(context, '/google-auth');
-                      },
-                      borderRadius: BorderRadius.circular(24),
-                      child: Container(
-                        width: 46,
-                        height: 46,
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.grey.shade200,
-                            width: 1.2,
+                  // Google Pill Button
+                  InkWell(
+                    onTap: () {
+                      Navigator.pushNamed(context, '/google-auth');
+                    },
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      width: double.infinity,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.grey.shade200,
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CustomPaint(
+                              painter: GoogleLogoPainter(),
                             ),
-                          ],
-                        ),
-                        child: CustomPaint(
-                          painter: GoogleLogoPainter(),
-                        ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Text(
+                            'Masuk dengan Google',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF3C4043),
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

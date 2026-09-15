@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import SplashPage from './pages/SplashPage';
 import LoginPage from './pages/LoginPage';
 import GoogleAuthPage from './pages/GoogleAuthPage';
 import RegisterPage from './pages/RegisterPage';
@@ -14,7 +15,10 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           {/* Default Route */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<Navigate to="/splash" replace />} />
+
+          {/* Splash / Onboarding */}
+          <Route path="/splash" element={<SplashPage />} />
 
           {/* Autentikasi */}
           <Route path="/login" element={<LoginPage />} />

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screens/splash_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/register_screen.dart';
 import '../screens/google_auth_screen.dart';
@@ -6,7 +7,8 @@ import '../screens/beranda_screen.dart';
 import '../screens/placeholder_screen.dart';
 
 class AppRoutes {
-  static const String initial = '/login';
+  static const String initial = '/splash';
+  static const String splash = '/splash';
   static const String login = '/login';
   static const String register = '/register';
   static const String googleAuth = '/google-auth';
@@ -15,6 +17,8 @@ class AppRoutes {
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
+      case splash:
+        return MaterialPageRoute(builder: (_) => const SplashScreen());
       case login:
         return MaterialPageRoute(builder: (_) => const LoginScreen());
       case register:

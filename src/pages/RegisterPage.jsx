@@ -89,7 +89,7 @@ export default function RegisterPage() {
           LAMON
         </h1>
         <p className="text-lg font-medium text-[#5B95AF] mt-0.5 tracking-tight">
-          Pemantauan Kesehatan Lambung
+          Lambung Awareness &amp; MONitoring
         </p>
       </div>
 
