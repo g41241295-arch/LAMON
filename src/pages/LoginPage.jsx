@@ -8,7 +8,7 @@ import lamonLogo from '../assets/lamon-logo.png';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { loginWithEmail } = useAuth();
+  const { loginWithEmail, isEmailRegistered, verifyPassword } = useAuth();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -16,6 +16,7 @@ export default function LoginPage() {
   });
 
   const [errors, setErrors] = useState({});
+  const [globalError, setGlobalError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validate = () => {
@@ -41,23 +42,60 @@ export default function LoginPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error on edit
+    // Clear errors on change
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+    if (globalError) {
+      setGlobalError(null);
     }
   };
 
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
+    setGlobalError(null);
+
     if (!validate()) return;
 
     setIsSubmitting(true);
-    // Simulate brief login process
+
     setTimeout(() => {
-      loginWithEmail(formData.email.trim(), formData.password);
+      const email = formData.email.trim();
+      const password = formData.password;
+
+      // 1. Check if user is registered
+      if (!isEmailRegistered(email)) {
+        setIsSubmitting(false);
+        setErrors((prev) => ({
+          ...prev,
+          email: 'Akun tidak ditemukan. Silakan daftar terlebih dahulu.',
+        }));
+        setGlobalError({
+          type: 'not_found',
+          message: 'Akun tidak ditemukan. Silakan daftar terlebih dahulu.',
+        });
+        return;
+      }
+
+      // 2. Check if password matches
+      if (!verifyPassword(email, password)) {
+        setIsSubmitting(false);
+        setErrors((prev) => ({
+          ...prev,
+          password: 'Kata sandi yang Anda masukkan salah.',
+        }));
+        setGlobalError({
+          type: 'wrong_password',
+          message: 'Kata sandi salah. Silakan coba lagi.',
+        });
+        return;
+      }
+
+      // 3. Success
+      loginWithEmail(email, password);
       setIsSubmitting(false);
       navigate('/beranda');
-    }, 250);
+    }, 300);
   };
 
   const handleKeyDown = (e) => {
@@ -105,6 +143,34 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {/* Global Error Alert Banner */}
+        {globalError && (
+          <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3 text-red-700 animate-fadeIn">
+            <svg
+              className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <circle cx="12" cy="12" r="10" strokeWidth="2" />
+              <path strokeWidth="2" strokeLinecap="round" d="M12 8v4m0 4h.01" />
+            </svg>
+            <div className="flex-1 text-sm font-semibold leading-snug">
+              <span>{globalError.message}</span>
+              {globalError.type === 'not_found' && (
+                <div className="mt-1">
+                  <Link
+                    to="/register"
+                    className="inline-block text-xs font-bold text-[#E5983A] bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 hover:bg-amber-100 transition-colors"
+                  >
+                    Daftar Sekarang &rarr;
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
           {/* Email Input */}
           <InputField
@@ -132,8 +198,8 @@ export default function LoginPage() {
             onKeyDown={handleKeyDown}
           />
 
-          {/* Submit Button */}
-          <div className="pt-1">
+          {/* Submit Button (Masuk) */}
+          <div className="pt-2">
             <PrimaryButton
               type="submit"
               disabled={isSubmitting}
@@ -153,7 +219,7 @@ export default function LoginPage() {
             <div className="flex-grow border-t border-[#C7D7E0]"></div>
           </div>
 
-          {/* Google Pill Button */}
+          {/* Google Pill Button (persis di bawah tombol Masuk) */}
           <button
             type="button"
             onClick={() => navigate('/google-auth')}

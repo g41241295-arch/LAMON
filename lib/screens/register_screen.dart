@@ -5,6 +5,7 @@ import '../providers/app_state.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/primary_button.dart';
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -80,13 +81,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _isLoading = true;
     });
 
-    Future.delayed(const Duration(milliseconds: 300), () {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    Future.delayed(const Duration(milliseconds: 350), () {
       if (!mounted) return;
       final appState = AppState.of(context);
-      appState.registerWithEmail(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+
+      // Check if email already registered
+      if (appState.isEmailRegistered(email)) {
+        setState(() {
+          _isLoading = false;
+          _emailError = 'Email ini sudah terdaftar. Silakan masuk.';
+        });
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.info_outline_rounded, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Email sudah terdaftar. Silakan masuk menggunakan akun Anda.',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFFD32F2F),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            margin: const EdgeInsets.all(16),
+            action: SnackBarAction(
+              label: 'Masuk',
+              textColor: Colors.amberAccent,
+              onPressed: () {
+                Navigator.pushReplacementNamed(context, '/login');
+              },
+            ),
+          ),
+        );
+        return;
+      }
+
+      appState.registerWithEmail(email, password);
       setState(() {
         _isLoading = false;
       });
@@ -259,6 +298,97 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     text: 'Daftar',
                     isLoading: _isLoading,
                     onPressed: _handleRegister,
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  // "atau" Divider
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Divider(
+                          color: AppColors.lightGray,
+                          thickness: 1.2,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          'atau',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.neutralGray.withValues(alpha: 0.9),
+                          ),
+                        ),
+                      ),
+                      const Expanded(
+                        child: Divider(
+                          color: AppColors.lightGray,
+                          thickness: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Google Pill Button (persis di bawah tombol Daftar)
+                  InkWell(
+                    onTap: () {
+                      Navigator.pushNamed(context, '/google-auth');
+                    },
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      width: double.infinity,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.grey.shade200,
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CustomPaint(
+                                    painter: GoogleLogoPainter(),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                const Text(
+                                  'Daftar dengan Google',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF3C4043),
+                                    letterSpacing: 0.1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),

@@ -67,13 +67,84 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    Future.delayed(const Duration(milliseconds: 300), () {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    Future.delayed(const Duration(milliseconds: 350), () {
       if (!mounted) return;
       final appState = AppState.of(context);
-      appState.loginWithEmail(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+
+      // Check if user account exists
+      if (!appState.isEmailRegistered(email)) {
+        setState(() {
+          _isLoading = false;
+          _emailError = 'Akun tidak ditemukan. Silakan daftar terlebih dahulu.';
+        });
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.error_outline_rounded, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Akun tidak ditemukan. Silakan daftar terlebih dahulu.',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFFD32F2F),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Daftar Sekarang',
+              textColor: Colors.amberAccent,
+              onPressed: () {
+                Navigator.pushNamed(context, '/register');
+              },
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Check if password matches
+      if (!appState.verifyPassword(email, password)) {
+        setState(() {
+          _isLoading = false;
+          _passwordError = 'Kata sandi yang Anda masukkan salah.';
+        });
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.lock_outline_rounded, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Kata sandi salah. Silakan coba lagi.',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFFD32F2F),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      // Valid credentials
+      appState.loginWithEmail(email, password);
       setState(() {
         _isLoading = false;
       });
@@ -222,9 +293,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
 
+                  const SizedBox(height: 20),
+
+                  // Submit Button (Masuk)
+                  PrimaryButton(
+                    text: 'Masuk',
+                    isLoading: _isLoading,
+                    showArrow: true,
+                    onPressed: _handleLogin,
+                  ),
+
                   const SizedBox(height: 18),
 
-                  // "Masuk dengan" Divider
+                  // "atau" Divider
                   Row(
                     children: [
                       const Expanded(
@@ -255,7 +336,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 14),
 
-                  // Google Pill Button
+                  // Google Pill Button (persis di bawah tombol Masuk)
                   InkWell(
                     onTap: () {
                       Navigator.pushNamed(context, '/google-auth');
@@ -279,39 +360,38 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CustomPaint(
-                              painter: GoogleLogoPainter(),
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CustomPaint(
+                                    painter: GoogleLogoPainter(),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                const Text(
+                                  'Masuk dengan Google',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF3C4043),
+                                    letterSpacing: 0.1,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          const Text(
-                            'Masuk dengan Google',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF3C4043),
-                              letterSpacing: 0.1,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  // Submit Button
-                  PrimaryButton(
-                    text: 'Masuk',
-                    isLoading: _isLoading,
-                    showArrow: true,
-                    onPressed: _handleLogin,
                   ),
                 ],
               ),
