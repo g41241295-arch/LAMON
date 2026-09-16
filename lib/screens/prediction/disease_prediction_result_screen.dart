@@ -50,8 +50,12 @@ class _DiseasePredictionResultScreenState
   }
 
   void _resetAndRetake() {
-    // Kembali ke langkah kuesioner dengan state baru
-    Navigator.of(context).pop();
+    // Kembali ke awal kuesioner (Langkah 1) dengan state baru ter-reset
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/prediksi-penyakit/form',
+      ModalRoute.withName('/prediksi-penyakit'),
+    );
   }
 
   /// Memetakan konten rekomendasi ke icon yang relevan

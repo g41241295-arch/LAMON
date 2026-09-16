@@ -17,22 +17,97 @@ class DiseasePredictionScreen extends StatefulWidget {
 class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
   int _currentStep = 1; // 1, 2, atau 3
   bool _isLoading = false;
+  bool _hasShownCompletionNotification = false;
 
   // State kuesioner disimpan dalam DTO
   UserDietInput _dietInput = const UserDietInput();
 
-  // Tracking pertanyaan yang sudah dijawab oleh user (untuk banner konfirmasi)
+  // Tracking pertanyaan yang sudah dijawab oleh user (untuk notifikasi konfirmasi)
   final Set<String> _touchedFields = {};
 
-  /// Banner hijau tampil HANYA setelah semua 10 pertanyaan slider/toggle dijawab
+  /// Notifikasi hijau tampil saat SEMUA 10 pertanyaan slider/toggle sudah dijawab
   bool get _allAnswered {
     const required = {
-      'fruitFrequency', 'vegetableFrequency',
-      'homecookedMealsFrequency', 'oneLiterWaterFrequency',
-      'redMeatFrequency', 'highFatRedMeat', 'saltedSnacksFrequency',
-      'frozenDessertFrequency', 'milkCheeseFrequency', 'alcoholFrequency',
+      'fruitFrequency',
+      'vegetableFrequency',
+      'homecookedMealsFrequency',
+      'oneLiterWaterFrequency',
+      'redMeatFrequency',
+      'highFatRedMeat',
+      'saltedSnacksFrequency',
+      'frozenDessertFrequency',
+      'milkCheeseFrequency',
+      'alcoholFrequency',
     };
     return required.every(_touchedFields.contains);
+  }
+
+  void _onFieldTouched(String field) {
+    _touchedFields.add(field);
+    if (_allAnswered && !_hasShownCompletionNotification) {
+      _hasShownCompletionNotification = true;
+      _showCompletionNotification();
+    }
+  }
+
+  void _showCompletionNotification() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+              ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: AppColors.successGreen,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Semua pertanyaan sudah terisi',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Tekan "Analisis Sekarang" untuk melihat hasil.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFFE8F5E9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF2E7D32),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        elevation: 6,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   void _onBack() {
@@ -189,14 +264,14 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
                     if (_currentStep == 1) _buildStep1(),
                     if (_currentStep == 2) _buildStep2(),
                     if (_currentStep == 3) _buildStep3(),
-                    const SizedBox(height: 100), // Ruang untuk sticky button
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
             ),
 
             // =========================================================
-            // 3. STICKY BOTTOM ACTION BAR
+            // 3. FLOATING BOTTOM ACTION BUTTON (TANPA BACKGROUND PUTIH)
             // =========================================================
             _buildBottomActionBar(),
           ],
@@ -303,8 +378,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
           onSelected: (diet) {
             setState(() {
               _dietInput = _dietInput.copyWith(dietType: diet);
-              _touchedFields.add('dietType');
             });
+            _onFieldTouched('dietType');
           },
         ),
         const SizedBox(height: 14),
@@ -318,8 +393,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
           onChanged: (val) {
             setState(() {
               _dietInput = _dietInput.copyWith(fruitFrequency: val);
-              _touchedFields.add('fruitFrequency');
             });
+            _onFieldTouched('fruitFrequency');
           },
         ),
         const SizedBox(height: 14),
@@ -333,8 +408,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
           onChanged: (val) {
             setState(() {
               _dietInput = _dietInput.copyWith(vegetableFrequency: val);
-              _touchedFields.add('vegetableFrequency');
             });
+            _onFieldTouched('vegetableFrequency');
           },
         ),
         const SizedBox(height: 14),
@@ -348,8 +423,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
           onChanged: (val) {
             setState(() {
               _dietInput = _dietInput.copyWith(homecookedMealsFrequency: val);
-              _touchedFields.add('homecookedMealsFrequency');
             });
+            _onFieldTouched('homecookedMealsFrequency');
           },
         ),
         const SizedBox(height: 14),
@@ -363,8 +438,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
           onChanged: (val) {
             setState(() {
               _dietInput = _dietInput.copyWith(oneLiterWaterFrequency: val);
-              _touchedFields.add('oneLiterWaterFrequency');
             });
+            _onFieldTouched('oneLiterWaterFrequency');
           },
         ),
       ],
@@ -386,8 +461,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
           onChanged: (val) {
             setState(() {
               _dietInput = _dietInput.copyWith(redMeatFrequency: val);
-              _touchedFields.add('redMeatFrequency');
             });
+            _onFieldTouched('redMeatFrequency');
           },
         ),
         const SizedBox(height: 14),
@@ -405,8 +480,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
           onChanged: (val) {
             setState(() {
               _dietInput = _dietInput.copyWith(saltedSnacksFrequency: val);
-              _touchedFields.add('saltedSnacksFrequency');
             });
+            _onFieldTouched('saltedSnacksFrequency');
           },
         ),
         const SizedBox(height: 14),
@@ -420,8 +495,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
           onChanged: (val) {
             setState(() {
               _dietInput = _dietInput.copyWith(frozenDessertFrequency: val);
-              _touchedFields.add('frozenDessertFrequency');
             });
+            _onFieldTouched('frozenDessertFrequency');
           },
         ),
       ],
@@ -493,8 +568,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
                   onTap: () {
                     setState(() {
                       _dietInput = _dietInput.copyWith(highFatRedMeat: false);
-                      _touchedFields.add('highFatRedMeat');
                     });
+                    _onFieldTouched('highFatRedMeat');
                   },
                 ),
               ),
@@ -506,8 +581,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
                   onTap: () {
                     setState(() {
                       _dietInput = _dietInput.copyWith(highFatRedMeat: true);
-                      _touchedFields.add('highFatRedMeat');
                     });
+                    _onFieldTouched('highFatRedMeat');
                   },
                 ),
               ),
@@ -586,8 +661,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
           onChanged: (val) {
             setState(() {
               _dietInput = _dietInput.copyWith(milkCheeseFrequency: val);
-              _touchedFields.add('milkCheeseFrequency');
             });
+            _onFieldTouched('milkCheeseFrequency');
           },
         ),
         const SizedBox(height: 14),
@@ -601,107 +676,22 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
           onChanged: (val) {
             setState(() {
               _dietInput = _dietInput.copyWith(alcoholFrequency: val);
-              _touchedFields.add('alcoholFrequency');
             });
+            _onFieldTouched('alcoholFrequency');
           },
-        ),
-        const SizedBox(height: 20),
-
-        // 3. Banner Konfirmasi Hijau — hanya tampil setelah SEMUA pertanyaan dijawab
-        if (_allAnswered)
-          Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEDF8EE),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: const Color(0xFFBCE6C0),
-              width: 1.4,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Icon centang hijau bulat
-              Container(
-                width: 36,
-                height: 36,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.successGreen,
-                ),
-                child: const Icon(
-                  Icons.check,
-                  color: Colors.white,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 14),
-
-              // Teks Konfirmasi
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Semua pertanyaan sudah terisi',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF1E5D22),
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Tekan tombol di bawah untuk melihat hasil analisis risiko refluks asam lambungmu.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF388E3C),
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ),
       ],
     );
   }
 
   // =========================================================
-  // STICKY BOTTOM ACTION BAR
+  // FLOATING BOTTOM ACTION BUTTON (TANPA BACKGROUND PUTIH)
   // =========================================================
   Widget _buildBottomActionBar() {
     final isLastStep = _currentStep == 3;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border.all(
-          color: const Color(0xFFE2E8F0),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: SizedBox(
         width: double.infinity,
         height: 52,
@@ -714,7 +704,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
-            elevation: 0,
+            elevation: 2,
+            shadowColor: AppColors.primary.withValues(alpha: 0.35),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
