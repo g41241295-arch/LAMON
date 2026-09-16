@@ -21,6 +21,20 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
   // State kuesioner disimpan dalam DTO
   UserDietInput _dietInput = const UserDietInput();
 
+  // Tracking pertanyaan yang sudah dijawab oleh user (untuk banner konfirmasi)
+  final Set<String> _touchedFields = {};
+
+  /// Banner hijau tampil HANYA setelah semua 10 pertanyaan slider/toggle dijawab
+  bool get _allAnswered {
+    const required = {
+      'fruitFrequency', 'vegetableFrequency',
+      'homecookedMealsFrequency', 'oneLiterWaterFrequency',
+      'redMeatFrequency', 'highFatRedMeat', 'saltedSnacksFrequency',
+      'frozenDessertFrequency', 'milkCheeseFrequency', 'alcoholFrequency',
+    };
+    return required.every(_touchedFields.contains);
+  }
+
   void _onBack() {
     if (_currentStep > 1) {
       setState(() {
@@ -289,6 +303,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
           onSelected: (diet) {
             setState(() {
               _dietInput = _dietInput.copyWith(dietType: diet);
+              _touchedFields.add('dietType');
             });
           },
         ),
@@ -296,12 +311,14 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
 
         // 2. Slider Makan Buah
         DiscreteLevelSlider(
+          icon: Icons.spa_rounded,
           title: 'Seberapa sering makan buah?',
           subtitle: 'Dalam seminggu terakhir',
           value: _dietInput.fruitFrequency,
           onChanged: (val) {
             setState(() {
               _dietInput = _dietInput.copyWith(fruitFrequency: val);
+              _touchedFields.add('fruitFrequency');
             });
           },
         ),
@@ -309,12 +326,14 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
 
         // 3. Slider Makan Sayur
         DiscreteLevelSlider(
+          icon: Icons.eco_rounded,
           title: 'Seberapa sering makan sayur?',
           subtitle: 'Dalam seminggu terakhir',
           value: _dietInput.vegetableFrequency,
           onChanged: (val) {
             setState(() {
               _dietInput = _dietInput.copyWith(vegetableFrequency: val);
+              _touchedFields.add('vegetableFrequency');
             });
           },
         ),
@@ -322,13 +341,14 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
 
         // 4. Slider Masak dan Makan di Rumah
         DiscreteLevelSlider(
+          icon: Icons.home_rounded,
           title: 'Seberapa sering masak dan makan di rumah?',
           subtitle: 'Dibanding makan di luar/pesan makanan',
           value: _dietInput.homecookedMealsFrequency,
           onChanged: (val) {
             setState(() {
-              _dietInput =
-                  _dietInput.copyWith(homecookedMealsFrequency: val);
+              _dietInput = _dietInput.copyWith(homecookedMealsFrequency: val);
+              _touchedFields.add('homecookedMealsFrequency');
             });
           },
         ),
@@ -336,12 +356,14 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
 
         // 5. Slider Minum Air > 1 Liter
         DiscreteLevelSlider(
+          icon: Icons.water_drop_rounded,
           title: 'Seberapa sering minum air >1 liter/hari?',
           subtitle: 'Kebiasaan minum air putih harian',
           value: _dietInput.oneLiterWaterFrequency,
           onChanged: (val) {
             setState(() {
               _dietInput = _dietInput.copyWith(oneLiterWaterFrequency: val);
+              _touchedFields.add('oneLiterWaterFrequency');
             });
           },
         ),
@@ -357,12 +379,14 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
       children: [
         // 1. Slider Daging Merah
         DiscreteLevelSlider(
+          icon: Icons.kebab_dining_rounded,
           title: 'Seberapa sering makan daging merah?',
           subtitle: 'Sapi, kambing, domba, dll',
           value: _dietInput.redMeatFrequency,
           onChanged: (val) {
             setState(() {
               _dietInput = _dietInput.copyWith(redMeatFrequency: val);
+              _touchedFields.add('redMeatFrequency');
             });
           },
         ),
@@ -374,12 +398,14 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
 
         // 3. Slider Camilan Asin
         DiscreteLevelSlider(
+          icon: Icons.cookie_outlined,
           title: 'Seberapa sering makan camilan asin?',
           subtitle: 'Kripik, kerupuk, kacang asin, gorengan, dll',
           value: _dietInput.saltedSnacksFrequency,
           onChanged: (val) {
             setState(() {
               _dietInput = _dietInput.copyWith(saltedSnacksFrequency: val);
+              _touchedFields.add('saltedSnacksFrequency');
             });
           },
         ),
@@ -387,13 +413,14 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
 
         // 4. Slider Makanan Beku Manis
         DiscreteLevelSlider(
+          icon: Icons.icecream_outlined,
           title: 'Seberapa sering makan makanan beku manis?',
           subtitle: 'Es krim, dessert dingin olahan',
           value: _dietInput.frozenDessertFrequency,
           onChanged: (val) {
             setState(() {
-              _dietInput =
-                  _dietInput.copyWith(frozenDessertFrequency: val);
+              _dietInput = _dietInput.copyWith(frozenDessertFrequency: val);
+              _touchedFields.add('frozenDessertFrequency');
             });
           },
         ),
@@ -425,14 +452,24 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Sering konsumsi daging tinggi lemak?',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primaryDark,
-              height: 1.25,
-            ),
+          // Judul dengan Icon
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Icon(Icons.lunch_dining_rounded, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Sering konsumsi daging tinggi lemak?',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primaryDark,
+                    height: 1.25,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 3),
           const Text(
@@ -456,6 +493,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
                   onTap: () {
                     setState(() {
                       _dietInput = _dietInput.copyWith(highFatRedMeat: false);
+                      _touchedFields.add('highFatRedMeat');
                     });
                   },
                 ),
@@ -468,6 +506,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
                   onTap: () {
                     setState(() {
                       _dietInput = _dietInput.copyWith(highFatRedMeat: true);
+                      _touchedFields.add('highFatRedMeat');
                     });
                   },
                 ),
@@ -540,12 +579,14 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
       children: [
         // 1. Slider Susu & Keju
         DiscreteLevelSlider(
+          icon: Icons.local_drink_rounded,
           title: 'Seberapa sering konsumsi susu & keju?',
           subtitle: 'Susu, keju, yoghurt, produk olahan susu lainnya',
           value: _dietInput.milkCheeseFrequency,
           onChanged: (val) {
             setState(() {
               _dietInput = _dietInput.copyWith(milkCheeseFrequency: val);
+              _touchedFields.add('milkCheeseFrequency');
             });
           },
         ),
@@ -553,19 +594,22 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
 
         // 2. Slider Konsumsi Alkohol
         DiscreteLevelSlider(
+          icon: Icons.local_bar_rounded,
           title: 'Seberapa sering konsumsi alkohol?',
           subtitle: 'Bir, anggur, minuman keras beralkohol lainnya',
           value: _dietInput.alcoholFrequency,
           onChanged: (val) {
             setState(() {
               _dietInput = _dietInput.copyWith(alcoholFrequency: val);
+              _touchedFields.add('alcoholFrequency');
             });
           },
         ),
         const SizedBox(height: 20),
 
-        // 3. Banner Konfirmasi Hijau
-        Container(
+        // 3. Banner Konfirmasi Hijau — hanya tampil setelah SEMUA pertanyaan dijawab
+        if (_allAnswered)
+          Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(

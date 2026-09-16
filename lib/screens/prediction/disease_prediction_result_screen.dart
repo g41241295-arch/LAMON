@@ -54,6 +54,29 @@ class _DiseasePredictionResultScreenState
     Navigator.of(context).pop();
   }
 
+  /// Memetakan konten rekomendasi ke icon yang relevan
+  static IconData _iconForRecommendation(String rec) {
+    final lower = rec.toLowerCase();
+    if (lower.contains('sayur') || lower.contains('buah') || lower.contains('serat')) {
+      return Icons.eco_rounded;
+    } else if (lower.contains('minum') || lower.contains('air')) {
+      return Icons.water_drop_rounded;
+    } else if (lower.contains('daging') || lower.contains('lemak')) {
+      return Icons.lunch_dining_rounded;
+    } else if (lower.contains('camilan') || lower.contains('gorengan') || lower.contains('asin')) {
+      return Icons.cookie_outlined;
+    } else if (lower.contains('alkohol')) {
+      return Icons.local_bar_rounded;
+    } else if (lower.contains('dessert') || lower.contains('es krim') || lower.contains('beku')) {
+      return Icons.icecream_outlined;
+    } else if (lower.contains('masak') || lower.contains('rumah')) {
+      return Icons.home_rounded;
+    } else if (lower.contains('berbaring') || lower.contains('jam') || lower.contains('tidur')) {
+      return Icons.schedule_rounded;
+    }
+    return Icons.thumb_up_rounded;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -454,10 +477,10 @@ class _DiseasePredictionResultScreenState
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
-                  padding: EdgeInsets.only(top: 2),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
                   child: Icon(
-                    Icons.check_circle_outline_rounded,
+                    _iconForRecommendation(rec),
                     color: AppColors.primary,
                     size: 18,
                   ),
@@ -505,39 +528,28 @@ class _DiseasePredictionResultScreenState
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  _isSaved
-                      ? Icons.check_circle_rounded
-                      : Icons.bookmark_add_rounded,
-                  size: 20,
-                  color: Colors.white,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _isSaved ? 'Tersimpan ke Riwayat ✓' : 'Simpan ke Riwayat',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ],
+            child: Text(
+              _isSaved ? 'Tersimpan ke Riwayat ✓' : 'Simpan ke Riwayat',
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.2,
+              ),
             ),
           ),
         ),
         const SizedBox(height: 12),
 
-        // Tombol "Isi Ulang Jawaban" (Text Button tanpa border)
+        // Tombol "Isi Ulang Jawaban" — Outlined button dengan border biru teal
         SizedBox(
           width: double.infinity,
           height: 46,
-          child: TextButton(
+          child: OutlinedButton(
             onPressed: _resetAndRetake,
-            style: TextButton.styleFrom(
+            style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.primary,
+              side: const BorderSide(color: AppColors.primary, width: 1.8),
+              backgroundColor: Colors.transparent,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),

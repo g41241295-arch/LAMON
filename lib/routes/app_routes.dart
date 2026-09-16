@@ -9,6 +9,7 @@ import '../screens/screening/screening_gender_screen.dart';
 import '../screens/screening/screening_birthdate_screen.dart';
 import '../screens/screening/screening_history_screen.dart';
 import '../screens/screening/screening_success_screen.dart';
+import '../screens/prediction/disease_prediction_intro_screen.dart';
 import '../screens/prediction/disease_prediction_screen.dart';
 import '../screens/prediction/disease_prediction_result_screen.dart';
 import '../models/reflux_prediction_model.dart';
@@ -30,7 +31,9 @@ class AppRoutes {
 
   // Disease Prediction Routes
   static const String diseasePrediction = '/prediksi-penyakit';
+  static const String diseasePredictionForm = '/prediksi-penyakit/form';
   static const String diseasePredictionResult = '/prediksi-penyakit/result';
+  static const String diseasePredictionHistory = '/prediksi-penyakit/history';
 
   /// Helper untuk membuat transisi halaman yang halus (fade + subtle slide 450ms)
   static PageRouteBuilder<T> _createSmoothRoute<T>(
@@ -118,7 +121,20 @@ class AppRoutes {
         );
       case diseasePrediction:
         return _createSmoothRoute(
+          const DiseasePredictionIntroScreen(),
+          settings: settings,
+        );
+      case diseasePredictionForm:
+        return _createSmoothRoute(
           const DiseasePredictionScreen(),
+          settings: settings,
+        );
+      case diseasePredictionHistory:
+        return _createSmoothRoute(
+          const PlaceholderScreen(
+            title: 'Riwayat Pemeriksaan',
+            description: 'Halaman riwayat hasil prediksi penyakit asam lambung sedang dikembangkan.',
+          ),
           settings: settings,
         );
       case diseasePredictionResult:

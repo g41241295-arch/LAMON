@@ -6,6 +6,7 @@ import '../../../constants/app_colors.dart';
 class DiscreteLevelSlider extends StatelessWidget {
   final String title;
   final String subtitle;
+  final IconData icon;
   final int value;
   final ValueChanged<int> onChanged;
 
@@ -21,6 +22,7 @@ class DiscreteLevelSlider extends StatelessWidget {
     super.key,
     required this.title,
     required this.subtitle,
+    required this.icon,
     required this.value,
     required this.onChanged,
   });
@@ -50,15 +52,24 @@ class DiscreteLevelSlider extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Judul Pertanyaan
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primaryDark,
-              height: 1.25,
-            ),
+          // Judul Pertanyaan dengan Icon
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primaryDark,
+                    height: 1.25,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 3),
 
@@ -129,7 +140,7 @@ class DiscreteLevelSlider extends StatelessWidget {
             data: SliderTheme.of(context).copyWith(
               activeTrackColor: AppColors.primary,
               inactiveTrackColor: const Color(0xFFE2EDF3),
-              trackHeight: 6.0,
+              trackHeight: 9.0,
               thumbColor: AppColors.primary,
               thumbShape: const RoundSliderThumbShape(
                 enabledThumbRadius: 10.0,

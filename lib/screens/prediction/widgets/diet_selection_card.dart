@@ -56,13 +56,19 @@ class DietSelectionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Jenis Pola Makan',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primaryDark,
-            ),
+          Row(
+            children: const [
+              Icon(Icons.restaurant_menu_rounded, size: 18, color: AppColors.primary),
+              SizedBox(width: 8),
+              Text(
+                'Jenis Pola Makan',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primaryDark,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 3),
           const Text(
