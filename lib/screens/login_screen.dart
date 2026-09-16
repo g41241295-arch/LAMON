@@ -148,7 +148,11 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         _isLoading = false;
       });
-      Navigator.pushReplacementNamed(context, '/beranda');
+      if (!appState.currentUser.hasCompletedScreening) {
+        Navigator.pushReplacementNamed(context, '/screening/gender');
+      } else {
+        Navigator.pushReplacementNamed(context, '/beranda');
+      }
     });
   }
 

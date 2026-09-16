@@ -19,8 +19,13 @@ class GoogleAuthScreen extends StatelessWidget {
   ];
 
   void _selectAccount(BuildContext context, String name, String email) {
-    AppState.of(context).loginWithGoogle(name, email);
-    Navigator.pushNamedAndRemoveUntil(context, '/beranda', (route) => false);
+    final appState = AppState.of(context);
+    appState.loginWithGoogle(name, email);
+    if (!appState.currentUser.hasCompletedScreening) {
+      Navigator.pushNamedAndRemoveUntil(context, '/screening/gender', (route) => false);
+    } else {
+      Navigator.pushNamedAndRemoveUntil(context, '/beranda', (route) => false);
+    }
   }
 
   void _showAddAccountDialog(BuildContext context) {

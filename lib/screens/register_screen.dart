@@ -129,7 +129,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() {
         _isLoading = false;
       });
-      Navigator.pushReplacementNamed(context, '/beranda');
+      // User baru langsung diarahkan ke Skrining Awal (wajib diselesaikan sekali)
+      Navigator.pushReplacementNamed(context, '/screening/gender');
     });
   }
 

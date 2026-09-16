@@ -92,9 +92,13 @@ export default function LoginPage() {
       }
 
       // 3. Success
-      loginWithEmail(email, password);
+      const result = loginWithEmail(email, password);
       setIsSubmitting(false);
-      navigate('/beranda');
+      if (!result?.hasCompletedScreening) {
+        navigate('/screening');
+      } else {
+        navigate('/beranda');
+      }
     }, 300);
   };
 

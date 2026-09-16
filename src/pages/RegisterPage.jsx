@@ -82,7 +82,7 @@ export default function RegisterPage() {
 
       registerWithEmail(email, password);
       setIsSubmitting(false);
-      navigate('/beranda');
+      navigate('/screening');
     }, 300);
   };
 

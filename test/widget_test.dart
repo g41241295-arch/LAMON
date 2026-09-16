@@ -74,4 +74,31 @@ void main() {
 
     expect(find.text('Login Screen Mock'), findsOneWidget);
   });
+
+  testWidgets('Registering new user routes to /screening/gender with hasCompletedScreening == false', (WidgetTester tester) async {
+    final appState = AppState();
+    final registered = appState.registerWithEmail('newuser@example.com', 'password123');
+    expect(registered, isTrue);
+    expect(appState.currentUser.hasCompletedScreening, isFalse);
+
+    // Verify completing screening updates hasCompletedScreening to true
+    appState.setDraftGender('Pria');
+    appState.setDraftBirthDate(day: 15, month: 8, year: 1995);
+    appState.setDraftHasHistory(false);
+    appState.completeScreening();
+
+    expect(appState.currentUser.hasCompletedScreening, isTrue);
+    expect(appState.currentUser.screeningData?['gender'], 'Pria');
+    expect(appState.currentUser.screeningData?['birthDate'], '1995-08-15');
+    expect(appState.currentUser.screeningData?['hasHistory'], false);
+
+    // If user logs out and logs in again, hasCompletedScreening is retained as true
+    appState.logout();
+    expect(appState.isAuthenticated, isFalse);
+
+    appState.loginWithEmail('newuser@example.com', 'password123');
+    expect(appState.isAuthenticated, isTrue);
+    expect(appState.currentUser.hasCompletedScreening, isTrue);
+  });
 }
+

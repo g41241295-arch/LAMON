@@ -11,17 +11,51 @@ class AppState extends ChangeNotifier {
   bool _lunchDone = false;
   int _currentNavIndex = 1; // 0 = Chat, 1 = Beranda, 2 = Profile
 
-  // Pre-registered users: email (lowercase) -> { name, password }
-  final Map<String, Map<String, String>> _registeredUsers = {
+  // Pre-registered users: email (lowercase) -> { name, password, hasCompletedScreening, screeningData }
+  final Map<String, Map<String, dynamic>> _registeredUsers = {
     'hanabi00@gmail.com': {
       'name': 'Hanabi',
       'password': 'password123',
+      'hasCompletedScreening': true,
+      'screeningData': null,
     },
     'user@gmail.com': {
       'name': 'User Lamon',
       'password': 'password123',
+      'hasCompletedScreening': true,
+      'screeningData': null,
     },
   };
+
+  // State draft screening yang sedang berjalan
+  String? _draftGender;
+  int _draftDay = 1;
+  int _draftMonth = 1;
+  int _draftYear = 1990;
+  bool? _draftHasHistory;
+
+  String? get draftGender => _draftGender;
+  int get draftDay => _draftDay;
+  int get draftMonth => _draftMonth;
+  int get draftYear => _draftYear;
+  bool? get draftHasHistory => _draftHasHistory;
+
+  void setDraftGender(String gender) {
+    _draftGender = gender;
+    notifyListeners();
+  }
+
+  void setDraftBirthDate({int? day, int? month, int? year}) {
+    if (day != null) _draftDay = day;
+    if (month != null) _draftMonth = month;
+    if (year != null) _draftYear = year;
+    notifyListeners();
+  }
+
+  void setDraftHasHistory(bool hasHistory) {
+    _draftHasHistory = hasHistory;
+    notifyListeners();
+  }
 
   UserModel get currentUser => _currentUser;
   bool get isAuthenticated => _isAuthenticated;
@@ -47,14 +81,21 @@ class AppState extends ChangeNotifier {
     final normalized = email.trim().toLowerCase();
     final user = _registeredUsers[normalized];
     final displayName = user?['name'] ?? _extractNameFromEmail(email);
+    final hasScreening = user?['hasCompletedScreening'] as bool? ?? false;
+    final screeningData = user?['screeningData'] as Map<String, dynamic>?;
 
-    _currentUser = UserModel(name: displayName, email: email.trim());
+    _currentUser = UserModel(
+      name: displayName,
+      email: email.trim(),
+      hasCompletedScreening: hasScreening,
+      screeningData: screeningData,
+    );
     _isAuthenticated = true;
     notifyListeners();
     return true;
   }
 
-  /// Register a new user account into the system
+  /// Register a new user account into the system (screening is initially false)
   bool registerWithEmail(String email, String password, {String? name}) {
     final normalized = email.trim().toLowerCase();
     final displayName = name ?? _extractNameFromEmail(email);
@@ -62,12 +103,55 @@ class AppState extends ChangeNotifier {
     _registeredUsers[normalized] = {
       'name': displayName,
       'password': password,
+      'hasCompletedScreening': false,
+      'screeningData': null,
     };
 
-    _currentUser = UserModel(name: displayName, email: email.trim());
+    // Reset draft screening
+    _draftGender = null;
+    _draftDay = 1;
+    _draftMonth = 1;
+    _draftYear = 1990;
+    _draftHasHistory = null;
+
+    _currentUser = UserModel(
+      name: displayName,
+      email: email.trim(),
+      hasCompletedScreening: false,
+      screeningData: null,
+    );
     _isAuthenticated = true;
     notifyListeners();
     return true;
+  }
+
+  /// Menyelesaikan skrining awal dan menyimpan status ke backend/database akun user
+  void completeScreening() {
+    final normalized = _currentUser.email.trim().toLowerCase();
+    final data = {
+      'gender': _draftGender ?? 'Pria',
+      'birthDate': '$_draftYear-${_draftMonth.toString().padLeft(2, '0')}-${_draftDay.toString().padLeft(2, '0')}',
+      'hasHistory': _draftHasHistory ?? false,
+      'completedAt': DateTime.now().toIso8601String(),
+    };
+
+    if (_registeredUsers.containsKey(normalized)) {
+      _registeredUsers[normalized]!['hasCompletedScreening'] = true;
+      _registeredUsers[normalized]!['screeningData'] = data;
+    } else {
+      _registeredUsers[normalized] = {
+        'name': _currentUser.name,
+        'password': '',
+        'hasCompletedScreening': true,
+        'screeningData': data,
+      };
+    }
+
+    _currentUser = _currentUser.copyWith(
+      hasCompletedScreening: true,
+      screeningData: data,
+    );
+    notifyListeners();
   }
 
   String _extractNameFromEmail(String email) {
@@ -79,13 +163,27 @@ class AppState extends ChangeNotifier {
 
   void loginWithGoogle(String name, String email) {
     final normalized = email.trim().toLowerCase();
+    bool hasScreening = false;
+    Map<String, dynamic>? screeningData;
+
     if (!_registeredUsers.containsKey(normalized)) {
       _registeredUsers[normalized] = {
         'name': name,
         'password': '',
+        'hasCompletedScreening': false,
+        'screeningData': null,
       };
+    } else {
+      hasScreening = _registeredUsers[normalized]!['hasCompletedScreening'] as bool? ?? false;
+      screeningData = _registeredUsers[normalized]!['screeningData'] as Map<String, dynamic>?;
     }
-    _currentUser = UserModel(name: name, email: email.trim());
+
+    _currentUser = UserModel(
+      name: name,
+      email: email.trim(),
+      hasCompletedScreening: hasScreening,
+      screeningData: screeningData,
+    );
     _isAuthenticated = true;
     notifyListeners();
   }

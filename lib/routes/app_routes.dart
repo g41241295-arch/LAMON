@@ -5,6 +5,10 @@ import '../screens/register_screen.dart';
 import '../screens/google_auth_screen.dart';
 import '../screens/beranda_screen.dart';
 import '../screens/placeholder_screen.dart';
+import '../screens/screening/screening_gender_screen.dart';
+import '../screens/screening/screening_birthdate_screen.dart';
+import '../screens/screening/screening_history_screen.dart';
+import '../screens/screening/screening_success_screen.dart';
 
 class AppRoutes {
   static const String initial = '/splash';
@@ -15,28 +19,111 @@ class AppRoutes {
   static const String beranda = '/beranda';
   static const String placeholder = '/placeholder';
 
+  // Screening Flow Routes
+  static const String screeningGender = '/screening/gender';
+  static const String screeningBirthdate = '/screening/birthdate';
+  static const String screeningHistory = '/screening/history';
+  static const String screeningSuccess = '/screening/success';
+
+  /// Helper untuk membuat transisi halaman yang halus (fade + subtle slide 450ms)
+  static PageRouteBuilder<T> _createSmoothRoute<T>(
+    Widget page, {
+    RouteSettings? settings,
+    bool isFadeOnly = false,
+  }) {
+    return PageRouteBuilder<T>(
+      settings: settings,
+      transitionDuration: const Duration(milliseconds: 450),
+      reverseTransitionDuration: const Duration(milliseconds: 350),
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeInOutCubic,
+        );
+
+        if (isFadeOnly) {
+          return FadeTransition(opacity: curved, child: child);
+        }
+
+        // Transisi slide halus ke atas/samping + fade
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.06, 0.0),
+            end: Offset.zero,
+          ).animate(curved),
+          child: FadeTransition(opacity: curved, child: child),
+        );
+      },
+    );
+  }
+
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
       case splash:
-        return MaterialPageRoute(builder: (_) => const SplashScreen());
+        return _createSmoothRoute(
+          const SplashScreen(),
+          settings: settings,
+          isFadeOnly: true,
+        );
       case login:
-        return MaterialPageRoute(builder: (_) => const LoginScreen());
+        return _createSmoothRoute(
+          const LoginScreen(),
+          settings: settings,
+          isFadeOnly: true,
+        );
       case register:
-        return MaterialPageRoute(builder: (_) => const RegisterScreen());
+        return _createSmoothRoute(
+          const RegisterScreen(),
+          settings: settings,
+        );
       case googleAuth:
-        return MaterialPageRoute(builder: (_) => const GoogleAuthScreen());
+        return _createSmoothRoute(
+          const GoogleAuthScreen(),
+          settings: settings,
+        );
+      case screeningGender:
+        return _createSmoothRoute(
+          const ScreeningGenderScreen(),
+          settings: settings,
+        );
+      case screeningBirthdate:
+        return _createSmoothRoute(
+          const ScreeningBirthdateScreen(),
+          settings: settings,
+        );
+      case screeningHistory:
+        return _createSmoothRoute(
+          const ScreeningHistoryScreen(),
+          settings: settings,
+        );
+      case screeningSuccess:
+        return _createSmoothRoute(
+          const ScreeningSuccessScreen(),
+          settings: settings,
+          isFadeOnly: true,
+        );
       case beranda:
-        return MaterialPageRoute(builder: (_) => const BerandaScreen());
+        return _createSmoothRoute(
+          const BerandaScreen(),
+          settings: settings,
+          isFadeOnly: true,
+        );
       case placeholder:
         final args = settings.arguments as Map<String, dynamic>? ?? {};
-        return MaterialPageRoute(
-          builder: (_) => PlaceholderScreen(
+        return _createSmoothRoute(
+          PlaceholderScreen(
             title: args['title'] as String? ?? 'Halaman Menu',
             description: args['description'] as String?,
           ),
+          settings: settings,
         );
       default:
-        return MaterialPageRoute(builder: (_) => const LoginScreen());
+        return _createSmoothRoute(
+          const LoginScreen(),
+          settings: settings,
+        );
     }
   }
 }
+

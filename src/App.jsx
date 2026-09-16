@@ -5,6 +5,7 @@ import SplashPage from './pages/SplashPage';
 import LoginPage from './pages/LoginPage';
 import GoogleAuthPage from './pages/GoogleAuthPage';
 import RegisterPage from './pages/RegisterPage';
+import ScreeningPage from './pages/ScreeningPage';
 import BerandaPage from './pages/BerandaPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import { MAIN_MENUS, INFO_MENUS, NAV_MENUS } from './routes/menuRoutes';
@@ -24,6 +25,9 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/google-auth" element={<GoogleAuthPage />} />
           <Route path="/register" element={<RegisterPage />} />
+
+          {/* Skrining Awal (Khusus Akun Baru) */}
+          <Route path="/screening" element={<ScreeningPage />} />
 
           {/* Halaman Utama */}
           <Route path="/beranda" element={<BerandaPage />} />

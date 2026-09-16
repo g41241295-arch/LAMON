@@ -3,16 +3,18 @@ import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_assets.dart';
 
-/// SplashScreen — animasi pembuka LAMON sebelum halaman Login.
+/// SplashScreen — Animasi pembuka LAMON 8 Frame berurutan (Total ±13 detik).
 ///
-/// Urutan animasi (total ±13 detik):
-///   0.0s – 2.1s → Tahap 1: Logo meluncur masuk dari luar batas atas layar ke posisi tengah
-///   2.1s – 4.3s → Tahap 2: Logo membesar (scale-up 1.0 → 1.35) sebagai penekanan di tengah
-///   4.3s – 5.4s → Tahap 3: Logo memudar keluar (exit) hingga tuntas sebelum teks muncul
-///   5.4s – 8.7s → Tahap 4: Teks "LAMON" scramble-in berurutan setelah logo selesai
-///   8.7s – 10.9s → Tahap 5: Subtitle "LAMBUNG AWARENESS & MONITORING" fade & slide-in
-///   10.9s – 13.3s → Tahap 6: "WELCOME" tampil (hitam, bold) menggantikan teks sebelumnya
-///   13.3s → Pindah ke halaman /login (bisa di-tap kapan saja untuk lewati)
+/// Urutan Frame:
+///   Frame 1 (0.0s – 1.1s)  : Halaman kosong background gradient kuning lembut.
+///   Frame 2 (1.1s – 3.8s)  : Logo meluncur turun dari atas ke tengah + halo bulat (tanpa kotak).
+///   Frame 3 (3.8s – 4.5s)  : Logo zoom dramatis CEPAT (300–500ms) + crossfade oranye solid bersih.
+///   Frame 4 (4.5s – 5.8s)  : Teks "NOMAL" muncul font Bebas Neue warna oranye tua.
+///   Frame 5 (5.8s – 6.8s)  : Flip 3D per-huruf cepat "NOMAL" -> "OMALN" (stagger antar huruf).
+///   Frame 6 (6.8s – 7.8s)  : Flip 3D per-huruf cepat "OMALN" -> "LAMON".
+///   Frame 7 (7.8s – 10.0s) : Subtitle "LAMBUNG AWARENESS & MONITORING" fade-in di bawah "LAMON".
+///   Frame 8 (10.0s – 12.5s): Crossfade ke teks "WELCOME" (hitam, bold, Bebas Neue, tanpa underline).
+///   Transisi ke /login     : Fade halus 450ms. Tap kapan saja untuk skip.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -21,220 +23,191 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with TickerProviderStateMixin {
-  // ── Phase controllers ───────────────────────────────────────────────────
-  late final AnimationController _logoSlideCtrl;
-  late final AnimationController _logoScaleCtrl;
-  late final AnimationController _logoExitCtrl;
-  late final AnimationController _scrambleCtrl;
-  late final AnimationController _subtitleCtrl;
-  late final AnimationController _welcomeCtrl;
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _masterCtrl;
 
-  // ── Derived animations ──────────────────────────────────────────────────
-  // Tahap 1: Meluncur dari atas ke tengah
+  // ── Interval Animations ─────────────────────────────────────────────────────
+  // Seluruh timeline di-pack dalam satu 12500ms controller untuk smooth sync
+
+  // Frame 2: Logo slide from top + halo glow (1100ms – 3500ms  : 0.088..0.280)
   late final Animation<Offset> _logoSlide;
   late final Animation<double> _logoSlideOpacity;
+  late final Animation<double> _haloOpacity;
 
-  // Tahap 2: Membesar di tengah
-  late final Animation<double> _logoScale;
-
-  // Tahap 3: Memudar sebelum teks mulai
+  // Frame 3: Zoom + Orange (3500ms – 4200ms : 0.280..0.336) — CEPAT, BERSIH
+  late final Animation<double> _logoDramaticScale;
   late final Animation<double> _logoExitOpacity;
-  late final Animation<double> _logoExitScale;
+  late final Animation<double> _orangeBgOpacity; // Crossfade ke oranye solid
 
-  // Tahap 4: Text scramble LAMON
-  late final Animation<double> _scrambleProgress;
-  late final Animation<double> _lamonOpacity;
+  // Frame 4: Teks "NOMAL" muncul (4200ms – 5000ms : 0.336..0.400)
+  late final Animation<double> _nomalOpacity;
 
-  // Tahap 5: Subtitle
+  // Frame 5: Flip "NOMAL" -> "OMALN" (5000ms – 5850ms : 0.400..0.468)
+  late final Animation<double> _flipToOmaln;
+
+  // Frame 6: Flip "OMALN" -> "LAMON" (5850ms – 6700ms : 0.468..0.536)
+  late final Animation<double> _flipToLamon;
+
+  // Frame 7: Subtitle muncul (6700ms – 7700ms : 0.536..0.616)
   late final Animation<double> _subtitleOpacity;
   late final Animation<Offset> _subtitleSlide;
 
-  // Tahap 6: WELCOME
-  late final Animation<double> _welcomeOpacity;
-  late final Animation<double> _prevTextOpacity;
+  // Frame 8: WELCOME crossfade (10000ms – 11000ms : 0.800..0.880)
+  late final Animation<double> _lamonGroupOutOpacity;
+  late final Animation<double> _welcomeInOpacity;
 
-  // ── Text scramble state ─────────────────────────────────────────────────
-  static const _target = 'LAMON';
-  static const _charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  String _displayText = 'LAMON';
-  final _rng = Random();
-
-  // ── Phase flag ─────────────────────────────────────────────────────────
-  // 0 = slide in, 1 = scale up, 2 = exit logo, 3 = scramble LAMON, 4 = subtitle, 5 = welcome
-  int _phase = 0;
   bool _navigated = false;
 
   @override
   void initState() {
     super.initState();
 
-    // ── Tahap 1: Logo slide-in dari batas atas layar (1800ms) ─────────────
-    _logoSlideCtrl = AnimationController(
+    // Total duration: 12500ms ≈ 12.5 detik
+    _masterCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 12500),
     );
+
+    // ── FRAME 2: Logo slide + halo (0.088 – 0.280) ──────────────────────────
     _logoSlide = Tween<Offset>(
-      begin: const Offset(0.0, -2.5),
+      begin: const Offset(0.0, -2.6),
       end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _logoSlideCtrl, curve: Curves.easeOutCubic),
-    );
+    ).animate(CurvedAnimation(
+      parent: _masterCtrl,
+      curve: const Interval(0.088, 0.280, curve: Curves.easeOutCubic),
+    ));
+
     _logoSlideOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _logoSlideCtrl,
-        curve: const Interval(0.0, 0.35, curve: Curves.easeOut),
+        parent: _masterCtrl,
+        curve: const Interval(0.088, 0.160, curve: Curves.easeOut),
       ),
     );
 
-    // ── Tahap 2: Logo scale-up di tengah sebagai penekanan (1200ms) ────────
-    _logoScaleCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    _logoScale = Tween<double>(begin: 1.0, end: 1.35).animate(
-      CurvedAnimation(parent: _logoScaleCtrl, curve: Curves.easeOutBack),
-    );
-
-    // ── Tahap 3: Logo exit fade-out sebelum teks muncul (800ms) ────────────
-    _logoExitCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _logoExitOpacity = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _logoExitCtrl, curve: Curves.easeInOut),
-    );
-    _logoExitScale = Tween<double>(begin: 1.35, end: 1.15).animate(
-      CurvedAnimation(parent: _logoExitCtrl, curve: Curves.easeInOut),
-    );
-
-    // ── Tahap 4: Text scramble LAMON (2500ms) ──────────────────────────────
-    _scrambleCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2500),
-    );
-    _scrambleProgress = CurvedAnimation(
-      parent: _scrambleCtrl,
-      curve: Curves.easeInOut,
-    );
-    _lamonOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _haloOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _scrambleCtrl,
-        curve: const Interval(0.0, 0.25, curve: Curves.easeOut),
+        parent: _masterCtrl,
+        curve: const Interval(0.140, 0.280, curve: Curves.easeIn),
       ),
     );
-    _scrambleCtrl.addListener(_onScrambleTick);
 
-    // ── Tahap 5: Subtitle fade & subtle slide-in (1000ms) ──────────────────
-    _subtitleCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
+    // ── FRAME 3: Logo dramatic zoom CEPAT + oranye bersih (0.280 – 0.336) ───
+    // Zoom dari skala 1.0 → 4.5 dalam waktu singkat agar memenuhi layar bersih
+    _logoDramaticScale = Tween<double>(begin: 1.0, end: 4.5).animate(
+      CurvedAnimation(
+        parent: _masterCtrl,
+        curve: const Interval(0.280, 0.340, curve: Curves.easeInCubic),
+      ),
     );
-    _subtitleOpacity = CurvedAnimation(
-      parent: _subtitleCtrl,
-      curve: Curves.easeOut,
+
+    // Logo memudar keluar segera bersamaan dengan mulainya zoom — BUKAN setelah zoom
+    // Ini yang menghilangkan "kotak oranye" — logo hilang lebih awal sebelum oranye masuk
+    _logoExitOpacity = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _masterCtrl,
+        curve: const Interval(0.280, 0.316, curve: Curves.easeIn),
+      ),
     );
+
+    // Background oranye crossfade: masuk bersamaan zoom, keluar sesudah teks muncul
+    _orangeBgOpacity = TweenSequence<double>([
+      // Masuk cepat bersamaan zoom logo (layer ini menutupi logo yg sedang zoom)
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.0, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 35,
+      ),
+      // Tahan full orange sejenak
+      TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 25),
+      // Keluar halus ke background kuning LAMON (supaya teks kontras)
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 0.0)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 40,
+      ),
+    ]).animate(CurvedAnimation(
+      parent: _masterCtrl,
+      // Interval: 0.280–0.420 (covering frames 3 & early 4)
+      curve: const Interval(0.280, 0.420),
+    ));
+
+    // ── FRAME 4: "NOMAL" muncul (0.336 – 0.400) ─────────────────────────────
+    _nomalOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _masterCtrl,
+        curve: const Interval(0.336, 0.390, curve: Curves.easeOut),
+      ),
+    );
+
+    // ── FRAME 5: Flip NOMAL -> OMALN (0.400 – 0.468) ────────────────────────
+    _flipToOmaln = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _masterCtrl,
+        curve: const Interval(0.400, 0.468, curve: Curves.easeInOut),
+      ),
+    );
+
+    // ── FRAME 6: Flip OMALN -> LAMON (0.468 – 0.536) ────────────────────────
+    _flipToLamon = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _masterCtrl,
+        curve: const Interval(0.468, 0.536, curve: Curves.easeInOut),
+      ),
+    );
+
+    // ── FRAME 7: Subtitle muncul (0.536 – 0.616) ─────────────────────────────
+    _subtitleOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _masterCtrl,
+        curve: const Interval(0.536, 0.616, curve: Curves.easeOut),
+      ),
+    );
+
     _subtitleSlide = Tween<Offset>(
       begin: const Offset(0.0, 0.3),
       end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _subtitleCtrl, curve: Curves.easeOutCubic),
+    ).animate(CurvedAnimation(
+      parent: _masterCtrl,
+      curve: const Interval(0.536, 0.616, curve: Curves.easeOutCubic),
+    ));
+
+    // ── FRAME 8: WELCOME crossfade (0.800 – 0.880) ───────────────────────────
+    _lamonGroupOutOpacity = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _masterCtrl,
+        curve: const Interval(0.800, 0.848, curve: Curves.easeIn),
+      ),
     );
 
-    // ── Tahap 6: WELCOME fade-in + LAMON fade-out (800ms) ──────────────────
-    _welcomeCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _welcomeOpacity = CurvedAnimation(
-      parent: _welcomeCtrl,
-      curve: Curves.easeOut,
-    );
-    _prevTextOpacity = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _welcomeCtrl, curve: Curves.easeIn),
+    _welcomeInOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _masterCtrl,
+        curve: const Interval(0.824, 0.880, curve: Curves.easeOut),
+      ),
     );
 
-    _runSequence();
-  }
+    _masterCtrl.addStatusListener((status) {
+      if (status == AnimationStatus.completed) _skipToLogin();
+    });
 
-  /// Menjalankan animasi acak karakter "LAMON"
-  void _onScrambleTick() {
-    final p = _scrambleProgress.value; // 0..1
-    final settledCount = (p * _target.length).round().clamp(0, _target.length);
-    final buf = StringBuffer();
-    for (int i = 0; i < _target.length; i++) {
-      if (i < settledCount) {
-        buf.write(_target[i]);
-      } else {
-        buf.write(_charset[_rng.nextInt(_charset.length)]);
-      }
-    }
-    if (mounted) setState(() => _displayText = buf.toString());
-  }
-
-  /// Jalankan rangkaian urutan animasi (total ±13 detik)
-  Future<void> _runSequence() async {
-    // ── Tahap 1: Logo meluncur masuk dari luar batas atas ke tengah (1.8s + 0.3s)
-    setState(() => _phase = 0);
-    await _logoSlideCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-
-    // ── Tahap 2: Logo membesar di tengah sebagai penekanan (1.2s + 1.0s hold)
-    setState(() => _phase = 1);
-    await _logoScaleCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 1000));
-    if (!mounted) return;
-
-    // ── Tahap 3: Logo fade-out tuntas sebelum teks mulai (0.8s + 0.3s buffer)
-    setState(() => _phase = 2);
-    await _logoExitCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-
-    // ── Tahap 4: Teks LAMON scramble setelah logo tuntas (2.5s + 0.8s hold)
-    setState(() => _phase = 3);
-    await _scrambleCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (!mounted) return;
-
-    // ── Tahap 5: Subtitle fade-in berurutan (1.0s + 1.2s hold)
-    setState(() => _phase = 4);
-    await _subtitleCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 1200));
-    if (!mounted) return;
-
-    // ── Tahap 6: WELCOME crossfade (0.8s + 1.6s hold)
-    setState(() => _phase = 5);
-    await _welcomeCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 1600));
-    if (!mounted) return;
-
-    // ── Selesai: Masuk ke login
-    _skipToLogin();
+    _masterCtrl.forward();
   }
 
   @override
   void dispose() {
-    _logoSlideCtrl.dispose();
-    _logoScaleCtrl.dispose();
-    _logoExitCtrl.dispose();
-    _scrambleCtrl.dispose();
-    _subtitleCtrl.dispose();
-    _welcomeCtrl.dispose();
+    _masterCtrl.dispose();
     super.dispose();
   }
 
   void _skipToLogin() {
     if (_navigated || !mounted) return;
     _navigated = true;
+    _masterCtrl.stop();
     Navigator.pushReplacementNamed(context, '/login');
   }
 
-  // ── Build ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    // Wrap di dalam Scaffold + Material memastikan tidak ada default underline kuning pada Text
     return Scaffold(
       backgroundColor: AppColors.desktopBackground,
       body: GestureDetector(
@@ -243,10 +216,9 @@ class _SplashScreenState extends State<SplashScreen>
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isLargeScreen = constraints.maxWidth > 520;
-
-            Widget content = Material(
+            final content = Material(
               color: Colors.transparent,
-              child: _buildContent(),
+              child: _buildAnimatedContent(),
             );
 
             if (isLargeScreen) {
@@ -284,41 +256,27 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildAnimatedContent() {
     return AnimatedBuilder(
-      animation: Listenable.merge([
-        _logoSlideCtrl,
-        _logoScaleCtrl,
-        _logoExitCtrl,
-        _scrambleCtrl,
-        _subtitleCtrl,
-        _welcomeCtrl,
-      ]),
+      animation: _masterCtrl,
       builder: (context, _) {
-        // Logo hanya tampil pada fase 0, 1, dan 2
-        final showLogo = _phase <= 2;
-        // Teks LAMON & Subtitle tampil pada fase 3, 4, 5
-        final showTextPhase = _phase >= 3;
+        final p = _masterCtrl.value;
 
-        // Skala gabungan untuk logo (tahap 1 normal scale, tahap 2 membesar, tahap 3 exit)
-        double currentLogoScale;
-        double currentLogoOpacity;
+        // Fase visibilitas
+        final showLogo = p < 0.340;
+        final showWordPhase = p >= 0.336 && p < 0.848;
+        final showWelcome = p >= 0.800;
 
-        if (_phase == 0) {
-          currentLogoScale = 1.0;
-          currentLogoOpacity = _logoSlideOpacity.value;
-        } else if (_phase == 1) {
-          currentLogoScale = _logoScale.value;
-          currentLogoOpacity = 1.0;
-        } else {
-          currentLogoScale = _logoExitScale.value;
-          currentLogoOpacity = _logoExitOpacity.value;
-        }
+        // Opacity logo: saat zoom, gunakan exit opacity
+        final logoOpacity = (p >= 0.280
+                ? _logoExitOpacity.value
+                : _logoSlideOpacity.value)
+            .clamp(0.0, 1.0);
 
         return Stack(
           fit: StackFit.expand,
           children: [
-            // ── Base gradient background (kuning khas LAMON) ───────────
+            // ── Background kuning gradient khas LAMON ──────────────────────
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -333,92 +291,125 @@ class _SplashScreenState extends State<SplashScreen>
               ),
             ),
 
-            // ── TAHAP 1-2-3: LOGO ANIMASI ─────────────────────────────
+            // ── Layer oranye solid (Frame 3, tanpa kotak — full screen overlay) ──
+            if (_orangeBgOpacity.value > 0.001)
+              Opacity(
+                opacity: _orangeBgOpacity.value.clamp(0.0, 1.0),
+                child: Container(color: const Color(0xFFFFA827)),
+              ),
+
+            // ── FRAME 2 & 3: LOGO + HALO LINGKARAN BULAT ──────────────────
+            // BUG 1 FIX: Logo PNG transparan ditempel langsung di atas background.
+            // Tidak ada Container/Card/BoxDecoration dengan background solid atau shadow.
+            // Hanya RadialGradient berbentuk lingkaran (BoxShape.circle) transparan.
             if (showLogo)
               Center(
                 child: SlideTransition(
                   position: _logoSlide,
                   child: Opacity(
-                    opacity: currentLogoOpacity.clamp(0.0, 1.0),
+                    opacity: logoOpacity,
                     child: Transform.scale(
-                      scale: currentLogoScale,
-                      child: Image.asset(
-                        AppAssets.logo,
-                        width: 150,
-                        height: 150,
-                        fit: BoxFit.contain,
+                      // BUG 2 FIX: Scale langsung ke 4.5 dalam ~700ms (cepat, bersih)
+                      scale: p >= 0.280 ? _logoDramaticScale.value : 1.0,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Halo glow lingkaran transparan — BUKAN kotak
+                          // BoxShape.circle + gradient dari putih ke transparent
+                          Opacity(
+                            opacity: _haloOpacity.value.clamp(0.0, 1.0),
+                            child: Container(
+                              width: 230,
+                              height: 230,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: RadialGradient(
+                                  colors: [
+                                    Color(0x80FFFFFF), // putih 50% di tengah
+                                    Color(0x40FFFACC), // kuning pucat 25%
+                                    Colors.transparent, // transparan di tepi
+                                  ],
+                                  stops: [0.0, 0.45, 1.0],
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // Logo maskot LAMON — PNG transparan, langsung di atas gradient
+                          Image.asset(
+                            AppAssets.logo,
+                            width: 160,
+                            height: 160,
+                            fit: BoxFit.contain,
+                            // filterQuality tinggi agar tidak blur saat zoom
+                            filterQuality: FilterQuality.high,
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
               ),
 
-            // ── TAHAP 4 & 5: LAMON SCRAMBLE & SUBTITLE ─────────────────
-            // Baru mulai muncul setelah logo tuntas (showTextPhase)
-            if (showTextPhase)
+            // ── FRAME 4, 5, 6, 7: FLIP WORD + SUBTITLE ────────────────────
+            if (showWordPhase)
               Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Main LAMON text (tanpa underline/garis apapun)
-                    FadeTransition(
-                      opacity: _phase == 5
-                          ? _prevTextOpacity
-                          : _lamonOpacity,
-                      child: Text(
-                        _displayText,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 52,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFFB8630A),
-                          letterSpacing: 10,
-                          height: 1.0,
-                          decoration: TextDecoration.none, // Hilangkan underline
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
+                child: Opacity(
+                  opacity: (p >= 0.800
+                          ? _lamonGroupOutOpacity.value
+                          : _nomalOpacity.value)
+                      .clamp(0.0, 1.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // BUG 3 FIX: Per-letter flip 3D dengan stagger
+                      _buildFlipWordRow(),
+                      const SizedBox(height: 16),
 
-                    // Subtitle "LAMBUNG AWARENESS & MONITORING"
-                    if (_phase >= 4)
-                      SlideTransition(
-                        position: _subtitleSlide,
-                        child: FadeTransition(
-                          opacity: _phase == 5
-                              ? _prevTextOpacity
-                              : _subtitleOpacity,
-                          child: const Text(
-                            'LAMBUNG AWARENESS & MONITORING',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFFB8630A),
-                              letterSpacing: 3.5,
-                              height: 1.0,
-                              decoration: TextDecoration.none, // Hilangkan underline
+                      // Frame 7: Subtitle
+                      if (p >= 0.536)
+                        SlideTransition(
+                          position: _subtitleSlide,
+                          child: Opacity(
+                            opacity: _subtitleOpacity.value.clamp(0.0, 1.0),
+                            child: const Text(
+                              'LAMBUNG AWARENESS & MONITORING',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                // BUG 4 FIX: Bebas Neue
+                                fontFamily: 'BebasNeue',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                color: Color(0xFFB8630A),
+                                letterSpacing: 4.0,
+                                height: 1.0,
+                                decoration: TextDecoration.none,
+                              ),
                             ),
-                            textAlign: TextAlign.center,
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
 
-            // ── TAHAP 6: WELCOME TEXT ─────────────────────────────────
-            if (_phase == 5)
+            // ── FRAME 8: WELCOME ───────────────────────────────────────────
+            if (showWelcome)
               Center(
-                child: FadeTransition(
-                  opacity: _welcomeOpacity,
+                child: Opacity(
+                  opacity: _welcomeInOpacity.value.clamp(0.0, 1.0),
                   child: const Text(
                     'WELCOME',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 42,
-                      fontWeight: FontWeight.w900,
+                      // BUG 4 FIX: Bebas Neue
+                      fontFamily: 'BebasNeue',
+                      fontSize: 56,
+                      fontWeight: FontWeight.w400,
                       color: Colors.black87,
-                      letterSpacing: 6,
-                      decoration: TextDecoration.none, // Hilangkan underline
+                      letterSpacing: 8,
+                      decoration: TextDecoration.none,
+                      height: 1.0,
                     ),
                   ),
                 ),
@@ -426,6 +417,124 @@ class _SplashScreenState extends State<SplashScreen>
           ],
         );
       },
+    );
+  }
+
+  /// Render baris kata dengan efek flip 3D per-karakter + stagger
+  Widget _buildFlipWordRow() {
+    const w1 = 'NOMAL';
+    const w2 = 'OMALN';
+    const w3 = 'LAMON';
+
+    final p1to2 = _flipToOmaln.value;
+    final p2to3 = _flipToLamon.value;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        String fromChar;
+        String toChar;
+        double charProgress;
+
+        // BUG 3 FIX: Stagger per huruf dengan Interval berbeda-beda
+        // Tiap huruf mulai berputar sedikit setelah huruf sebelumnya (20ms per step)
+        const staggerFrac = 0.12; // selisih start antar huruf dalam 0..1
+        const flipWindowFrac = 0.55; // lebar window flip tiap huruf
+
+        if (p2to3 > 0.0) {
+          fromChar = w2[i];
+          toChar = w3[i];
+          final start = i * staggerFrac;
+          final end = start + flipWindowFrac;
+          charProgress = end <= 1.0
+              ? ((p2to3 - start) / flipWindowFrac).clamp(0.0, 1.0)
+              : (p2to3 - start).clamp(0.0, 1.0);
+        } else if (p1to2 > 0.0) {
+          fromChar = w1[i];
+          toChar = w2[i];
+          final start = i * staggerFrac;
+          final end = start + flipWindowFrac;
+          charProgress = end <= 1.0
+              ? ((p1to2 - start) / flipWindowFrac).clamp(0.0, 1.0)
+              : (p1to2 - start).clamp(0.0, 1.0);
+        } else {
+          fromChar = w1[i];
+          toChar = w1[i];
+          charProgress = 0.0;
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 3.5),
+          child: _FlipCharWidget(
+            fromChar: fromChar,
+            toChar: toChar,
+            progress: charProgress,
+          ),
+        );
+      }),
+    );
+  }
+}
+
+/// Flip-clock 3D character: rotasi sumbu X dengan perspektif, Curves.easeInOut
+class _FlipCharWidget extends StatelessWidget {
+  final String fromChar;
+  final String toChar;
+  final double progress; // 0.0 .. 1.0
+
+  const _FlipCharWidget({
+    required this.fromChar,
+    required this.toChar,
+    required this.progress,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (fromChar == toChar || progress <= 0.0) {
+      return _char(fromChar);
+    }
+    if (progress >= 1.0) {
+      return _char(toChar);
+    }
+
+    // Paruh pertama (0.0 – 0.5): karakter lama berotasi 0° → -90° (menghilang)
+    // Paruh kedua (0.5 – 1.0): karakter baru berotasi dari 90° → 0° (muncul)
+    // Kurva easeInOut: awal & akhir halus, tengah cepat (efek snap kalender)
+    final eased = _easeInOut(progress);
+    final isFirstHalf = eased < 0.5;
+    final displayChar = isFirstHalf ? fromChar : toChar;
+
+    // Angle: paruh pertama 0 → -π/2, paruh kedua π/2 → 0
+    final angle = isFirstHalf
+        ? -eased * pi         // 0 → -π/2
+        : (1.0 - eased) * pi; // π/2 → 0
+
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.identity()
+        ..setEntry(3, 2, 0.003) // perspektif 3D
+        ..rotateX(angle),
+      child: _char(displayChar),
+    );
+  }
+
+  static double _easeInOut(double t) {
+    // Sinusoidal ease-in-out untuk gerakan halus seperti kalender flip
+    return -(cos(pi * t) - 1) / 2;
+  }
+
+  Widget _char(String ch) {
+    return Text(
+      ch,
+      style: const TextStyle(
+        // BUG 4 FIX: Bebas Neue untuk NOMAL, OMALN, LAMON
+        fontFamily: 'BebasNeue',
+        fontSize: 58,
+        fontWeight: FontWeight.w400,
+        color: Color(0xFFB8630A),
+        height: 1.0,
+        decoration: TextDecoration.none,
+      ),
     );
   }
 }
