@@ -20,6 +20,14 @@ class BerandaScreen extends StatelessWidget {
     );
   }
 
+  void _onMainMenuClick(BuildContext context, MainMenuItem menu) {
+    if (menu.route == '/prediksi-penyakit' || menu.id == 'prediksi-penyakit') {
+      Navigator.pushNamed(context, '/prediksi-penyakit');
+      return;
+    }
+    _onMenuClick(context, menu.shortTitle, menu.description);
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = AppState.of(context);
@@ -367,10 +375,9 @@ class BerandaScreen extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final menu = AppMenus.mainMenus[index];
                   return GestureDetector(
-                    onTap: () => _onMenuClick(
+                    onTap: () => _onMainMenuClick(
                       context,
-                      menu.shortTitle,
-                      menu.description,
+                      menu,
                     ),
                     child: Container(
                       width: 134,

@@ -9,6 +9,9 @@ import '../screens/screening/screening_gender_screen.dart';
 import '../screens/screening/screening_birthdate_screen.dart';
 import '../screens/screening/screening_history_screen.dart';
 import '../screens/screening/screening_success_screen.dart';
+import '../screens/prediction/disease_prediction_screen.dart';
+import '../screens/prediction/disease_prediction_result_screen.dart';
+import '../models/reflux_prediction_model.dart';
 
 class AppRoutes {
   static const String initial = '/splash';
@@ -24,6 +27,10 @@ class AppRoutes {
   static const String screeningBirthdate = '/screening/birthdate';
   static const String screeningHistory = '/screening/history';
   static const String screeningSuccess = '/screening/success';
+
+  // Disease Prediction Routes
+  static const String diseasePrediction = '/prediksi-penyakit';
+  static const String diseasePredictionResult = '/prediksi-penyakit/result';
 
   /// Helper untuk membuat transisi halaman yang halus (fade + subtle slide 450ms)
   static PageRouteBuilder<T> _createSmoothRoute<T>(
@@ -108,6 +115,28 @@ class AppRoutes {
           const BerandaScreen(),
           settings: settings,
           isFadeOnly: true,
+        );
+      case diseasePrediction:
+        return _createSmoothRoute(
+          const DiseasePredictionScreen(),
+          settings: settings,
+        );
+      case diseasePredictionResult:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final result = args['result'] as RefluxPredictionResult?;
+        final dietInput = args['dietInput'] as UserDietInput?;
+        if (result != null) {
+          return _createSmoothRoute(
+            DiseasePredictionResultScreen(
+              result: result,
+              dietInput: dietInput,
+            ),
+            settings: settings,
+          );
+        }
+        return _createSmoothRoute(
+          const DiseasePredictionScreen(),
+          settings: settings,
         );
       case placeholder:
         final args = settings.arguments as Map<String, dynamic>? ?? {};

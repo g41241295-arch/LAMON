@@ -71,6 +71,7 @@ class AppMenus {
       route: '/prediksi-penyakit',
       assetPath: AppAssets.menuPrediksi,
       description: 'Cek gejala lambung dan analisis kemungkinan gangguan kesehatan lambung.',
+      implemented: true,
     ),
     MainMenuItem(
       id: 'ringkasan-makanan',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
+import '../models/reflux_prediction_model.dart';
 
 class AppState extends ChangeNotifier {
   UserModel _currentUser = const UserModel(
@@ -10,20 +11,23 @@ class AppState extends ChangeNotifier {
   bool _isAuthenticated = false;
   bool _lunchDone = false;
   int _currentNavIndex = 1; // 0 = Chat, 1 = Beranda, 2 = Profile
+  List<RefluxPredictionResult> _predictionHistory = [];
 
-  // Pre-registered users: email (lowercase) -> { name, password, hasCompletedScreening, screeningData }
+  // Pre-registered users: email (lowercase) -> { name, password, hasCompletedScreening, screeningData, predictionHistory }
   final Map<String, Map<String, dynamic>> _registeredUsers = {
     'hanabi00@gmail.com': {
       'name': 'Hanabi',
       'password': 'password123',
       'hasCompletedScreening': true,
       'screeningData': null,
+      'predictionHistory': <Map<String, dynamic>>[],
     },
     'user@gmail.com': {
       'name': 'User Lamon',
       'password': 'password123',
       'hasCompletedScreening': true,
       'screeningData': null,
+      'predictionHistory': <Map<String, dynamic>>[],
     },
   };
 
@@ -61,6 +65,22 @@ class AppState extends ChangeNotifier {
   bool get isAuthenticated => _isAuthenticated;
   bool get lunchDone => _lunchDone;
   int get currentNavIndex => _currentNavIndex;
+  List<RefluxPredictionResult> get predictionHistory =>
+      List.unmodifiable(_predictionHistory);
+
+  /// Menyimpan hasil prediksi ke riwayat akun pengguna
+  void savePredictionResult(RefluxPredictionResult result) {
+    _predictionHistory.insert(0, result);
+    final normalized = _currentUser.email.trim().toLowerCase();
+    if (_registeredUsers.containsKey(normalized)) {
+      final historyList = (_registeredUsers[normalized]!['predictionHistory']
+              as List<dynamic>? ??
+          []);
+      historyList.insert(0, result.toJson());
+      _registeredUsers[normalized]!['predictionHistory'] = historyList;
+    }
+    notifyListeners();
+  }
 
   /// Check whether an email is already registered in the system
   bool isEmailRegistered(String email) {
@@ -83,6 +103,11 @@ class AppState extends ChangeNotifier {
     final displayName = user?['name'] ?? _extractNameFromEmail(email);
     final hasScreening = user?['hasCompletedScreening'] as bool? ?? false;
     final screeningData = user?['screeningData'] as Map<String, dynamic>?;
+    final rawHistory = user?['predictionHistory'] as List<dynamic>? ?? [];
+    _predictionHistory = rawHistory
+        .map((item) =>
+            RefluxPredictionResult.fromJson(item as Map<String, dynamic>))
+        .toList();
 
     _currentUser = UserModel(
       name: displayName,
@@ -105,6 +130,7 @@ class AppState extends ChangeNotifier {
       'password': password,
       'hasCompletedScreening': false,
       'screeningData': null,
+      'predictionHistory': <Map<String, dynamic>>[],
     };
 
     // Reset draft screening
@@ -113,6 +139,7 @@ class AppState extends ChangeNotifier {
     _draftMonth = 1;
     _draftYear = 1990;
     _draftHasHistory = null;
+    _predictionHistory = [];
 
     _currentUser = UserModel(
       name: displayName,
@@ -144,6 +171,7 @@ class AppState extends ChangeNotifier {
         'password': '',
         'hasCompletedScreening': true,
         'screeningData': data,
+        'predictionHistory': <Map<String, dynamic>>[],
       };
     }
 
@@ -165,6 +193,7 @@ class AppState extends ChangeNotifier {
     final normalized = email.trim().toLowerCase();
     bool hasScreening = false;
     Map<String, dynamic>? screeningData;
+    List<dynamic> rawHistory = [];
 
     if (!_registeredUsers.containsKey(normalized)) {
       _registeredUsers[normalized] = {
@@ -172,11 +201,18 @@ class AppState extends ChangeNotifier {
         'password': '',
         'hasCompletedScreening': false,
         'screeningData': null,
+        'predictionHistory': <Map<String, dynamic>>[],
       };
     } else {
       hasScreening = _registeredUsers[normalized]!['hasCompletedScreening'] as bool? ?? false;
       screeningData = _registeredUsers[normalized]!['screeningData'] as Map<String, dynamic>?;
+      rawHistory = _registeredUsers[normalized]!['predictionHistory'] as List<dynamic>? ?? [];
     }
+
+    _predictionHistory = rawHistory
+        .map((item) =>
+            RefluxPredictionResult.fromJson(item as Map<String, dynamic>))
+        .toList();
 
     _currentUser = UserModel(
       name: name,
