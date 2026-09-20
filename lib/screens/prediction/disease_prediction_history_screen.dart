@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/reflux_prediction_model.dart';
@@ -6,7 +7,12 @@ import '../../utils/app_date_formatter.dart';
 import 'widgets/risk_trend_card.dart';
 
 class DiseasePredictionHistoryScreen extends StatefulWidget {
-  const DiseasePredictionHistoryScreen({super.key});
+  /// ID prediksi yang baru saja disimpan. Jika diisi, item tersebut
+  /// mendapat badge "Baru" yang hilang otomatis setelah beberapa detik.
+  /// Null jika dibuka lewat ikon jam biasa (tanpa sorotan).
+  final String? newId;
+
+  const DiseasePredictionHistoryScreen({super.key, this.newId});
 
   @override
   State<DiseasePredictionHistoryScreen> createState() =>
@@ -17,6 +23,33 @@ class _DiseasePredictionHistoryScreenState
     extends State<DiseasePredictionHistoryScreen> {
   bool _isLoading = false;
   bool _hasError = false;
+
+  /// ID yang sedang di-highlight sebagai "Baru". Di-clear setelah 3 detik
+  /// atau saat halaman ditinggalkan.
+  String? _highlightedId;
+  Timer? _highlightTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.newId != null) {
+      _highlightedId = widget.newId;
+      // Badge hilang setelah 3 detik
+      _highlightTimer = Timer(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _highlightedId = null;
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _highlightTimer?.cancel();
+    super.dispose();
+  }
 
   void _retryLoading() {
     setState(() {
@@ -355,6 +388,7 @@ class _DiseasePredictionHistoryScreenState
     final score = record.riskPercentage;
     final isLow = score <= 33.0;
     final isMedium = score > 33.0 && score <= 66.0;
+    final isNew = _highlightedId != null && _highlightedId == record.id;
 
     final Color riskColor;
     final Color riskBg;
@@ -373,19 +407,26 @@ class _DiseasePredictionHistoryScreenState
 
     final formattedDate = AppDateFormatter.formatDateTime(record.createdAt);
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOut,
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFFE2E8F0),
-          width: 1.2,
+          // Highlight border saat item baru
+          color: isNew
+              ? AppColors.primary.withValues(alpha: 0.55)
+              : const Color(0xFFE2E8F0),
+          width: isNew ? 2.0 : 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
+            color: isNew
+                ? AppColors.primary.withValues(alpha: 0.10)
+                : Colors.black.withValues(alpha: 0.03),
+            blurRadius: isNew ? 14 : 8,
             offset: const Offset(0, 2),
           ),
         ],
@@ -418,18 +459,47 @@ class _DiseasePredictionHistoryScreenState
                 ),
                 const SizedBox(width: 14),
 
-                // Bagian Tengah: Tanggal & Badge Kategori Risiko
+                // Bagian Tengah: Tanggal & Badge Kategori Risiko + badge "Baru"
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        formattedDate,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF334155),
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              formattedDate,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF334155),
+                              ),
+                            ),
+                          ),
+                          // Badge "Baru" — hanya muncul untuk item yang baru disimpan
+                          if (isNew)
+                            AnimatedOpacity(
+                              opacity: isNew ? 1.0 : 0.0,
+                              duration: const Duration(milliseconds: 300),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'Baru',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Container(

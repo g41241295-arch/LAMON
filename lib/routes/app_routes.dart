@@ -96,8 +96,12 @@ class AppRoutes {
     // Dynamic Route untuk Daftar Riwayat
     if (uri.path == diseasePredictionHistory ||
         uri.path == diseasePredictionHistoryLegacy) {
+      final args = settings.arguments is Map<String, dynamic>
+          ? settings.arguments as Map<String, dynamic>
+          : null;
+      final newId = args?['newId'] as String?;
       return _createSmoothRoute(
-        const DiseasePredictionHistoryScreen(),
+        DiseasePredictionHistoryScreen(newId: newId),
         settings: settings,
       );
     }
@@ -164,8 +168,12 @@ class AppRoutes {
         );
       case diseasePredictionHistory:
       case diseasePredictionHistoryLegacy:
+        final histArgs = settings.arguments is Map<String, dynamic>
+            ? settings.arguments as Map<String, dynamic>
+            : null;
+        final newId = histArgs?['newId'] as String?;
         return _createSmoothRoute(
-          const DiseasePredictionHistoryScreen(),
+          DiseasePredictionHistoryScreen(newId: newId),
           settings: settings,
         );
       case diseasePredictionResult:

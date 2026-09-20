@@ -33,19 +33,45 @@ class _DiseasePredictionResultScreenState
       _isSaved = true;
     });
 
+    // Tutup snackbar sebelumnya agar tidak menumpuk
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
+      SnackBar(
+        content: const Row(
           children: [
             Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
             SizedBox(width: 10),
-            Text('Hasil analisis berhasil disimpan ke riwayat akun!'),
+            Expanded(
+              child: Text(
+                'Hasil analisis berhasil disimpan ke riwayat akun!',
+                style: TextStyle(fontSize: 13),
+              ),
+            ),
           ],
         ),
         backgroundColor: AppColors.primary,
         behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 3),
+        duration: const Duration(seconds: 5),
+        // Action "Lihat" — membuka riwayat dan menghapus halaman hasil dari stack
+        action: SnackBarAction(
+          label: 'Lihat',
+          textColor: Colors.white,
+          onPressed: _goToHistory,
+        ),
       ),
+    );
+  }
+
+  /// Navigasi ke riwayat dan hapus halaman hasil dari back-stack.
+  /// Tujuan: tombol back di riwayat kembali ke intro (/prediksi-penyakit),
+  /// bukan kembali ke halaman hasil yang sudah selesai.
+  void _goToHistory() {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/prediksi-penyakit/riwayat',
+      ModalRoute.withName('/prediksi-penyakit'),
+      arguments: {'newId': widget.result.id},
     );
   }
 
@@ -515,7 +541,7 @@ class _DiseasePredictionResultScreenState
   Widget _buildActionButtons() {
     return Column(
       children: [
-        // Tombol "Simpan ke Riwayat" (Solid)
+        // Tombol "Simpan ke Riwayat" (Solid) / "Tersimpan ke Riwayat ✓" (disabled)
         SizedBox(
           width: double.infinity,
           height: 52,
@@ -544,6 +570,43 @@ class _DiseasePredictionResultScreenState
         ),
         const SizedBox(height: 12),
 
+        // Tombol "Lihat Riwayat" — muncul setelah data tersimpan
+        AnimatedCrossFade(
+          duration: const Duration(milliseconds: 300),
+          crossFadeState: _isSaved
+              ? CrossFadeState.showFirst
+              : CrossFadeState.showSecond,
+          firstChild: Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: OutlinedButton.icon(
+                onPressed: _goToHistory,
+                icon: const Icon(Icons.history_rounded, size: 18),
+                label: const Text(
+                  'Lihat Riwayat',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary, width: 1.8),
+                  backgroundColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Placeholder kosong saat belum tersimpan (agar layout tidak bergeser)
+          secondChild: const SizedBox.shrink(),
+        ),
+
         // Tombol "Isi Ulang Jawaban" — Outlined button dengan border biru teal
         SizedBox(
           width: double.infinity,
@@ -569,6 +632,8 @@ class _DiseasePredictionResultScreenState
             ),
           ),
         ),
+        // Spacer ekstra agar tombol tidak tertutup snackbar floating
+        const SizedBox(height: 20),
       ],
     );
   }
