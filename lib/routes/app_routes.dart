@@ -12,6 +12,8 @@ import '../screens/screening/screening_success_screen.dart';
 import '../screens/prediction/disease_prediction_intro_screen.dart';
 import '../screens/prediction/disease_prediction_screen.dart';
 import '../screens/prediction/disease_prediction_result_screen.dart';
+import '../screens/prediction/disease_prediction_history_screen.dart';
+import '../screens/prediction/disease_prediction_history_detail_screen.dart';
 import '../models/reflux_prediction_model.dart';
 
 class AppRoutes {
@@ -33,7 +35,8 @@ class AppRoutes {
   static const String diseasePrediction = '/prediksi-penyakit';
   static const String diseasePredictionForm = '/prediksi-penyakit/form';
   static const String diseasePredictionResult = '/prediksi-penyakit/result';
-  static const String diseasePredictionHistory = '/prediksi-penyakit/history';
+  static const String diseasePredictionHistory = '/prediksi-penyakit/riwayat';
+  static const String diseasePredictionHistoryLegacy = '/prediksi-penyakit/history';
 
   /// Helper untuk membuat transisi halaman yang halus (fade + subtle slide 450ms)
   static PageRouteBuilder<T> _createSmoothRoute<T>(
@@ -69,6 +72,36 @@ class AppRoutes {
   }
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
+    final rawName = settings.name ?? '';
+    final uri = Uri.parse(rawName);
+
+    // Dynamic Route untuk Detail Riwayat: /prediksi-penyakit/riwayat/:id atau /prediksi-penyakit/history/:id
+    if (uri.pathSegments.length == 3 &&
+        uri.pathSegments[0] == 'prediksi-penyakit' &&
+        (uri.pathSegments[1] == 'riwayat' || uri.pathSegments[1] == 'history')) {
+      final predictionId = uri.pathSegments[2];
+      final initialResult = settings.arguments is RefluxPredictionResult
+          ? settings.arguments as RefluxPredictionResult
+          : null;
+
+      return _createSmoothRoute(
+        DiseasePredictionHistoryDetailScreen(
+          predictionId: predictionId,
+          initialResult: initialResult,
+        ),
+        settings: settings,
+      );
+    }
+
+    // Dynamic Route untuk Daftar Riwayat
+    if (uri.path == diseasePredictionHistory ||
+        uri.path == diseasePredictionHistoryLegacy) {
+      return _createSmoothRoute(
+        const DiseasePredictionHistoryScreen(),
+        settings: settings,
+      );
+    }
+
     switch (settings.name) {
       case splash:
         return _createSmoothRoute(
@@ -130,11 +163,9 @@ class AppRoutes {
           settings: settings,
         );
       case diseasePredictionHistory:
+      case diseasePredictionHistoryLegacy:
         return _createSmoothRoute(
-          const PlaceholderScreen(
-            title: 'Riwayat Pemeriksaan',
-            description: 'Halaman riwayat hasil prediksi penyakit asam lambung sedang dikembangkan.',
-          ),
+          const DiseasePredictionHistoryScreen(),
           settings: settings,
         );
       case diseasePredictionResult:

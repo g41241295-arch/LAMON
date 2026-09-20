@@ -210,32 +210,36 @@ class DiseasePredictionIntroScreen extends StatelessWidget {
           ),
 
           // Tombol Riwayat Pemeriksaan
-          InkWell(
-            onTap: () =>
-                Navigator.pushNamed(context, '/prediksi-penyakit/history'),
-            borderRadius: BorderRadius.circular(24),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0xFFD6E2E8),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+          Semantics(
+            label: 'Riwayat Pemeriksaan',
+            button: true,
+            child: InkWell(
+              onTap: () =>
+                  Navigator.pushNamed(context, '/prediksi-penyakit/riwayat'),
+              borderRadius: BorderRadius.circular(24),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFD6E2E8),
+                    width: 1.2,
                   ),
-                ],
-              ),
-              child: const Icon(
-                Icons.history_rounded,
-                color: AppColors.primary,
-                size: 22,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.history_rounded,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
               ),
             ),
           ),

@@ -40,14 +40,16 @@ class RefluxPredictionService {
     // 5. Buat rekomendasi personal
     final recommendations = _generateRecommendations(input);
 
+    final now = DateTime.now();
     return RefluxPredictionResult(
+      id: 'pred_${now.millisecondsSinceEpoch}',
       riskPercentage: double.parse(riskPercentage.toStringAsFixed(1)),
       riskCategory: riskCategory,
       categoryDescription: categoryDescription,
       topFactors: topFactors,
       recommendations: recommendations,
       dietInput: input,
-      createdAt: DateTime.now(),
+      createdAt: now,
     );
   }
 

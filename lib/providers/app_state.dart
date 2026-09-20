@@ -82,6 +82,18 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Mengambil data snapshot riwayat prediksi berdasarkan ID
+  RefluxPredictionResult? getPredictionById(String id) {
+    try {
+      return _predictionHistory.firstWhere((item) {
+        final generatedId = 'pred_${item.createdAt.millisecondsSinceEpoch}';
+        return item.id == id || (item.id.isEmpty && generatedId == id) || generatedId == id;
+      });
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Check whether an email is already registered in the system
   bool isEmailRegistered(String email) {
     final normalized = email.trim().toLowerCase();

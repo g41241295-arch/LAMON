@@ -95,6 +95,52 @@ void main() {
       expect(appState.predictionHistory.length, 1);
       expect(appState.predictionHistory.first.riskPercentage, 45.0);
       expect(appState.predictionHistory.first.riskCategory, 'Risiko Sedang');
+
+      // Test lookup by ID
+      final retrieved = appState.getPredictionById(mockResult.id);
+      expect(retrieved, isNotNull);
+      expect(retrieved?.riskPercentage, 45.0);
+    });
+
+    test('RefluxPredictionResult JSON serialization preserves all fields', () {
+      const diet = UserDietInput(
+        dietType: 'Vegetarian',
+        fruitFrequency: 4,
+        vegetableFrequency: 4,
+        highFatRedMeat: false,
+        alcoholFrequency: 0,
+      );
+
+      final result = RefluxPredictionResult(
+        id: 'pred_test_123',
+        riskPercentage: 22.5,
+        riskCategory: 'Risiko Rendah',
+        categoryDescription: 'Pola makan ramah lambung',
+        topFactors: const [
+          FactorContribution(
+            featureName: 'fruit_habit',
+            title: 'Asupan Buah Tinggi',
+            userValueDescription: 'setiap hari',
+            contributionScore: 0.8,
+            icon: Icons.apple_rounded,
+          ),
+        ],
+        recommendations: const ['Pertahankan pola makan sehat'],
+        dietInput: diet,
+        createdAt: DateTime(2026, 9, 15, 14, 30),
+      );
+
+      final json = result.toJson();
+      final fromJson = RefluxPredictionResult.fromJson(json);
+
+      expect(fromJson.id, 'pred_test_123');
+      expect(fromJson.riskPercentage, 22.5);
+      expect(fromJson.riskCategory, 'Risiko Rendah');
+      expect(fromJson.dietInput.dietType, 'Vegetarian');
+      expect(fromJson.dietInput.fruitFrequency, 4);
+      expect(fromJson.dietInput.highFatRedMeat, isFalse);
+      expect(fromJson.topFactors.length, 1);
+      expect(fromJson.recommendations.first, 'Pertahankan pola makan sehat');
     });
   });
 
@@ -143,6 +189,165 @@ void main() {
 
       // Verifikasi kembali ke Langkah 1 dan Vegetarian tetap terpilih
       expect(find.text('Langkah 1 — Pola makan sehari-hari'), findsOneWidget);
+    });
+  });
+
+  group('DiseasePredictionHistoryScreen & Detail Tests', () {
+    testWidgets('Renders empty state when history is empty',
+        (WidgetTester tester) async {
+      final appState = AppState();
+
+      await tester.pumpWidget(
+        AppStateScope(
+          notifier: appState,
+          child: const MaterialApp(
+            initialRoute: '/prediksi-penyakit/riwayat',
+            onGenerateRoute: AppRoutes.onGenerateRoute,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Riwayat Prediksi'), findsOneWidget);
+      expect(find.text('Belum ada riwayat pemeriksaan'), findsOneWidget);
+      expect(find.text('Mulai Pemeriksaan Baru'), findsOneWidget);
+    });
+
+    testWidgets('Renders history list with trend card and navigates to detail snapshot',
+        (WidgetTester tester) async {
+      final appState = AppState();
+
+      final record1 = RefluxPredictionResult(
+        id: 'pred_1',
+        riskPercentage: 25.0,
+        riskCategory: 'Risiko Rendah',
+        categoryDescription: 'Pola makan baik',
+        topFactors: const [
+          FactorContribution(
+            featureName: 'fruit_habit',
+            title: 'Asupan Buah',
+            userValueDescription: 'setiap hari',
+            contributionScore: 0.6,
+            icon: Icons.apple_rounded,
+          ),
+        ],
+        recommendations: const ['Perbanyak serat'],
+        dietInput: const UserDietInput(
+          dietType: 'Omnivora',
+          fruitFrequency: 4,
+          vegetableFrequency: 3,
+          highFatRedMeat: false,
+        ),
+        createdAt: DateTime(2026, 9, 10, 10, 0),
+      );
+
+      final record2 = RefluxPredictionResult(
+        id: 'pred_2',
+        riskPercentage: 72.0,
+        riskCategory: 'Risiko Tinggi',
+        categoryDescription: 'Banyak faktor pemicu',
+        topFactors: const [
+          FactorContribution(
+            featureName: 'alcohol',
+            title: 'Konsumsi Alkohol',
+            userValueDescription: 'sering',
+            contributionScore: 0.9,
+            icon: Icons.local_bar_rounded,
+          ),
+        ],
+        recommendations: const ['Kurangi konsumsi alkohol'],
+        dietInput: const UserDietInput(
+          dietType: 'Omnivora',
+          alcoholFrequency: 3,
+          highFatRedMeat: true,
+        ),
+        createdAt: DateTime(2026, 9, 15, 14, 0),
+      );
+
+      appState.savePredictionResult(record1);
+      appState.savePredictionResult(record2);
+
+      await tester.pumpWidget(
+        AppStateScope(
+          notifier: appState,
+          child: const MaterialApp(
+            initialRoute: '/prediksi-penyakit/riwayat',
+            onGenerateRoute: AppRoutes.onGenerateRoute,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verifikasi judul dan list kartu
+      expect(find.text('Riwayat Prediksi'), findsOneWidget);
+      expect(find.text('Tren risikomu'), findsOneWidget);
+      expect(find.text('2 pemeriksaan'), findsOneWidget);
+      expect(find.text('Semua Pemeriksaan (2)'), findsOneWidget);
+      expect(find.text('72%'), findsWidgets);
+      expect(find.text('25%'), findsWidgets);
+
+      // Tap kartu terbaru (72%)
+      await tester.ensureVisible(find.text('Risiko Tinggi'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Risiko Tinggi'));
+      await tester.pumpAndSettle();
+
+      // Verifikasi halaman Detail Pemeriksaan (Snapshot)
+      expect(find.text('Detail Pemeriksaan'), findsOneWidget);
+      expect(find.text('Pola makan tercatat'), findsOneWidget);
+      expect(find.text('Jawaban yang tersimpan'), findsOneWidget);
+      expect(find.text('Daging tinggi lemak'), findsOneWidget);
+      expect(find.text('Ya'), findsOneWidget);
+      expect(find.text('Faktor paling berpengaruh saat itu'), findsOneWidget);
+      expect(find.text('Konsumsi Alkohol'), findsOneWidget);
+      expect(find.text('Rekomendasi saat itu'), findsOneWidget);
+      expect(find.text('Kurangi konsumsi alkohol'), findsOneWidget);
+
+      // Tap Back
+      final backBtn = find.byIcon(Icons.arrow_back_rounded);
+      await tester.tap(backBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Riwayat Prediksi'), findsOneWidget);
+    });
+
+    testWidgets('Direct route to /prediksi-penyakit/riwayat/:id renders detail snapshot on deep link',
+        (WidgetTester tester) async {
+      final appState = AppState();
+
+      final record = RefluxPredictionResult(
+        id: 'pred_999',
+        riskPercentage: 30.0,
+        riskCategory: 'Risiko Rendah',
+        categoryDescription: 'Aman dan stabil',
+        topFactors: const [],
+        recommendations: const ['Pertahankan hidrasi'],
+        dietInput: const UserDietInput(
+          dietType: 'Vegan',
+          fruitFrequency: 4,
+          vegetableFrequency: 4,
+        ),
+        createdAt: DateTime(2026, 9, 20, 8, 30),
+      );
+
+      appState.savePredictionResult(record);
+
+      await tester.pumpWidget(
+        AppStateScope(
+          notifier: appState,
+          child: const MaterialApp(
+            initialRoute: '/prediksi-penyakit/riwayat/pred_999',
+            onGenerateRoute: AppRoutes.onGenerateRoute,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Detail Pemeriksaan'), findsOneWidget);
+      expect(find.text('Vegan'), findsOneWidget);
+      expect(find.text('30'), findsOneWidget);
+      expect(find.text('Risiko Rendah'), findsOneWidget);
+      expect(find.text('Pertahankan hidrasi'), findsOneWidget);
     });
   });
 }

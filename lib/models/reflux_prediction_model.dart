@@ -205,6 +205,7 @@ class FactorContribution {
 
 /// Model hasil prediksi risiko refluks asam lambung
 class RefluxPredictionResult {
+  final String id;
   final double riskPercentage; // 0 - 100
   final String riskCategory; // "Risiko Rendah", "Risiko Sedang", "Risiko Tinggi"
   final String categoryDescription;
@@ -214,6 +215,7 @@ class RefluxPredictionResult {
   final DateTime createdAt;
 
   const RefluxPredictionResult({
+    this.id = '',
     required this.riskPercentage,
     required this.riskCategory,
     required this.categoryDescription,
@@ -225,6 +227,7 @@ class RefluxPredictionResult {
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id.isNotEmpty ? id : 'pred_${createdAt.millisecondsSinceEpoch}',
       'riskPercentage': riskPercentage,
       'riskCategory': riskCategory,
       'categoryDescription': categoryDescription,
@@ -236,7 +239,14 @@ class RefluxPredictionResult {
   }
 
   factory RefluxPredictionResult.fromJson(Map<String, dynamic> json) {
+    final createdAt = json['createdAt'] != null
+        ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
+        : DateTime.now();
+    final id = json['id'] as String? ??
+        'pred_${createdAt.millisecondsSinceEpoch}';
+
     return RefluxPredictionResult(
+      id: id,
       riskPercentage: (json['riskPercentage'] as num?)?.toDouble() ?? 0.0,
       riskCategory: json['riskCategory'] as String? ?? 'Risiko Rendah',
       categoryDescription: json['categoryDescription'] as String? ?? '',
@@ -252,9 +262,7 @@ class RefluxPredictionResult {
       dietInput: json['dietInput'] != null
           ? UserDietInput.fromJson(json['dietInput'] as Map<String, dynamic>)
           : const UserDietInput(),
-      createdAt: json['createdAt'] != null
-          ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
-          : DateTime.now(),
+      createdAt: createdAt,
     );
   }
 }
