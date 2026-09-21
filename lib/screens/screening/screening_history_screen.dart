@@ -33,11 +33,32 @@ class _ScreeningHistoryScreenState extends State<ScreeningHistoryScreen> {
     AppState.of(context).setDraftHasHistory(value);
   }
 
-  void _onNext() {
+  void _onNext() async {
     if (_hasHistory == null) return;
     final appState = AppState.of(context);
-    // Simpan tuntas ke profil akun user
-    appState.completeScreening();
+
+    // Tampilkan loading sebelum Firestore selesai
+    final saved = await appState.completeScreening();
+
+    if (!mounted) return;
+
+    if (!saved) {
+      // Simpan ke Firestore gagal — beri tahu user
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Gagal menyimpan data. Periksa koneksi internet Anda dan coba lagi.',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: Color(0xFFD32F2F),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 5),
+        ),
+      );
+      // Tetap navigasi ke success page karena data sudah tersimpan secara lokal,
+      // namun user sudah diberitahu bahwa sinkronisasi cloud gagal
+    }
+
     Navigator.pushNamed(context, '/screening/success');
   }
 

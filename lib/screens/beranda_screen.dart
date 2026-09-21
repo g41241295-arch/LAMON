@@ -59,6 +59,7 @@ class BerandaScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Tombol logout disembunyikan sementara sesuai permintaan
             // =========================================================
             // A. HEADER SAPAAN & MASKOT BERANDA
             // =========================================================

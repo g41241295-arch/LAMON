@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_assets.dart';
-import '../providers/app_state.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/primary_button.dart';
@@ -74,7 +75,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return isValid;
   }
 
-  void _handleRegister() {
+  void _handleRegister() async {
     if (!_validate()) return;
 
     setState(() {
@@ -84,54 +85,109 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    Future.delayed(const Duration(milliseconds: 350), () {
-      if (!mounted) return;
-      final appState = AppState.of(context);
+    try {
+      final UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-      // Check if email already registered
-      if (appState.isEmailRegistered(email)) {
-        setState(() {
-          _isLoading = false;
-          _emailError = 'Email ini sudah terdaftar. Silakan masuk.';
+      if (userCredential.user != null) {
+        final uid = userCredential.user!.uid;
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'email': email,
+          'tanggal_daftar': Timestamp.now(),
         });
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.info_outline_rounded, color: Colors.white),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Email sudah terdaftar. Silakan masuk menggunakan akun Anda.',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: const Color(0xFFD32F2F),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            margin: const EdgeInsets.all(16),
-            action: SnackBarAction(
-              label: 'Masuk',
-              textColor: Colors.amberAccent,
-              onPressed: () {
-                Navigator.pushReplacementNamed(context, '/login');
-              },
-            ),
-          ),
-        );
-        return;
+        
+        await FirebaseFirestore.instance.collection('login_history').add({
+          'user_id': uid,
+          'email': email,
+          'waktu_login': Timestamp.now(),
+        });
+
+        // Sign out user yang baru dibuat agar tidak otomatis tersi-login
+        await FirebaseAuth.instance.signOut();
       }
 
-      appState.registerWithEmail(email, password);
+      if (!mounted) return;
+      
       setState(() {
         _isLoading = false;
       });
-      // User baru langsung diarahkan ke Skrining Awal (wajib diselesaikan sekali)
-      Navigator.pushReplacementNamed(context, '/screening/gender');
-    });
+
+      // Tampilkan pesan sukses
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_outline_rounded, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Registrasi berhasil! Silakan masuk dengan akun Anda.',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF2E7D32),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+
+      // User diarahkan ke Login, bukan otomatis ke Skrining
+      Navigator.pushReplacementNamed(context, '/login');
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      String errorMessage = 'Terjadi kesalahan saat pendaftaran.';
+      if (e.code == 'email-already-in-use') {
+        errorMessage = 'Email ini sudah terdaftar. Silakan masuk.';
+      } else if (e.code == 'weak-password') {
+        errorMessage = 'Kata sandi terlalu lemah.';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'Format email tidak valid.';
+      }
+
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.info_outline_rounded, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  errorMessage,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFFD32F2F),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          margin: const EdgeInsets.all(16),
+          action: e.code == 'email-already-in-use' ? SnackBarAction(
+            label: 'Masuk',
+            textColor: Colors.amberAccent,
+            onPressed: () {
+              Navigator.pushReplacementNamed(context, '/login');
+            },
+          ) : null,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
