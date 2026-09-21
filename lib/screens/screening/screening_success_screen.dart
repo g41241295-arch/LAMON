@@ -131,9 +131,9 @@ class _ScreeningSuccessScreenState extends State<ScreeningSuccessScreen>
                       const GreenCheckmark3DBadge(size: 130),
                       const SizedBox(height: 32),
 
-                      // Teks SKRINING BERHASIL
+                      // Teks DATA BERHASIL DISIMPAN
                       const Text(
-                        'SKRINING\nBERHASIL',
+                        'DATA BERHASIL\nDISIMPAN',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 24,

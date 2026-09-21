@@ -166,8 +166,9 @@ class AppState extends ChangeNotifier {
     return true;
   }
 
-  /// Menyelesaikan skrining awal dan menyimpan status ke backend/database akun user
-  void completeScreening() {
+  /// Menyelesaikan skrining awal dan menyimpan status ke backend/database akun user.
+  /// Mengembalikan true jika berhasil disimpan ke Firestore, false jika gagal.
+  Future<bool> completeScreening() async {
     final normalized = _currentUser.email.trim().toLowerCase();
     final data = {
       'gender': _draftGender ?? 'Pria',
@@ -194,21 +195,33 @@ class AppState extends ChangeNotifier {
       screeningData: data,
     );
     notifyListeners();
-    
-    // Update ke Firestore secara asinkron
-    _updateScreeningToFirestore(data);
+
+    // Simpan ke Firestore dan tunggu hasilnya sebelum navigasi
+    final saved = await _updateScreeningToFirestore(data);
+    return saved;
   }
 
-  Future<void> _updateScreeningToFirestore(Map<String, dynamic> data) async {
+  /// Menyimpan data skrining ke Firestore. Mengembalikan true jika berhasil.
+  Future<bool> _updateScreeningToFirestore(Map<String, dynamic> data) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'hasCompletedScreening': true,
           'screeningData': data,
-        });
+          'jenis_kelamin': data['gender'],
+          'tanggal_lahir': data['birthDate'],
+          'riwayat_penyakit_lambung': data['hasHistory'],
+        }, SetOptions(merge: true));
+        debugPrint('Data skrining berhasil disimpan ke Firestore untuk uid: ${user.uid}');
+        return true;
       }
-    } catch (_) {}
+      debugPrint('Tidak ada user yang login, data skrining tidak tersimpan.');
+      return false;
+    } catch (e) {
+      debugPrint('GAGAL menyimpan data skrining ke Firestore: $e');
+      return false;
+    }
   }
 
   String _extractNameFromEmail(String email) {

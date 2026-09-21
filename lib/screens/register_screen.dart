@@ -103,6 +103,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'email': email,
           'waktu_login': Timestamp.now(),
         });
+
+        // Sign out user yang baru dibuat agar tidak otomatis tersi-login
+        await FirebaseAuth.instance.signOut();
       }
 
       if (!mounted) return;
@@ -111,8 +114,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _isLoading = false;
       });
 
-      // User baru langsung diarahkan ke Skrining Awal (wajib diselesaikan sekali)
-      Navigator.pushReplacementNamed(context, '/screening/gender');
+      // Tampilkan pesan sukses
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_outline_rounded, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Registrasi berhasil! Silakan masuk dengan akun Anda.',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF2E7D32),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+
+      // User diarahkan ke Login, bukan otomatis ke Skrining
+      Navigator.pushReplacementNamed(context, '/login');
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       setState(() {

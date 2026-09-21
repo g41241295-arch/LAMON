@@ -80,41 +80,58 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (userCredential.user != null) {
         final uid = userCredential.user!.uid;
-        await FirebaseFirestore.instance.collection('login_history').add({
-          'user_id': uid,
-          'email': email,
-          'waktu_login': Timestamp.now(),
-        });
+        try {
+          await FirebaseFirestore.instance.collection('login_history').add({
+            'user_id': uid,
+            'email': email,
+            'waktu_login': Timestamp.now(),
+          });
+        } catch (e) {
+          debugPrint('Gagal menambahkan riwayat login: $e');
+        }
 
-        // Cek status skrining dari Firestore
-        final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        // Cek status skrining dari Firestore dengan timeout 10 detik
+        // agar tidak macet selamanya jika Firestore Rules memblokir
         bool hasCompletedScreening = false;
         String userName = 'User';
-        
-        if (userDoc.exists) {
-          final data = userDoc.data();
-          if (data != null) {
-            hasCompletedScreening = data['hasCompletedScreening'] == true;
-            userName = data['nama'] ?? 'User';
+        try {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .get()
+              .timeout(const Duration(seconds: 10));
+          if (userDoc.exists) {
+            final data = userDoc.data();
+            if (data != null) {
+              hasCompletedScreening = data['hasCompletedScreening'] == true;
+              userName = data['nama'] ?? data['name'] ?? 'User';
+            }
           }
+        } catch (e) {
+          debugPrint('Gagal membaca data user dari Firestore: $e');
+          // Lanjutkan login meski Firestore gagal; default ke skrining jika belum ada data
         }
 
         if (!mounted) return;
-        
+
         setState(() {
           _isLoading = false;
         });
 
         final appState = AppState.of(context);
-        // Perbarui state lokal dengan data dari Firestore
-        appState.loginWithGoogle(userName, email); 
-        // Note: loginWithGoogle di appState sebenarnya cuma nge-set current user tanpa peduli password. Nanti kita sesuaikan jika perlu.
+        appState.loginWithGoogle(userName, email);
 
         if (!hasCompletedScreening) {
           Navigator.pushReplacementNamed(context, '/screening/gender');
         } else {
           Navigator.pushReplacementNamed(context, '/beranda');
         }
+      } else {
+        // userCredential.user == null — kondisi tidak normal, reset loading
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+        });
       }
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
@@ -162,6 +179,28 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         _isLoading = false;
       });
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Terjadi kesalahan saat masuk.',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFFD32F2F),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
   }
 
