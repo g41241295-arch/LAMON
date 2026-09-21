@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_assets.dart';
 import '../models/menu_item_model.dart';
@@ -59,6 +61,20 @@ class BerandaScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                tooltip: 'Keluar',
+                icon: const Icon(Icons.logout_rounded, color: AppColors.brownAccent),
+                onPressed: () async {
+                  await GoogleSignIn.instance.signOut();
+                  await FirebaseAuth.instance.signOut();
+                  if (context.mounted) {
+                    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                  }
+                },
+              ),
+            ),
             // =========================================================
             // A. HEADER SAPAAN & MASKOT BERANDA
             // =========================================================

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_assets.dart';
 import '../providers/app_state.dart';
@@ -60,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return isValid;
   }
 
-  void _handleLogin() {
+  void _handleLogin() async {
     if (!_validate()) return;
 
     setState(() {
@@ -70,90 +72,97 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    Future.delayed(const Duration(milliseconds: 350), () {
+    try {
+      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (userCredential.user != null) {
+        final uid = userCredential.user!.uid;
+        await FirebaseFirestore.instance.collection('login_history').add({
+          'user_id': uid,
+          'email': email,
+          'waktu_login': Timestamp.now(),
+        });
+
+        // Cek status skrining dari Firestore
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        bool hasCompletedScreening = false;
+        String userName = 'User';
+        
+        if (userDoc.exists) {
+          final data = userDoc.data();
+          if (data != null) {
+            hasCompletedScreening = data['hasCompletedScreening'] == true;
+            userName = data['nama'] ?? 'User';
+          }
+        }
+
+        if (!mounted) return;
+        
+        setState(() {
+          _isLoading = false;
+        });
+
+        final appState = AppState.of(context);
+        // Perbarui state lokal dengan data dari Firestore
+        appState.loginWithGoogle(userName, email); 
+        // Note: loginWithGoogle di appState sebenarnya cuma nge-set current user tanpa peduli password. Nanti kita sesuaikan jika perlu.
+
+        if (!hasCompletedScreening) {
+          Navigator.pushReplacementNamed(context, '/screening/gender');
+        } else {
+          Navigator.pushReplacementNamed(context, '/beranda');
+        }
+      }
+    } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      final appState = AppState.of(context);
-
-      // Check if user account exists
-      if (!appState.isEmailRegistered(email)) {
-        setState(() {
-          _isLoading = false;
-          _emailError = 'Akun tidak ditemukan. Silakan daftar terlebih dahulu.';
-        });
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.error_outline_rounded, color: Colors.white),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Akun tidak ditemukan. Silakan daftar terlebih dahulu.',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: const Color(0xFFD32F2F),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            margin: const EdgeInsets.all(16),
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'Daftar Sekarang',
-              textColor: Colors.amberAccent,
-              onPressed: () {
-                Navigator.pushNamed(context, '/register');
-              },
-            ),
-          ),
-        );
-        return;
-      }
-
-      // Check if password matches
-      if (!appState.verifyPassword(email, password)) {
-        setState(() {
-          _isLoading = false;
-          _passwordError = 'Kata sandi yang Anda masukkan salah.';
-        });
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.lock_outline_rounded, color: Colors.white),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Kata sandi salah. Silakan coba lagi.',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: const Color(0xFFD32F2F),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            margin: const EdgeInsets.all(16),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-        return;
-      }
-
-      // Valid credentials
-      appState.loginWithEmail(email, password);
       setState(() {
         _isLoading = false;
       });
-      if (!appState.currentUser.hasCompletedScreening) {
-        Navigator.pushReplacementNamed(context, '/screening/gender');
-      } else {
-        Navigator.pushReplacementNamed(context, '/beranda');
+      String errorMessage = 'Terjadi kesalahan saat login.';
+      if (e.code == 'user-not-found' || e.code == 'invalid-credential' || e.code == 'invalid-email') {
+        errorMessage = 'Akun tidak ditemukan. Silakan daftar terlebih dahulu.';
+      } else if (e.code == 'wrong-password') {
+        errorMessage = 'Kata sandi salah. Silakan coba lagi.';
       }
-    });
+      
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  errorMessage,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFFD32F2F),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 4),
+          action: (e.code == 'user-not-found' || e.code == 'invalid-credential') ? SnackBarAction(
+            label: 'Daftar',
+            textColor: Colors.amberAccent,
+            onPressed: () {
+              Navigator.pushNamed(context, '/register');
+            },
+          ) : null,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "360000290906",
+    "project_id": "lamon-a720b",
+    "storage_bucket": "lamon-a720b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:360000290906:android:6184d923db161b6dd39863",
+        "android_client_info": {
+          "package_name": "com.lamon.lamon"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "360000290906-o2kf8cheif62eajf12ri718r3a3faj65.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.lamon.lamon",
+            "certificate_hash": "3c227e79127f9aba07b2fc89d947212c8817e35f"
+          }
+        },
+        {
+          "client_id": "360000290906-hsn7ebeukuas0bq56a1avq2m00nduknr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD28BAD9HX7awYnwi0iegkY3m6uLbYuyNU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "360000290906-hsn7ebeukuas0bq56a1avq2m00nduknr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

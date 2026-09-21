@@ -1,85 +1,123 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_assets.dart';
 import '../providers/app_state.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/primary_button.dart';
 
-class GoogleAuthScreen extends StatelessWidget {
+class GoogleAuthScreen extends StatefulWidget {
   const GoogleAuthScreen({super.key});
 
-  final List<Map<String, String>> _accounts = const [
-    {
-      'name': 'Hanabi',
-      'email': 'Hanabi00@gmail.com',
-    },
-    {
-      'name': 'Hanabi',
-      'email': 'h4nab1@gmail.com',
-    },
-  ];
+  @override
+  State<GoogleAuthScreen> createState() => _GoogleAuthScreenState();
+}
 
-  void _selectAccount(BuildContext context, String name, String email) {
-    final appState = AppState.of(context);
-    appState.loginWithGoogle(name, email);
-    if (!appState.currentUser.hasCompletedScreening) {
-      Navigator.pushNamedAndRemoveUntil(context, '/screening/gender', (route) => false);
-    } else {
-      Navigator.pushNamedAndRemoveUntil(context, '/beranda', (route) => false);
+class _GoogleAuthScreenState extends State<GoogleAuthScreen> {
+  bool _isLoading = false;
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Inisialisasi GoogleSignIn dengan Web Client ID
+      await GoogleSignIn.instance.initialize(
+        serverClientId: '360000290906-hsn7ebeukuas0bq56a1avq2m00nduknr.apps.googleusercontent.com',
+      );
+      
+      // Trigger the authentication flow
+      final GoogleSignInAccount? googleUser = await GoogleSignIn.instance.authenticate();
+
+      if (googleUser == null) {
+        // User canceled the sign-in flow
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      
+      // Request authorization to get access token (dibutuhkan Firebase)
+      final clientAuth = await googleUser.authorizationClient.authorizeScopes(['email', 'profile']);
+
+      // Create a new credential
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: clientAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Once signed in, return the UserCredential
+      final UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+
+      if (userCredential.user != null) {
+        final uid = userCredential.user!.uid;
+        final email = userCredential.user!.email ?? googleUser.email;
+        
+        // Simpan riwayat login ke Firestore
+        await FirebaseFirestore.instance.collection('login_history').add({
+          'user_id': uid,
+          'email': email,
+          'waktu_login': Timestamp.now(),
+        });
+
+        bool hasCompletedScreening = false;
+        String userName = googleUser.displayName ?? 'User';
+
+        // Cek jika pengguna baru
+        if (userCredential.additionalUserInfo?.isNewUser == true) {
+          await FirebaseFirestore.instance.collection('users').doc(uid).set({
+            'nama': userName,
+            'email': email,
+            'tanggal_daftar': Timestamp.now(),
+            'hasCompletedScreening': false,
+          });
+        } else {
+          // Ambil dari Firestore
+          final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+          if (userDoc.exists) {
+            final data = userDoc.data();
+            if (data != null) {
+              hasCompletedScreening = data['hasCompletedScreening'] == true;
+              userName = data['nama'] ?? userName;
+            }
+          }
+        }
+
+        if (!mounted) return;
+
+        final appState = AppState.of(context);
+        appState.loginWithGoogle(userName, email);
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        if (!hasCompletedScreening) {
+          Navigator.pushNamedAndRemoveUntil(context, '/screening/gender', (route) => false);
+        } else {
+          Navigator.pushNamedAndRemoveUntil(context, '/beranda', (route) => false);
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan saat login dengan Google: $e'),
+          backgroundColor: const Color(0xFFD32F2F),
+        ),
+      );
     }
-  }
-
-  void _showAddAccountDialog(BuildContext context) {
-    final controller = TextEditingController(text: 'user.baru@gmail.com');
-
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Tambahkan Akun Google',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AppColors.primary,
-          ),
-        ),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            hintText: 'Masukkan email Google baru',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () {
-              final text = controller.text.trim();
-              if (text.isNotEmpty) {
-                final namePart = text.split('@').first;
-                final capitalized = namePart.isNotEmpty
-                    ? namePart[0].toUpperCase() + namePart.substring(1)
-                    : 'Hanabi';
-                Navigator.pop(dialogCtx);
-                _selectAccount(context, capitalized, text);
-              }
-            },
-            child: const Text('Lanjutkan'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -151,7 +189,7 @@ class GoogleAuthScreen extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   const Text(
-                    'Pilih Akun',
+                    'Login Google',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w900,
@@ -162,124 +200,22 @@ class GoogleAuthScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   const Text(
                     'Untuk Melanjutkan ke LAMON',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,
                       height: 1.2,
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
 
-                  // Account List
-                  ..._accounts.map((acc) {
-                    return Column(
-                      children: [
-                        InkWell(
-                          onTap: () => _selectAccount(
-                            context,
-                            acc['name']!,
-                            acc['email']!,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 10,
-                              horizontal: 4,
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFCCCCCC),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      acc['name']![0],
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        acc['name']!,
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.primary,
-                                        ),
-                                      ),
-                                      Text(
-                                        acc['email']!,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          color: Color(0xFF5B89A0),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const Divider(
-                          color: AppColors.lightGray,
-                          height: 1,
-                          thickness: 1,
-                        ),
-                      ],
-                    );
-                  }),
-
-                  // Add Account Button
-                  InkWell(
-                    onTap: () => _showAddAccountDialog(context),
-                    borderRadius: BorderRadius.circular(12),
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: 14,
-                        horizontal: 4,
-                      ),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 44,
-                            height: 44,
-                            child: Center(
-                              child: Icon(
-                                Icons.person_add_alt_1_rounded,
-                                color: AppColors.primary,
-                                size: 26,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 14),
-                          Text(
-                            'Tambahkan akun lain',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  // Lanjutkan dengan Google Button
+                  PrimaryButton(
+                    text: 'Lanjutkan dengan Google',
+                    isLoading: _isLoading,
+                    onPressed: _signInWithGoogle,
                   ),
 
                   const SizedBox(height: 24),
@@ -287,7 +223,7 @@ class GoogleAuthScreen extends StatelessWidget {
                   // Privacy Policy Disclaimer
                   const Text(
                     'Untuk melanjutkan, Google akan membagikan nama, alamat email, dan foto profil Anda ke LAMON. Sebelum menggunakan aplikasi ini, tinjau kebijakan privasi dan persyaratan layanan-nya',
-                    textAlign: TextAlign.justify,
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.45,

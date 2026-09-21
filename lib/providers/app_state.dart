@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../models/reflux_prediction_model.dart';
 
@@ -192,6 +194,21 @@ class AppState extends ChangeNotifier {
       screeningData: data,
     );
     notifyListeners();
+    
+    // Update ke Firestore secara asinkron
+    _updateScreeningToFirestore(data);
+  }
+
+  Future<void> _updateScreeningToFirestore(Map<String, dynamic> data) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+          'hasCompletedScreening': true,
+          'screeningData': data,
+        });
+      }
+    } catch (_) {}
   }
 
   String _extractNameFromEmail(String email) {
