@@ -1,11 +1,11 @@
 {
-    "name": "lamon",
-    "short_name": "lamon",
+    "name": "LAMON",
+    "short_name": "LAMON",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFF3BF",
+    "theme_color": "#276F8F",
+    "description": "LAMON - Pemantauan Kesehatan Lambung",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

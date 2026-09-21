@@ -218,42 +218,45 @@ class RiskTrendCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // 3 Chip Statistik: Terendah, Tertinggi, Arah Tren
-          Row(
-            children: [
-              // Chip Terendah
-              Expanded(
-                child: _buildStatChip(
-                  label: 'Terendah',
-                  value: '${minScore.toInt()}%',
-                  valueColor: const Color(0xFF2E7D32),
-                  bgColor: const Color(0xFFF1F8F3),
+          // 3 Chip Statistik: Terendah, Tertinggi, Arah Tren (Tinggi sama & sejajar)
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Chip Terendah
+                Expanded(
+                  child: _buildStatChip(
+                    label: 'Terendah',
+                    value: '${minScore.toInt()}%',
+                    valueColor: const Color(0xFF2E7D32),
+                    bgColor: const Color(0xFFF1F8F3),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
+                const SizedBox(width: 8),
 
-              // Chip Tertinggi
-              Expanded(
-                child: _buildStatChip(
-                  label: 'Tertinggi',
-                  value: '${maxScore.toInt()}%',
-                  valueColor: const Color(0xFFC62828),
-                  bgColor: const Color(0xFFFDF2F2),
+                // Chip Tertinggi
+                Expanded(
+                  child: _buildStatChip(
+                    label: 'Tertinggi',
+                    value: '${maxScore.toInt()}%',
+                    valueColor: const Color(0xFFC62828),
+                    bgColor: const Color(0xFFFDF2F2),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
+                const SizedBox(width: 8),
 
-              // Chip Arah Tren
-              Expanded(
-                child: _buildTrendChip(
-                  label: 'Arah tren',
-                  value: trendLabel,
-                  icon: trendIcon,
-                  valueColor: trendColor,
-                  bgColor: trendBg,
+                // Chip Arah Tren
+                Expanded(
+                  child: _buildTrendChip(
+                    label: 'Arah tren',
+                    value: trendLabel,
+                    icon: trendIcon,
+                    valueColor: trendColor,
+                    bgColor: trendBg,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -267,7 +270,7 @@ class RiskTrendCard extends StatelessWidget {
     required Color bgColor,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(14),
@@ -277,22 +280,32 @@ class RiskTrendCard extends StatelessWidget {
         ),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             label,
+            maxLines: 1,
             style: const TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w600,
               color: Color(0xFF64748B),
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              color: valueColor,
+          const SizedBox(height: 3),
+          SizedBox(
+            height: 20,
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: valueColor,
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -318,34 +331,41 @@ class RiskTrendCard extends StatelessWidget {
         ),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             label,
+            maxLines: 1,
             style: const TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w600,
               color: Color(0xFF64748B),
             ),
           ),
-          const SizedBox(height: 2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 14, color: valueColor),
-              const SizedBox(width: 2),
-              Flexible(
-                child: Text(
-                  value,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: valueColor,
-                  ),
+          const SizedBox(height: 3),
+          SizedBox(
+            height: 20,
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 14, color: valueColor),
+                    const SizedBox(width: 3),
+                    Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: valueColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ],
       ),

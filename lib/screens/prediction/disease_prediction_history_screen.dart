@@ -24,7 +24,7 @@ class _DiseasePredictionHistoryScreenState
   bool _isLoading = false;
   bool _hasError = false;
 
-  /// ID yang sedang di-highlight sebagai "Baru". Di-clear setelah 3 detik
+  /// ID yang sedang di-highlight sebagai "Baru". Di-clear setelah 3.5 detik
   /// atau saat halaman ditinggalkan.
   String? _highlightedId;
   Timer? _highlightTimer;
@@ -34,8 +34,8 @@ class _DiseasePredictionHistoryScreenState
     super.initState();
     if (widget.newId != null) {
       _highlightedId = widget.newId;
-      // Badge hilang setelah 3 detik
-      _highlightTimer = Timer(const Duration(seconds: 3), () {
+      // Badge memudar setelah 3.5 detik
+      _highlightTimer = Timer(const Duration(milliseconds: 3500), () {
         if (mounted) {
           setState(() {
             _highlightedId = null;
@@ -389,6 +389,7 @@ class _DiseasePredictionHistoryScreenState
     final isLow = score <= 33.0;
     final isMedium = score > 33.0 && score <= 66.0;
     final isNew = _highlightedId != null && _highlightedId == record.id;
+    final isRecentlySaved = widget.newId != null && widget.newId == record.id;
 
     final Color riskColor;
     final Color riskBg;
@@ -407,142 +408,192 @@ class _DiseasePredictionHistoryScreenState
 
     final formattedDate = AppDateFormatter.formatDateTime(record.createdAt);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeOut,
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          // Highlight border saat item baru
-          color: isNew
-              ? AppColors.primary.withValues(alpha: 0.55)
-              : const Color(0xFFE2E8F0),
-          width: isNew ? 2.0 : 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isNew
-                ? AppColors.primary.withValues(alpha: 0.10)
-                : Colors.black.withValues(alpha: 0.03),
-            blurRadius: isNew ? 14 : 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        child: InkWell(
-          onTap: () => _navigateToDetail(record),
+    return Semantics(
+      label: isRecentlySaved
+          ? 'Pemeriksaan terbaru, $formattedDate, $riskLabel, ${score.toInt()} persen'
+          : 'Pemeriksaan, $formattedDate, $riskLabel, ${score.toInt()} persen',
+      button: true,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOut,
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                // Dot Indikator Level Risiko
-                Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: riskColor,
-                    boxShadow: [
-                      BoxShadow(
-                        color: riskColor.withValues(alpha: 0.35),
-                        blurRadius: 4,
-                        spreadRadius: 1,
-                      ),
-                    ],
+          border: Border.all(
+            // Lebar border SAMA (1.5 px) di semua kartu agar konten selalu sejajar
+            color: isNew
+                ? AppColors.primary.withValues(alpha: 0.65)
+                : const Color(0xFFE2E8F0),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isNew
+                  ? AppColors.primary.withValues(alpha: 0.14)
+                  : Colors.black.withValues(alpha: 0.03),
+              blurRadius: isNew ? 12 : 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            onTap: () => _navigateToDetail(record),
+            borderRadius: BorderRadius.circular(20),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  // Dot Indikator Level Risiko
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: riskColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: riskColor.withValues(alpha: 0.35),
+                          blurRadius: 4,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 14),
+                  const SizedBox(width: 14),
 
-                // Bagian Tengah: Tanggal & Badge Kategori Risiko + badge "Baru"
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              formattedDate,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF334155),
+                  // Bagian Tengah: Tanggal & Baris 2 (Chip Kategori Risiko + Badge "Baru")
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Baris 1: Tanggal & Waktu
+                        Text(
+                          formattedDate,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+
+                        // Baris 2: Chip Risiko & Badge "Baru" berdampingan
+                        Wrap(
+                          spacing: 7,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            // Chip Kategori Risiko
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: riskBg,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: riskColor.withValues(alpha: 0.20),
+                                  width: 1.0,
+                                ),
+                              ),
+                              child: Text(
+                                riskLabel,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: riskColor,
+                                  height: 1.2,
+                                ),
                               ),
                             ),
-                          ),
-                          // Badge "Baru" — hanya muncul untuk item yang baru disimpan
-                          if (isNew)
-                            AnimatedOpacity(
-                              opacity: isNew ? 1.0 : 0.0,
-                              duration: const Duration(milliseconds: 300),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 7, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Text(
-                                  'Baru',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
-                                    letterSpacing: 0.2,
+
+                            // Badge "Baru" — Muncul hanya pada item yang baru disimpan, memudar halus tanpa mengubah ukuran
+                            if (isRecentlySaved)
+                              AnimatedOpacity(
+                                opacity: isNew ? 1.0 : 0.0,
+                                duration: const Duration(milliseconds: 500),
+                                curve: Curves.easeInOut,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.10),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: AppColors.primary
+                                          .withValues(alpha: 0.30),
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.auto_awesome,
+                                        size: 11,
+                                        color: AppColors.primaryDark,
+                                      ),
+                                      SizedBox(width: 3.5),
+                                      Text(
+                                        'Baru',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppColors.primaryDark,
+                                          height: 1.2,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: riskBg,
-                          borderRadius: BorderRadius.circular(8),
+                          ],
                         ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Bagian Kanan: Kolom Persentase Skor & Chevron (Lebar & Posisi Konsisten)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 54),
                         child: Text(
-                          riskLabel,
+                          '${score.toInt()}%',
+                          textAlign: TextAlign.right,
                           style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 21,
+                            fontWeight: FontWeight.w900,
                             color: riskColor,
+                            letterSpacing: -0.5,
+                            fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
                       ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        size: 22,
+                        color: Color(0xFF94A3B8),
+                      ),
                     ],
                   ),
-                ),
-
-                // Bagian Kanan: Persentase Skor Besar & Chevron
-                Row(
-                  children: [
-                    Text(
-                      '${score.toInt()}%',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: riskColor,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      size: 22,
-                      color: Color(0xFF94A3B8),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
