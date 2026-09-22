@@ -202,6 +202,8 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
           _activeSession == MealSession.makanMalam ? s.bebanPikiran : null,
       bebanAktivitas:
           _activeSession == MealSession.makanMalam ? s.bebanAktivitas : null,
+    );
+
     try {
       await _service.saveEntry(entry);
 

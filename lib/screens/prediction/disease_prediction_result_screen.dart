@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/reflux_prediction_model.dart';
 import '../../providers/app_state.dart';
+import '../../services/prediction_history_repository.dart';
 import 'widgets/factor_contribution_bar.dart';
 
 class DiseasePredictionResultScreen extends StatefulWidget {
@@ -21,45 +22,118 @@ class DiseasePredictionResultScreen extends StatefulWidget {
 
 class _DiseasePredictionResultScreenState
     extends State<DiseasePredictionResultScreen> {
+  final _repository = PredictionHistoryRepository();
   bool _isSaved = false;
+  bool _isSaving = false;
 
-  void _saveToHistory() {
-    if (_isSaved) return;
+  Future<void> _saveToHistory() async {
+    if (_isSaved || _isSaving) return;
 
-    final appState = AppState.of(context);
-    appState.savePredictionResult(widget.result);
+    if (!_repository.isAuthenticated) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Silakan login terlebih dahulu untuk menyimpan riwayat.',
+                  style: TextStyle(fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFFD32F2F),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Login',
+            textColor: Colors.white,
+            onPressed: () {
+              Navigator.pushNamed(context, '/login');
+            },
+          ),
+        ),
+      );
+      return;
+    }
 
     setState(() {
-      _isSaved = true;
+      _isSaving = true;
     });
 
-    // Tutup snackbar sebelumnya agar tidak menumpuk
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Hasil analisis berhasil disimpan ke riwayat akun!',
-                style: TextStyle(fontSize: 13),
+    try {
+      await _repository.save(widget.result);
+
+      if (!mounted) return;
+
+      final appState = AppState.of(context);
+      appState.savePredictionResult(widget.result);
+
+      setState(() {
+        _isSaved = true;
+        _isSaving = false;
+      });
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Hasil analisis berhasil disimpan ke riwayat akun!',
+                  style: TextStyle(fontSize: 13),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
+          backgroundColor: AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Lihat',
+            textColor: Colors.white,
+            onPressed: _goToHistory,
+          ),
         ),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 5),
-        // Action "Lihat" — membuka riwayat dan menghapus halaman hasil dari stack
-        action: SnackBarAction(
-          label: 'Lihat',
-          textColor: Colors.white,
-          onPressed: _goToHistory,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+      });
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Gagal menyimpan ke riwayat: ${e.toString().replaceAll("Exception: ", "")}',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFFD32F2F),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Coba Lagi',
+            textColor: Colors.white,
+            onPressed: _saveToHistory,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   /// Navigasi ke riwayat dan hapus halaman hasil dari back-stack.
@@ -546,26 +620,36 @@ class _DiseasePredictionResultScreenState
           width: double.infinity,
           height: 52,
           child: ElevatedButton(
-            onPressed: _isSaved ? null : _saveToHistory,
+            onPressed: (_isSaved || _isSaving) ? null : _saveToHistory,
             style: ElevatedButton.styleFrom(
               backgroundColor:
                   _isSaved ? AppColors.successGreen : AppColors.primary,
               foregroundColor: Colors.white,
-              disabledBackgroundColor: AppColors.successGreen,
+              disabledBackgroundColor:
+                  _isSaved ? AppColors.successGreen : AppColors.primary.withValues(alpha: 0.6),
               disabledForegroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            child: Text(
-              _isSaved ? 'Tersimpan ke Riwayat ✓' : 'Simpan ke Riwayat',
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.2,
-              ),
-            ),
+            child: _isSaving
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Text(
+                    _isSaved ? 'Tersimpan ke Riwayat ✓' : 'Simpan ke Riwayat',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
           ),
         ),
         const SizedBox(height: 12),

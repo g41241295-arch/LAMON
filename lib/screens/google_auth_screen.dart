@@ -30,17 +30,7 @@ class _GoogleAuthScreenState extends State<GoogleAuthScreen> {
       );
       
       // Trigger the authentication flow
-      final GoogleSignInAccount? googleUser = await GoogleSignIn.instance.authenticate();
-
-      if (googleUser == null) {
-        // User canceled the sign-in flow
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
-        return;
-      }
+      final googleUser = await GoogleSignIn.instance.authenticate();
 
       // Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;

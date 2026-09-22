@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/reflux_prediction_model.dart';
 import '../../providers/app_state.dart';
+import '../../services/prediction_history_repository.dart';
 import '../../utils/app_date_formatter.dart';
 import 'widgets/risk_trend_card.dart';
 
@@ -21,8 +22,11 @@ class DiseasePredictionHistoryScreen extends StatefulWidget {
 
 class _DiseasePredictionHistoryScreenState
     extends State<DiseasePredictionHistoryScreen> {
-  bool _isLoading = false;
+  final _repository = PredictionHistoryRepository();
+  List<RefluxPredictionResult> _history = [];
+  bool _isLoading = true;
   bool _hasError = false;
+  bool _isInitialized = false;
 
   /// ID yang sedang di-highlight sebagai "Baru". Di-clear setelah 3.5 detik
   /// atau saat halaman ditinggalkan.
@@ -46,24 +50,72 @@ class _DiseasePredictionHistoryScreenState
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _isInitialized = true;
+      final cached = AppState.of(context).predictionHistory;
+      if (cached.isNotEmpty) {
+        _history = cached;
+        _isLoading = false;
+      }
+      _loadHistory();
+    }
+  }
+
+  @override
   void dispose() {
     _highlightTimer?.cancel();
     super.dispose();
   }
 
-  void _retryLoading() {
+  Future<void> _loadHistory() async {
+    // Jika di runtime nyata Firebase tersedia dan user belum login, arahkan ke login
+    if (_repository.isFirebaseAvailable && !_repository.isAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/login');
+      });
+      return;
+    }
+
+    // Jika Firebase tidak tersedia (lingkungan test), gunakan cache AppState
+    if (!_repository.isFirebaseAvailable || !_repository.isAuthenticated) {
+      final cached = AppState.of(context).predictionHistory;
+      setState(() {
+        _history = cached;
+        _isLoading = false;
+        _hasError = false;
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _hasError = false;
     });
 
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) {
+    try {
+      final items = await _repository.fetchAll();
+      if (!mounted) return;
+      setState(() {
+        _history = items;
+        _isLoading = false;
+      });
+      AppState.of(context).setPredictionHistory(items);
+    } catch (e) {
+      if (!mounted) return;
+      if (_history.isEmpty) {
         setState(() {
           _isLoading = false;
+          _hasError = true;
         });
       }
-    });
+    }
+  }
+
+  void _retryLoading() {
+    _loadHistory();
   }
 
   void _navigateToDetail(RefluxPredictionResult record) {
@@ -122,9 +174,6 @@ class _DiseasePredictionHistoryScreenState
   }
 
   Widget _buildScreenBody(BuildContext context) {
-    final appState = AppState.of(context);
-    final history = appState.predictionHistory;
-
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -149,7 +198,7 @@ class _DiseasePredictionHistoryScreenState
             // 2. KONTEN STATEFUL (SCROLLABLE)
             // =========================================================
             Expanded(
-              child: _buildMainContent(history),
+              child: _buildMainContent(_history),
             ),
 
             // =========================================================
@@ -286,13 +335,18 @@ class _DiseasePredictionHistoryScreenState
       return _buildEmptyState();
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Kartu Tren Risiko (custom painter line chart + summary chips)
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _loadHistory,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. Kartu Tren Risiko (custom painter line chart + summary chips)
           RiskTrendCard(history: history),
           const SizedBox(height: 20),
 
@@ -326,6 +380,7 @@ class _DiseasePredictionHistoryScreenState
           const SizedBox(height: 16),
         ],
       ),
+    ),
     );
   }
 
