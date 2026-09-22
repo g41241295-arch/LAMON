@@ -20,6 +20,9 @@ class DiscreteSlider extends StatefulWidget {
   /// Emoji ikon sebagai alternatif [icon]
   final String? iconEmoji;
 
+  /// Custom widget untuk ikon (misalnya Image.asset)
+  final Widget? customIcon;
+
   /// 5 label untuk tahap 0–4
   final List<String> stepLabels;
 
@@ -38,6 +41,7 @@ class DiscreteSlider extends StatefulWidget {
     this.icon = Icons.tune_rounded,
     this.iconColor,
     this.iconEmoji,
+    this.customIcon,
     required this.stepLabels,
     required this.value,
     this.onChanged,
@@ -76,14 +80,17 @@ class _DiscreteSliderState extends State<DiscreteSlider> {
       children: [
         // ── Judul dengan ikon ──────────────────────────────────────
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (widget.iconEmoji != null)
+            if (widget.customIcon != null)
+              widget.customIcon!
+            else if (widget.iconEmoji != null)
               Text(
                 widget.iconEmoji!,
-                style: const TextStyle(fontSize: 18),
+                style: const TextStyle(fontSize: 22),
               )
             else
-              Icon(widget.icon, color: iconColor, size: 20),
+              Icon(widget.icon, color: iconColor, size: 22),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
