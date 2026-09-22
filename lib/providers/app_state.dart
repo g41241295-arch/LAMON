@@ -84,6 +84,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Memperbarui seluruh daftar riwayat prediksi dari Firestore/sumber luar
+  void setPredictionHistory(List<RefluxPredictionResult> history) {
+    _predictionHistory = List.from(history);
+    notifyListeners();
+  }
+
   /// Mengambil data snapshot riwayat prediksi berdasarkan ID
   RefluxPredictionResult? getPredictionById(String id) {
     try {
@@ -268,6 +274,7 @@ class AppState extends ChangeNotifier {
 
   void logout() {
     _isAuthenticated = false;
+    _predictionHistory = [];
     notifyListeners();
   }
 

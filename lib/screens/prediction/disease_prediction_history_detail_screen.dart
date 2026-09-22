@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/reflux_prediction_model.dart';
 import '../../providers/app_state.dart';
+import '../../services/prediction_history_repository.dart';
 import '../../utils/app_date_formatter.dart';
 import 'widgets/factor_contribution_bar.dart';
 
@@ -22,17 +23,50 @@ class DiseasePredictionHistoryDetailScreen extends StatefulWidget {
 
 class _DiseasePredictionHistoryDetailScreenState
     extends State<DiseasePredictionHistoryDetailScreen> {
+  final _repository = PredictionHistoryRepository();
   RefluxPredictionResult? _result;
+  bool _isLoading = false;
   bool _isInitialized = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_isInitialized) {
-      _result = widget.initialResult ??
-          AppState.of(context).getPredictionById(widget.predictionId);
       _isInitialized = true;
+      _loadDetail();
     }
+  }
+
+  Future<void> _loadDetail() async {
+    if (widget.initialResult != null) {
+      setState(() {
+        _result = widget.initialResult;
+        _isLoading = false;
+      });
+      return;
+    }
+
+    final localResult =
+        AppState.of(context).getPredictionById(widget.predictionId);
+    if (localResult != null) {
+      setState(() {
+        _result = localResult;
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // Ambil dari Firestore
+    setState(() {
+      _isLoading = true;
+    });
+
+    final doc = await _repository.fetchById(widget.predictionId);
+    if (!mounted) return;
+    setState(() {
+      _result = doc;
+      _isLoading = false;
+    });
   }
 
   /// Label frekuensi standar 0-4
@@ -148,9 +182,16 @@ class _DiseasePredictionHistoryDetailScreenState
 
             // 2. KONTEN DETAIL SNAPSHOT (SCROLLABLE)
             Expanded(
-              child: _result == null
-                  ? _buildNotFoundState()
-                  : _buildDetailContent(_result!),
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(AppColors.primary),
+                      ),
+                    )
+                  : (_result == null
+                      ? _buildNotFoundState()
+                      : _buildDetailContent(_result!)),
             ),
           ],
         ),

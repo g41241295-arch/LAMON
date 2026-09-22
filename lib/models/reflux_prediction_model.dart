@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 /// DTO yang menampung seluruh input kuesioner pengguna (Langkah 1–3)
@@ -160,6 +161,16 @@ class FactorContribution {
     };
   }
 
+  /// Serialisasi khusus Firestore (tanpa IconData sesuai spesifikasi)
+  Map<String, dynamic> toFirestore() {
+    return {
+      'featureName': featureName,
+      'title': title,
+      'userValueDescription': userValueDescription,
+      'contributionScore': contributionScore,
+    };
+  }
+
   static IconData _iconForFeature(String featureName) {
     switch (featureName) {
       case 'alcohol':
@@ -188,6 +199,18 @@ class FactorContribution {
       default:
         return Icons.restaurant_rounded;
     }
+  }
+
+  factory FactorContribution.fromFirestore(Map<String, dynamic> data) {
+    final featureName = data['featureName'] as String? ?? '';
+    return FactorContribution(
+      featureName: featureName,
+      title: data['title'] as String? ?? '',
+      userValueDescription: data['userValueDescription'] as String? ?? '',
+      contributionScore:
+          (data['contributionScore'] as num?)?.toDouble() ?? 0.0,
+      icon: _iconForFeature(featureName),
+    );
   }
 
   factory FactorContribution.fromJson(Map<String, dynamic> json) {
@@ -236,6 +259,67 @@ class RefluxPredictionResult {
       'dietInput': dietInput.toJson(),
       'createdAt': createdAt.toIso8601String(),
     };
+  }
+
+  /// Serialisasi ke Cloud Firestore
+  /// Menggunakan FieldValue.serverTimestamp() untuk createdAt
+  Map<String, dynamic> toFirestore() {
+    return {
+      'id': id.isNotEmpty ? id : 'pred_${createdAt.millisecondsSinceEpoch}',
+      'riskPercentage': riskPercentage,
+      'riskCategory': riskCategory,
+      'categoryDescription': categoryDescription,
+      'topFactors': topFactors.map((f) => f.toFirestore()).toList(),
+      'recommendations': recommendations,
+      'dietInput': dietInput.toJson(),
+      'createdAt': FieldValue.serverTimestamp(),
+    };
+  }
+
+  factory RefluxPredictionResult.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final data = doc.data() ?? {};
+    return RefluxPredictionResult.fromMap(data, id: doc.id);
+  }
+
+  factory RefluxPredictionResult.fromMap(
+    Map<String, dynamic> data, {
+    String? id,
+  }) {
+    final createdAtRaw = data['createdAt'];
+    DateTime createdAt;
+    if (createdAtRaw is Timestamp) {
+      createdAt = createdAtRaw.toDate();
+    } else if (createdAtRaw is String) {
+      createdAt = DateTime.tryParse(createdAtRaw) ?? DateTime.now();
+    } else {
+      createdAt = DateTime.now();
+    }
+
+    final docId = id ??
+        (data['id'] as String? ?? 'pred_${createdAt.millisecondsSinceEpoch}');
+
+    return RefluxPredictionResult(
+      id: docId.isNotEmpty ? docId : 'pred_${createdAt.millisecondsSinceEpoch}',
+      riskPercentage: (data['riskPercentage'] as num?)?.toDouble() ?? 0.0,
+      riskCategory: data['riskCategory'] as String? ?? 'Risiko Rendah',
+      categoryDescription: data['categoryDescription'] as String? ?? '',
+      topFactors: (data['topFactors'] as List<dynamic>?)
+              ?.map((item) => FactorContribution.fromFirestore(
+                  Map<String, dynamic>.from(item as Map)))
+              .toList() ??
+          [],
+      recommendations: (data['recommendations'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      dietInput: data['dietInput'] != null
+          ? UserDietInput.fromJson(
+              Map<String, dynamic>.from(data['dietInput'] as Map))
+          : const UserDietInput(),
+      createdAt: createdAt,
+    );
   }
 
   factory RefluxPredictionResult.fromJson(Map<String, dynamic> json) {

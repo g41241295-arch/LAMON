@@ -349,5 +349,83 @@ void main() {
       expect(find.text('Risiko Rendah'), findsOneWidget);
       expect(find.text('Pertahankan hidrasi'), findsOneWidget);
     });
+
+    test('RefluxPredictionResult toFirestore and fromMap handle Firestore data correctly', () {
+      final sample = RefluxPredictionResult(
+        id: 'pred_123456789',
+        riskPercentage: 72.5,
+        riskCategory: 'Risiko Tinggi',
+        categoryDescription: 'Pola konsumsi berisiko tinggi.',
+        topFactors: const [
+          FactorContribution(
+            featureName: 'alcohol',
+            title: 'Konsumsi Alkohol',
+            userValueDescription: 'sering',
+            contributionScore: 0.85,
+            icon: Icons.local_bar_rounded,
+          ),
+          FactorContribution(
+            featureName: 'high_fat_meat',
+            title: 'Daging Tinggi Lemak',
+            userValueDescription: 'sering dikonsumsi',
+            contributionScore: 0.70,
+            icon: Icons.lunch_dining_rounded,
+          ),
+        ],
+        recommendations: const [
+          'Hindari konsumsi alkohol.',
+          'Kurangi daging tinggi lemak.',
+        ],
+        dietInput: const UserDietInput(
+          dietType: 'Omnivora',
+          fruitFrequency: 1,
+          vegetableFrequency: 1,
+          alcoholFrequency: 3,
+          highFatRedMeat: true,
+        ),
+        createdAt: DateTime(2026, 9, 22, 10, 0),
+      );
+
+      final firestoreMap = sample.toFirestore();
+
+      expect(firestoreMap['id'], 'pred_123456789');
+      expect(firestoreMap['riskPercentage'], 72.5);
+      expect(firestoreMap['riskCategory'], 'Risiko Tinggi');
+      expect(firestoreMap['categoryDescription'], 'Pola konsumsi berisiko tinggi.');
+      expect(firestoreMap['recommendations'], ['Hindari konsumsi alkohol.', 'Kurangi daging tinggi lemak.']);
+
+      // Pastikan topFactors tidak mengandung IconData
+      final factors = firestoreMap['topFactors'] as List;
+      expect(factors.length, 2);
+      expect(factors[0]['featureName'], 'alcohol');
+      expect(factors[0]['title'], 'Konsumsi Alkohol');
+      expect(factors[0]['contributionScore'], 0.85);
+      expect(factors[0].containsKey('icon'), isFalse);
+      expect(factors[0].containsKey('iconCodePoint'), isFalse);
+
+      // Deserialisasi dari Map (simulasi data dari Firestore)
+      final restored = RefluxPredictionResult.fromMap({
+        'id': 'pred_123456789',
+        'riskPercentage': 72.5,
+        'riskCategory': 'Risiko Tinggi',
+        'categoryDescription': 'Pola konsumsi berisiko tinggi.',
+        'topFactors': factors,
+        'recommendations': ['Hindari konsumsi alkohol.', 'Kurangi daging tinggi lemak.'],
+        'dietInput': firestoreMap['dietInput'],
+        'createdAt': '2026-09-22T10:00:00.000',
+      });
+
+      expect(restored.id, 'pred_123456789');
+      expect(restored.riskPercentage, 72.5);
+      expect(restored.topFactors.length, 2);
+      expect(restored.topFactors[0].featureName, 'alcohol');
+      // Ikon harus terpetakan kembali secara otomatis di sisi UI/model
+      expect(restored.topFactors[0].icon, Icons.local_bar_rounded);
+      expect(restored.topFactors[1].icon, Icons.lunch_dining_rounded);
+      expect(restored.dietInput.dietType, 'Omnivora');
+      expect(restored.dietInput.alcoholFrequency, 3);
+      expect(restored.dietInput.highFatRedMeat, true);
+    });
   });
 }
+
