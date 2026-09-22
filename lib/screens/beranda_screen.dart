@@ -25,6 +25,10 @@ class BerandaScreen extends StatelessWidget {
       Navigator.pushNamed(context, '/prediksi-penyakit');
       return;
     }
+    if (menu.route == '/catat-makananmu' || menu.id == 'catat-makananmu') {
+      Navigator.pushNamed(context, '/catat-makananmu');
+      return;
+    }
     _onMenuClick(context, menu.shortTitle, menu.description);
   }
 

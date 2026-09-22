@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. Rules untuk koleksi user dan pencatatan makanan
+    // Path: /users/{userId}/food_entries/{entryId}
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      match /food_entries/{entryId} {
+        // Hanya izinkan jika user login, path userId sama dengan uid, 
+        // dan payload field "user_id" sama dengan uid (mencegah manipulasi data)
+        allow read, update, delete: if request.auth != null 
+                                 && request.auth.uid == userId 
+                                 && resource.data.user_id == request.auth.uid;
+                                 
+        allow create: if request.auth != null 
+                   && request.auth.uid == userId 
+                   && request.resource.data.user_id == request.auth.uid;
+      }
+    }
+    
+    // 2. Rules untuk riwayat login (Root level collection)
+    // Path: /login_history/{docId}
+    match /login_history/{docId} {
+      allow read, update, delete: if request.auth != null 
+                               && resource.data.user_id == request.auth.uid;
+                               
+      allow create: if request.auth != null 
+                 && request.resource.data.user_id == request.auth.uid;
+    }
+  }
+}

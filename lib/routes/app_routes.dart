@@ -14,6 +14,7 @@ import '../screens/prediction/disease_prediction_screen.dart';
 import '../screens/prediction/disease_prediction_result_screen.dart';
 import '../screens/prediction/disease_prediction_history_screen.dart';
 import '../screens/prediction/disease_prediction_history_detail_screen.dart';
+import '../screens/food/catat_makanan_screen.dart';
 import '../models/reflux_prediction_model.dart';
 
 class AppRoutes {
@@ -37,6 +38,9 @@ class AppRoutes {
   static const String diseasePredictionResult = '/prediksi-penyakit/result';
   static const String diseasePredictionHistory = '/prediksi-penyakit/riwayat';
   static const String diseasePredictionHistoryLegacy = '/prediksi-penyakit/history';
+
+  // Catat Makanan Route
+  static const String catatMakanan = '/catat-makananmu';
 
   /// Helper untuk membuat transisi halaman yang halus (fade + subtle slide 450ms)
   static PageRouteBuilder<T> _createSmoothRoute<T>(
@@ -155,6 +159,11 @@ class AppRoutes {
           const BerandaScreen(),
           settings: settings,
           isFadeOnly: true,
+        );
+      case catatMakanan:
+        return _createSmoothRoute(
+          const CatatMakananScreen(),
+          settings: settings,
         );
       case diseasePrediction:
         return _createSmoothRoute(
