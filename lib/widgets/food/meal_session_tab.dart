@@ -94,19 +94,35 @@ class MealSessionTab extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            session.label,
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: isActive
-                                  ? FontWeight.w800
-                                  : FontWeight.w500,
-                              color: isActive
-                                  ? AppColors.primaryText
-                                  : AppColors.neutralGray,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  session.label,
+                                  textAlign: TextAlign.center,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: isActive
+                                        ? FontWeight.w800
+                                        : FontWeight.w500,
+                                    color: isActive
+                                        ? AppColors.primaryText
+                                        : AppColors.neutralGray,
+                                  ),
+                                ),
+                              ),
+                              if (isDone) ...[
+                                const SizedBox(width: 3),
+                                const Icon(
+                                  Icons.check_circle_rounded,
+                                  size: 13,
+                                  color: AppColors.successGreen,
+                                ),
+                              ],
+                            ],
                           ),
                           Text(
                             _getTimeRange(session),

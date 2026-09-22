@@ -16,7 +16,11 @@ import '../screens/prediction/disease_prediction_history_screen.dart';
 import '../screens/prediction/disease_prediction_history_detail_screen.dart';
 import '../screens/food/catat_makanan_screen.dart';
 import '../screens/food/ringkasan_makanan_screen.dart';
+import '../screens/gastropedia/gastropedia_screen.dart';
+import '../screens/gastropedia/gastropedia_category_screen.dart';
+import '../screens/gastropedia/gastropedia_detail_screen.dart';
 import '../models/reflux_prediction_model.dart';
+import '../models/gastropedia_item_model.dart';
 
 class AppRoutes {
   static const String initial = '/splash';
@@ -43,6 +47,11 @@ class AppRoutes {
   // Catat Makanan Route
   static const String catatMakanan = '/catat-makananmu';
   static const String ringkasanMakanan = '/ringkasan-makanan';
+
+  // Gastropedia Routes
+  static const String gastropedia = '/gastropedia';
+  static const String gastropediaCategory = '/gastropedia/kategori';
+  static const String gastropediaDetail = '/gastropedia/detail';
 
   /// Helper untuk membuat transisi halaman yang halus (fade + subtle slide 450ms)
   static PageRouteBuilder<T> _createSmoothRoute<T>(
@@ -216,6 +225,27 @@ class AppRoutes {
             title: args['title'] as String? ?? 'Halaman Menu',
             description: args['description'] as String?,
           ),
+          settings: settings,
+        );
+      case gastropedia:
+        return _createSmoothRoute(
+          const GastropediaScreen(),
+          settings: settings,
+        );
+      case gastropediaCategory:
+        final category = settings.arguments is GastropediaCategory
+            ? settings.arguments as GastropediaCategory
+            : GastropediaCategory.makanan;
+        return _createSmoothRoute(
+          GastropediaCategoryScreen(category: category),
+          settings: settings,
+        );
+      case gastropediaDetail:
+        final item = settings.arguments is GastropediaItem
+            ? settings.arguments as GastropediaItem
+            : GastropediaData.items.first;
+        return _createSmoothRoute(
+          GastropediaDetailScreen(item: item),
           settings: settings,
         );
       default:

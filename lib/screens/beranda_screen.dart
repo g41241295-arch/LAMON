@@ -459,11 +459,17 @@ class BerandaScreen extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: InkWell(
-                  onTap: () => _onMenuClick(
-                    context,
-                    info.title,
-                    info.description,
-                  ),
+                  onTap: () {
+                    if (info.id == 'gastropedia' || info.route == '/gastropedia') {
+                      Navigator.pushNamed(context, '/gastropedia');
+                      return;
+                    }
+                    _onMenuClick(
+                      context,
+                      info.title,
+                      info.description,
+                    );
+                  },
                   borderRadius: BorderRadius.circular(18),
                   child: Container(
                     padding: const EdgeInsets.symmetric(

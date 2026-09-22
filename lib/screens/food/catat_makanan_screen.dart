@@ -415,69 +415,6 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
     );
   }
 
-  // ── Read-Only Banner (sesi sudah diisi) ───────────────────────────────────
-  Widget _buildReadOnlyView() {
-    final entry = _existingEntries[_activeSession];
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.successGreen.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AppColors.successGreen.withValues(alpha: 0.35),
-              ),
-            ),
-            child: Column(
-              children: [
-                const Icon(
-                  Icons.check_circle_rounded,
-                  color: AppColors.successGreen,
-                  size: 48,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Data ${_activeSession.label} Sudah Tersimpan',
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primaryText,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  entry != null
-                      ? 'Diisi pada ${_formatTime(entry.waktuPengisian)} WIB, ${_formatDate(entry.waktuPengisian)}'
-                      : 'Entri sesi ini sudah tercatat hari ini.',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.neutralGray,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Data makanan ini tidak dapat diubah.\nSilakan isi sesi lain jika belum.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.neutralGray,
-                    height: 1.5,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ── Form ──────────────────────────────────────────────────────────────────
   Widget _buildForm() {
@@ -491,6 +428,59 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Banner: Sesi Sudah Diisi ─────────────────────────────────────
+          if (isReadOnly) ...[  
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.successGreen.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.successGreen.withValues(alpha: 0.35),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    color: AppColors.successGreen,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Data ${_activeSession.label} Sudah Tersimpan',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primaryText,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          () {
+                            final entry = _existingEntries[_activeSession];
+                            return entry != null
+                                ? 'Diisi ${_formatTime(entry.waktuPengisian)} WIB · ${_formatDate(entry.waktuPengisian)}'
+                                : 'Entri sesi ini sudah tercatat hari ini.';
+                          }(),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.neutralGray,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           // ── Pilihan Kategori ─────────────────────────────────────────────
           SectionCard(
             child: Column(
