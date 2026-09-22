@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../providers/app_state.dart';
 import 'screening_scaffold.dart';
 
@@ -10,23 +11,64 @@ class ScreeningBirthdateScreen extends StatefulWidget {
 }
 
 class _ScreeningBirthdateScreenState extends State<ScreeningBirthdateScreen> {
-  int _day = 1;
-  int _month = 1;
-  int _year = 1990;
+  final TextEditingController _dayCtrl = TextEditingController();
+  final TextEditingController _monthCtrl = TextEditingController();
+  final TextEditingController _yearCtrl = TextEditingController();
+
+  final FocusNode _dayFocus = FocusNode();
+  final FocusNode _monthFocus = FocusNode();
+  final FocusNode _yearFocus = FocusNode();
+
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appState = AppState.of(context);
       if (mounted) {
-        setState(() {
-          _day = appState.draftDay;
-          _month = appState.draftMonth;
-          _year = appState.draftYear;
-        });
+        _dayCtrl.text = appState.draftDay.toString().padLeft(2, '0');
+        _monthCtrl.text = appState.draftMonth.toString().padLeft(2, '0');
+        _yearCtrl.text = appState.draftYear.toString();
       }
     });
+
+    _dayCtrl.addListener(() {
+      if (_dayCtrl.text.length == 2) {
+        FocusScope.of(context).requestFocus(_monthFocus);
+      }
+    });
+
+    _monthCtrl.addListener(() {
+      if (_monthCtrl.text.length == 2) {
+        FocusScope.of(context).requestFocus(_yearFocus);
+      }
+      if (_monthCtrl.text.isEmpty) {
+        FocusScope.of(context).requestFocus(_dayFocus);
+      }
+    });
+
+    _yearCtrl.addListener(() {
+      if (_yearCtrl.text.length == 4) {
+        _yearFocus.unfocus();
+        _saveDate();
+      }
+      if (_yearCtrl.text.isEmpty) {
+        FocusScope.of(context).requestFocus(_monthFocus);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _dayCtrl.dispose();
+    _monthCtrl.dispose();
+    _yearCtrl.dispose();
+    _dayFocus.dispose();
+    _monthFocus.dispose();
+    _yearFocus.dispose();
+    super.dispose();
   }
 
   int _maxDaysInMonth(int month, int year) {
@@ -38,27 +80,45 @@ class _ScreeningBirthdateScreenState extends State<ScreeningBirthdateScreen> {
     return 31;
   }
 
-  void _updateDate({int? day, int? month, int? year}) {
-    setState(() {
-      if (year != null) _year = year.clamp(1920, DateTime.now().year);
-      if (month != null) _month = month.clamp(1, 12);
+  bool _validate() {
+    final day = int.tryParse(_dayCtrl.text);
+    final month = int.tryParse(_monthCtrl.text);
+    final year = int.tryParse(_yearCtrl.text);
+    final currentYear = DateTime.now().year;
 
-      final maxDays = _maxDaysInMonth(_month, _year);
-      if (day != null) {
-        _day = day.clamp(1, maxDays);
-      } else if (_day > maxDays) {
-        _day = maxDays;
-      }
-    });
+    if (day == null || day < 1 || day > 31) {
+      setState(() => _errorMessage = 'Tanggal harus antara 1–31.');
+      return false;
+    }
+    if (month == null || month < 1 || month > 12) {
+      setState(() => _errorMessage = 'Bulan harus antara 1–12.');
+      return false;
+    }
+    if (year == null || year < 1900 || year > currentYear) {
+      setState(() => _errorMessage = 'Tahun harus antara 1900–$currentYear.');
+      return false;
+    }
+    final maxDays = _maxDaysInMonth(month, year);
+    if (day > maxDays) {
+      setState(() => _errorMessage = 'Tanggal $day tidak valid untuk bulan $month/$year.');
+      return false;
+    }
+    setState(() => _errorMessage = null);
+    return true;
+  }
 
-    AppState.of(context).setDraftBirthDate(
-      day: _day,
-      month: _month,
-      year: _year,
-    );
+  void _saveDate() {
+    final day = int.tryParse(_dayCtrl.text);
+    final month = int.tryParse(_monthCtrl.text);
+    final year = int.tryParse(_yearCtrl.text);
+    if (day != null && month != null && year != null) {
+      AppState.of(context).setDraftBirthDate(day: day, month: month, year: year);
+    }
   }
 
   void _onNext() {
+    if (!_validate()) return;
+    _saveDate();
     Navigator.pushNamed(context, '/screening/history');
   }
 
@@ -68,56 +128,65 @@ class _ScreeningBirthdateScreenState extends State<ScreeningBirthdateScreen> {
       title: 'Kapan Tanggal Lahir Anda?',
       isButtonEnabled: true,
       onNext: _onNext,
-      content: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Picker Tanggal
-          Flexible(
-            child: _buildPickerColumn(
-              label: 'Tanggal',
-              valueText: _day.toString().padLeft(2, '0'),
-              onPrev: () => _updateDate(day: _day - 1),
-              onNext: () => _updateDate(day: _day + 1),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(child: _buildInputBox(
+                label: 'Tanggal',
+                controller: _dayCtrl,
+                focusNode: _dayFocus,
+                maxLength: 2,
+                hint: 'HH',
+              )),
+              const SizedBox(width: 10),
+              Flexible(child: _buildInputBox(
+                label: 'Bulan',
+                controller: _monthCtrl,
+                focusNode: _monthFocus,
+                maxLength: 2,
+                hint: 'BB',
+              )),
+              const SizedBox(width: 10),
+              Flexible(child: _buildInputBox(
+                label: 'Tahun',
+                controller: _yearCtrl,
+                focusNode: _yearFocus,
+                maxLength: 4,
+                hint: 'TTTT',
+              )),
+            ],
           ),
-          const SizedBox(width: 10),
-
-          // Picker Bulan
-          Flexible(
-            child: _buildPickerColumn(
-              label: 'Bulan',
-              valueText: _month.toString().padLeft(2, '0'),
-              onPrev: () => _updateDate(month: _month - 1),
-              onNext: () => _updateDate(month: _month + 1),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _errorMessage!,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFFEF4444),
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
             ),
-          ),
-          const SizedBox(width: 10),
-
-          // Picker Tahun
-          Flexible(
-            child: _buildPickerColumn(
-              label: 'Tahun',
-              valueText: _year.toString(),
-              onPrev: () => _updateDate(year: _year - 1),
-              onNext: () => _updateDate(year: _year + 1),
-            ),
-          ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildPickerColumn({
+  Widget _buildInputBox({
     required String label,
-    required String valueText,
-    required VoidCallback onPrev,
-    required VoidCallback onNext,
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required int maxLength,
+    required String hint,
   }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Label atas (Tanggal / Bulan / Tahun)
         Text(
           label,
           style: const TextStyle(
@@ -127,8 +196,6 @@ class _ScreeningBirthdateScreenState extends State<ScreeningBirthdateScreen> {
           ),
         ),
         const SizedBox(height: 8),
-
-        // Kotak Picker: < Nilai >
         Container(
           height: 48,
           decoration: BoxDecoration(
@@ -143,56 +210,30 @@ class _ScreeningBirthdateScreenState extends State<ScreeningBirthdateScreen> {
               ),
             ],
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Panah Kiri (<)
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: onPrev,
-                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(14)),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-                    child: Icon(
-                      Icons.chevron_left_rounded,
-                      size: 20,
-                      color: Color(0xFF475569),
-                    ),
-                  ),
-                ),
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            maxLength: maxLength,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1E293B),
+            ),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFFCBD5E1),
+                fontWeight: FontWeight.w400,
               ),
-
-              // Teks Nilai
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Text(
-                  valueText,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1E293B),
-                  ),
-                ),
-              ),
-
-              // Panah Kanan (>)
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: onNext,
-                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(14)),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-                    child: Icon(
-                      Icons.chevron_right_rounded,
-                      size: 20,
-                      color: Color(0xFF475569),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+              border: InputBorder.none,
+              counterText: '',
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+            onChanged: (_) => setState(() => _errorMessage = null),
           ),
         ),
       ],

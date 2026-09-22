@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../constants/app_colors.dart';
@@ -93,7 +94,10 @@ class _LoginScreenState extends State<LoginScreen> {
         // Cek status skrining dari Firestore dengan timeout 10 detik
         // agar tidak macet selamanya jika Firestore Rules memblokir
         bool hasCompletedScreening = false;
-        String userName = 'User';
+        String userName = email.split('@')[0];
+        if (userName.isNotEmpty) {
+          userName = userName[0].toUpperCase() + userName.substring(1);
+        }
         try {
           final userDoc = await FirebaseFirestore.instance
               .collection('users')
@@ -104,7 +108,11 @@ class _LoginScreenState extends State<LoginScreen> {
             final data = userDoc.data();
             if (data != null) {
               hasCompletedScreening = data['hasCompletedScreening'] == true;
-              userName = data['nama'] ?? data['name'] ?? 'User';
+              if (data['nama'] != null && data['nama'].toString().trim().isNotEmpty) {
+                userName = data['nama'];
+              } else if (data['name'] != null && data['name'].toString().trim().isNotEmpty) {
+                userName = data['name'];
+              }
             }
           }
         } catch (e) {
@@ -122,9 +130,9 @@ class _LoginScreenState extends State<LoginScreen> {
         appState.loginWithGoogle(userName, email);
 
         if (!hasCompletedScreening) {
-          Navigator.pushReplacementNamed(context, '/screening/gender');
+          Navigator.pushNamedAndRemoveUntil(context, '/screening/gender', (route) => false);
         } else {
-          Navigator.pushReplacementNamed(context, '/beranda');
+          Navigator.pushNamedAndRemoveUntil(context, '/beranda', (route) => false);
         }
       } else {
         // userCredential.user == null — kondisi tidak normal, reset loading
@@ -206,7 +214,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, dynamic result) {
+        if (didPop) return;
+        SystemNavigator.pop();
+      },
+      child: AppScaffold(
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         child: Column(
@@ -451,6 +465,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
             const SizedBox(height: 20),
           ],
+        ),
         ),
       ),
     );

@@ -35,12 +35,8 @@ class _GoogleAuthScreenState extends State<GoogleAuthScreen> {
       // Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
       
-      // Request authorization to get access token (dibutuhkan Firebase)
-      final clientAuth = await googleUser.authorizationClient.authorizeScopes(['email', 'profile']);
-
-      // Create a new credential
+      // Create a new credential using only idToken (accessToken is not needed for Firebase Auth)
       final OAuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: clientAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
@@ -59,7 +55,10 @@ class _GoogleAuthScreenState extends State<GoogleAuthScreen> {
         });
 
         bool hasCompletedScreening = false;
-        String userName = googleUser.displayName ?? 'User';
+        String userName = userCredential.user?.displayName ?? googleUser.displayName ?? email.split('@')[0];
+        if (userName.isNotEmpty && userName == email.split('@')[0]) {
+          userName = userName[0].toUpperCase() + userName.substring(1);
+        }
 
         // Cek jika pengguna baru
         if (userCredential.additionalUserInfo?.isNewUser == true) {

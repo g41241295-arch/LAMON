@@ -1,8 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../providers/app_state.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_assets.dart';
 
@@ -207,36 +206,13 @@ class _SplashScreenState extends State<SplashScreen>
     _navigated = true;
     _masterCtrl.stop();
     
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      try {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-        bool hasCompletedScreening = false;
-        String userName = 'User';
-        
-        if (doc.exists) {
-          final data = doc.data();
-          if (data != null) {
-            hasCompletedScreening = data['hasCompletedScreening'] == true;
-            userName = data['nama'] ?? 'User';
-          }
-        }
-        
-        if (!mounted) return;
-        final appState = AppState.of(context);
-        appState.loginWithGoogle(userName, user.email ?? '');
+    try {
+      await FirebaseAuth.instance.signOut();
+      await GoogleSignIn.instance.signOut();
+    } catch (_) {}
 
-        if (hasCompletedScreening) {
-          Navigator.pushReplacementNamed(context, '/beranda');
-          return;
-        }
-      } catch (_) {}
-      
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/screening/gender');
-    } else {
-      Navigator.pushReplacementNamed(context, '/login');
-    }
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, '/login');
   }
 
   @override
