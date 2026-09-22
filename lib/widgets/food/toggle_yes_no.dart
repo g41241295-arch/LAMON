@@ -41,16 +41,20 @@ class ToggleYesNo extends StatelessWidget {
         const SizedBox(height: 10),
         Row(
           children: [
-            _ToggleButton(
-              label: 'Iya',
-              isSelected: value == true,
-              onTap: isReadOnly ? null : () => onChanged?.call(true),
+            Expanded(
+              child: _ToggleButton(
+                label: 'Iya',
+                isSelected: value == true,
+                onTap: isReadOnly ? null : () => onChanged?.call(true),
+              ),
             ),
-            const SizedBox(width: 10),
-            _ToggleButton(
-              label: 'Tidak',
-              isSelected: value == false,
-              onTap: isReadOnly ? null : () => onChanged?.call(false),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _ToggleButton(
+                label: 'Tidak',
+                isSelected: value == false,
+                onTap: isReadOnly ? null : () => onChanged?.call(false),
+              ),
             ),
           ],
         ),
@@ -86,8 +90,8 @@ class _ToggleButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
+        alignment: Alignment.center,
         duration: const Duration(milliseconds: 180),
-        width: 80,
         padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : Colors.white,

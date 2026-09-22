@@ -153,4 +153,75 @@ class FoodEntryService {
   static String generateEntryId(String userId, MealSession sesi, String tanggal) {
     return '${userId}_${sesi.firestoreKey}_$tanggal';
   }
+
+  // ===========================================================================
+  // FUNGSI DEVELOPMENT (DUMMY DATA)
+  // ===========================================================================
+
+  /// Membuat 7 data dummy untuk 7 hari terakhir agar chart Ringkasan Makanan bisa diuji.
+  Future<void> generateDummyData() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) throw Exception('Tidak ada user yang login.');
+
+    final ref = _entriesRef;
+    if (ref == null) return;
+
+    final now = DateTime.now();
+    final List<String> junkFoods = ['Junk Food'];
+    final List<String> homemades = ['Homemade'];
+    final List<String> karbo = ['Nasi Putih', 'Nasi Merah', 'Roti', 'Mie', 'Kentang'];
+    final List<String> proteins = ['Daging Ayam', 'Daging Sapi', 'Ikan', 'Telur', 'Tahu/Tempe'];
+    final List<String> sayurans = ['Bayam', 'Kangkung', 'Wortel', 'Brokoli', 'Sawi'];
+
+    for (int i = 0; i < 7; i++) {
+      final date = now.subtract(Duration(days: i));
+      final dateString = _formatDate(date);
+      
+      // Pilih sesi secara random, tapi pastikan ada beberapa makan malam agar Beban Harian terisi
+      final sesi = (i % 3 == 0) ? MealSession.makanMalam : MealSession.makanSiang;
+
+      final isJunk = (i % 2 == 0); // Selang seling junkfood dan homemade
+
+      final entry = FoodEntry(
+        id: 'dummy_${generateEntryId(uid, sesi, dateString)}',
+        userId: uid,
+        tanggal: dateString,
+        waktuPengisian: date,
+        sesi: sesi,
+        jenisMakanan: isJunk ? junkFoods : homemades,
+        sumberKarbohidrat: [karbo[i % karbo.length]],
+        protein: [proteins[i % proteins.length]],
+        sayuran: [sayurans[i % sayurans.length]],
+        levelPedas: (i * 2) % 5,     // 0-4
+        levelAsin: (i * 3) % 5,
+        levelAsam: (i + 1) % 5,
+        levelManis: (i * 4) % 5,
+        levelBerlemak: (i + 2) % 5,
+        berbaringSetelahMakan: i % 2 == 0,
+        konsumsiKopi: i % 3 == 0,
+        konsumsiSoda: isJunk && (i % 2 == 0),
+        bebanPikiran: sesi == MealSession.makanMalam ? (i % 5) : null,
+        bebanAktivitas: sesi == MealSession.makanMalam ? ((i + 2) % 5) : null,
+      );
+
+      await ref.doc(entry.id).set({
+        ...entry.toJson(),
+        'is_dummy': true, // penanda agar mudah dihapus
+      });
+    }
+  }
+
+  /// Menghapus semua data dummy yang dibuat oleh fungsi [generateDummyData].
+  Future<void> deleteDummyData() async {
+    final ref = _entriesRef;
+    if (ref == null) return;
+
+    final snapshot = await ref.where('is_dummy', isEqualTo: true).get();
+    
+    final batch = _db.batch();
+    for (final doc in snapshot.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
+  }
 }

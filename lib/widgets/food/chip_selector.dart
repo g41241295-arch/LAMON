@@ -19,7 +19,7 @@ class ChipSelector extends StatelessWidget {
   final Set<String> selected;
 
   /// Callback ketika pilihan berubah
-  final ValueChanged<Set<String>> onChanged;
+  final ValueChanged<Set<String>>? onChanged;
 
   /// Gunakan grid 2 kolom (untuk protein & sayuran)
   final bool useGrid;
@@ -38,13 +38,14 @@ class ChipSelector extends StatelessWidget {
   });
 
   void _toggle(String option) {
+    if (onChanged == null) return;
     final newSet = Set<String>.from(selected);
     if (newSet.contains(option)) {
       newSet.remove(option);
     } else {
       newSet.add(option);
     }
-    onChanged(newSet);
+    onChanged!(newSet);
   }
 
   Widget _buildChip(String option) {
@@ -52,8 +53,9 @@ class ChipSelector extends StatelessWidget {
     return GestureDetector(
       onTap: () => _toggle(option),
       child: AnimatedContainer(
+        alignment: Alignment.center,
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : Colors.white,
           borderRadius: BorderRadius.circular(50),
@@ -99,24 +101,15 @@ class ChipSelector extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        if (useGrid)
-          // Grid 2 kolom
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: 3.0,
-            children: options.map(_buildChip).toList(),
-          )
-        else
-          // Wrap horizontal
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: options.map(_buildChip).toList(),
-          ),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          childAspectRatio: 3.5,
+          children: options.map(_buildChip).toList(),
+        ),
         if (hasError) ...[
           const SizedBox(height: 6),
           Text(

@@ -7,12 +7,14 @@ class OtherTextField extends StatelessWidget {
   final String hint;
   final TextEditingController controller;
   final bool hasError;
+  final bool enabled;
 
   const OtherTextField({
     super.key,
     required this.controller,
     this.hint = 'Tuliskan di sini...',
     this.hasError = false,
+    this.enabled = true,
   });
 
   @override
@@ -26,9 +28,10 @@ class OtherTextField extends StatelessWidget {
           const SizedBox(height: 8),
           TextField(
             controller: controller,
-            style: const TextStyle(
+            enabled: enabled,
+            style: TextStyle(
               fontSize: 13,
-              color: AppColors.primaryText,
+              color: enabled ? AppColors.primaryText : AppColors.inputPlaceholder,
             ),
             decoration: InputDecoration(
               hintText: hint,
@@ -37,7 +40,7 @@ class OtherTextField extends StatelessWidget {
                 color: AppColors.inputPlaceholder,
               ),
               filled: true,
-              fillColor: AppColors.inputBackground,
+              fillColor: enabled ? AppColors.inputBackground : AppColors.lightGray,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 14,
                 vertical: 10,

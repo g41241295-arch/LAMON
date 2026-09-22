@@ -112,6 +112,28 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
       );
       _existingEntries[session] = entry;
       _submittedMap[session] = entry != null;
+
+      if (entry != null) {
+        final s = _states[session.index];
+        s.jenisMakanan = Set.from(entry.jenisMakanan);
+        s.sumberKarbohidrat = Set.from(entry.sumberKarbohidrat);
+        s.protein = Set.from(entry.protein);
+        s.sayuran = Set.from(entry.sayuran);
+        if (entry.proteinLainnya != null) s.proteinLainnyaCtrl.text = entry.proteinLainnya!;
+        if (entry.sayuranLainnya != null) s.sayuranLainnyaCtrl.text = entry.sayuranLainnya!;
+        s.levelPedas = entry.levelPedas;
+        s.levelAsin = entry.levelAsin;
+        s.levelAsam = entry.levelAsam;
+        s.levelManis = entry.levelManis;
+        s.levelBerlemak = entry.levelBerlemak;
+        s.berbaringSetelahMakan = entry.berbaringSetelahMakan;
+        s.konsumsiSoda = entry.konsumsiSoda;
+        s.konsumsiKopi = entry.konsumsiKopi;
+        if (session == MealSession.makanMalam) {
+          s.bebanPikiran = entry.bebanPikiran ?? 0;
+          s.bebanAktivitas = entry.bebanAktivitas ?? 0;
+        }
+      }
     }
     setState(() => _isLoading = false);
   }
@@ -202,6 +224,8 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
           _activeSession == MealSession.makanMalam ? s.bebanPikiran : null,
       bebanAktivitas:
           _activeSession == MealSession.makanMalam ? s.bebanAktivitas : null,
+    );
+
     try {
       await _service.saveEntry(entry);
 
@@ -284,9 +308,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
               children: [
                 _buildHeader(),
                 Expanded(
-                  child: _isCurrentSessionDone
-                      ? _buildReadOnlyView()
-                      : _buildForm(),
+                  child: _buildForm(),
                 ),
               ],
             ),
@@ -302,45 +324,55 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Baris: Back + Judul
-          Row(
+          Stack(
+            alignment: Alignment.center,
             children: [
-              InkWell(
-                onTap: () => Navigator.pop(context),
-                borderRadius: BorderRadius.circular(20),
-                child: const Padding(
-                  padding: EdgeInsets.all(4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.arrow_back_rounded,
-                        color: AppColors.primaryText,
-                        size: 22,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        'Kembali',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primaryText,
-                        ),
-                      ),
-                    ],
+              Align(
+                alignment: Alignment.centerLeft,
+                child: InkWell(
+                  onTap: () => Navigator.pop(context),
+                  borderRadius: BorderRadius.circular(24),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: AppColors.primaryText,
+                      size: 20,
+                    ),
                   ),
                 ),
               ),
-              const Spacer(),
-              const Text(
-                'Catat Makananmu',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.primaryText,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7D6),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: const Color(0xFFE8DCAB),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: const Text(
+                  'Catat Makananmu',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primaryText,
+                    letterSpacing: 0.2,
+                  ),
                 ),
               ),
-              const Spacer(),
-              const SizedBox(width: 72), // balance back button
             ],
           ),
 
@@ -451,6 +483,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
   Widget _buildForm() {
     final s = _current;
     final isMalam = _activeSession == MealSession.makanMalam;
+    final isReadOnly = _isCurrentSessionDone;
 
     return SingleChildScrollView(
       controller: _scrollController,
@@ -469,7 +502,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   options: const ['Junk Food', 'Homemade'],
                   selected: s.jenisMakanan,
                   hasError: s.errJenis,
-                  onChanged: (v) =>
+                  onChanged: isReadOnly ? null : (v) =>
                       setState(() => s.jenisMakanan = v),
                 ),
                 const SizedBox(height: 16),
@@ -482,7 +515,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   options: const ['Nasi putih', 'Roti'],
                   selected: s.sumberKarbohidrat,
                   hasError: s.errKarbo,
-                  onChanged: (v) =>
+                  onChanged: isReadOnly ? null : (v) =>
                       setState(() => s.sumberKarbohidrat = v),
                 ),
                 const SizedBox(height: 16),
@@ -502,7 +535,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   selected: s.protein,
                   hasError: s.errProtein,
                   useGrid: true,
-                  onChanged: (v) =>
+                  onChanged: isReadOnly ? null : (v) =>
                       setState(() => s.protein = v),
                 ),
                 if (s.protein.contains('Lainnya'))
@@ -510,6 +543,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                     controller: s.proteinLainnyaCtrl,
                     hint: 'Contoh: Tempe, Tahu, dll.',
                     hasError: s.errProteinLainnya,
+                    enabled: !isReadOnly,
                   ),
                 const SizedBox(height: 16),
                 const Divider(height: 1, color: AppColors.lightGray),
@@ -527,7 +561,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   selected: s.sayuran,
                   hasError: s.errSayuran,
                   useGrid: true,
-                  onChanged: (v) =>
+                  onChanged: isReadOnly ? null : (v) =>
                       setState(() => s.sayuran = v),
                 ),
                 if (s.sayuran.contains('Lainnya'))
@@ -535,6 +569,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                     controller: s.sayuranLainnyaCtrl,
                     hint: 'Contoh: Brokoli, Kangkung, dll.',
                     hasError: s.errSayuranLainnya,
+                    enabled: !isReadOnly,
                   ),
               ],
             ),
@@ -547,10 +582,10 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
               'Pilihlah, semakin ke kiri semakin rendah dan semakin ke kanan semakin tinggi.',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-                fontStyle: FontStyle.italic,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
                 height: 1.4,
               ),
             ),
@@ -573,7 +608,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                     'Sangat pedas',
                   ],
                   value: s.levelPedas,
-                  onChanged: (v) => setState(() => s.levelPedas = v),
+                  onChanged: isReadOnly ? null : (v) => setState(() => s.levelPedas = v),
                 ),
                 const SizedBox(height: 16),
                 const Divider(height: 1, color: AppColors.lightGray),
@@ -590,7 +625,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                     'Sangat asin',
                   ],
                   value: s.levelAsin,
-                  onChanged: (v) => setState(() => s.levelAsin = v),
+                  onChanged: isReadOnly ? null : (v) => setState(() => s.levelAsin = v),
                 ),
                 const SizedBox(height: 16),
                 const Divider(height: 1, color: AppColors.lightGray),
@@ -598,7 +633,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
 
                 DiscreteSlider(
                   label: 'Apakah makanan Anda asam?',
-                  iconEmoji: '🍋',
+                  customIcon: Image.asset('assets/images/asam.png', width: 22, height: 22, errorBuilder: (c,e,s) => const Text('🍋', style: TextStyle(fontSize: 22))),
                   stepLabels: const [
                     'Tidak asam',
                     'Sedikit asam',
@@ -607,7 +642,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                     'Sangat asam',
                   ],
                   value: s.levelAsam,
-                  onChanged: (v) => setState(() => s.levelAsam = v),
+                  onChanged: isReadOnly ? null : (v) => setState(() => s.levelAsam = v),
                 ),
                 const SizedBox(height: 16),
                 const Divider(height: 1, color: AppColors.lightGray),
@@ -615,7 +650,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
 
                 DiscreteSlider(
                   label: 'Apakah makanan Anda manis?',
-                  iconEmoji: '🍯',
+                  customIcon: Image.asset('assets/images/manis.png', width: 22, height: 22, errorBuilder: (c,e,s) => const Text('🍯', style: TextStyle(fontSize: 22))),
                   stepLabels: const [
                     'Tidak manis',
                     'Sedikit manis',
@@ -624,7 +659,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                     'Sangat manis',
                   ],
                   value: s.levelManis,
-                  onChanged: (v) => setState(() => s.levelManis = v),
+                  onChanged: isReadOnly ? null : (v) => setState(() => s.levelManis = v),
                 ),
                 const SizedBox(height: 16),
                 const Divider(height: 1, color: AppColors.lightGray),
@@ -632,7 +667,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
 
                 DiscreteSlider(
                   label: 'Apakah makanan Anda berlemak?',
-                  iconEmoji: '🥩',
+                  customIcon: Image.asset('assets/images/berlemak.png', width: 22, height: 22, errorBuilder: (c,e,s) => const Text('🥩', style: TextStyle(fontSize: 22))),
                   stepLabels: const [
                     'Tidak berlemak',
                     'Sedikit berlemak',
@@ -641,7 +676,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                     'Sangat berlemak',
                   ],
                   value: s.levelBerlemak,
-                  onChanged: (v) => setState(() => s.levelBerlemak = v),
+                  onChanged: isReadOnly ? null : (v) => setState(() => s.levelBerlemak = v),
                 ),
               ],
             ),
@@ -657,7 +692,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   label: 'Apakah Anda berbaring dalam waktu 2–3 jam setelah makan?',
                   value: s.berbaringSetelahMakan,
                   hasError: s.errBerbaring,
-                  onChanged: (v) =>
+                  onChanged: isReadOnly ? null : (v) =>
                       setState(() => s.berbaringSetelahMakan = v),
                 ),
                 const SizedBox(height: 16),
@@ -668,7 +703,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   label: 'Apakah Anda mengonsumsi minuman bersoda?',
                   value: s.konsumsiSoda,
                   hasError: s.errSoda,
-                  onChanged: (v) => setState(() => s.konsumsiSoda = v),
+                  onChanged: isReadOnly ? null : (v) => setState(() => s.konsumsiSoda = v),
                 ),
                 const SizedBox(height: 16),
                 const Divider(height: 1, color: AppColors.lightGray),
@@ -678,7 +713,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   label: 'Apakah Anda mengonsumsi kopi?',
                   value: s.konsumsiKopi,
                   hasError: s.errKopi,
-                  onChanged: (v) => setState(() => s.konsumsiKopi = v),
+                  onChanged: isReadOnly ? null : (v) => setState(() => s.konsumsiKopi = v),
                 ),
               ],
             ),
@@ -701,7 +736,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                       'Sangat berat',
                     ],
                     value: s.bebanPikiran,
-                    onChanged: (v) =>
+                    onChanged: isReadOnly ? null : (v) =>
                         setState(() => s.bebanPikiran = v),
                   ),
                   const SizedBox(height: 16),
@@ -718,7 +753,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                       'Sangat berat',
                     ],
                     value: s.bebanAktivitas,
-                    onChanged: (v) =>
+                    onChanged: isReadOnly ? null : (v) =>
                         setState(() => s.bebanAktivitas = v),
                   ),
                 ],
@@ -732,7 +767,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _isSaving ? null : _save,
+              onPressed: _isSaving || isReadOnly ? null : _save,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,

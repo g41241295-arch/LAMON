@@ -44,6 +44,17 @@ class MealSessionTab extends StatelessWidget {
     return MealSession.makanMalam;
   }
 
+  String _getTimeRange(MealSession session) {
+    switch (session) {
+      case MealSession.sarapan:
+        return '06.00-09.29';
+      case MealSession.makanSiang:
+        return '10.00-15.59';
+      case MealSession.makanMalam:
+        return '16.00-20.00';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -79,31 +90,36 @@ class MealSessionTab extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (isDone)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: Icon(
-                          Icons.check_circle_rounded,
-                          size: 13,
-                          color: isActive
-                              ? AppColors.successGreen
-                              : AppColors.successGreen.withValues(alpha: 0.7),
-                        ),
-                      ),
                     Flexible(
-                      child: Text(
-                        session.label,
-                        textAlign: TextAlign.center,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: isActive
-                              ? FontWeight.w800
-                              : FontWeight.w500,
-                          color: isActive
-                              ? AppColors.primaryText
-                              : AppColors.neutralGray,
-                        ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            session.label,
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isActive
+                                  ? FontWeight.w800
+                                  : FontWeight.w500,
+                              color: isActive
+                                  ? AppColors.primaryText
+                                  : AppColors.neutralGray,
+                            ),
+                          ),
+                          Text(
+                            _getTimeRange(session),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: isActive
+                                  ? AppColors.primaryText.withValues(alpha: 0.7)
+                                  : AppColors.neutralGray.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
