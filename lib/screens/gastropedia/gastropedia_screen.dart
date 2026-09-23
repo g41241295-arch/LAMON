@@ -10,6 +10,8 @@ class GastropediaScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final recommendedItem = GastropediaData.getRecommended();
+    final secondItem =
+        GastropediaData.items.length > 1 ? GastropediaData.items[1] : null;
 
     return AppScaffold(
       body: SingleChildScrollView(
@@ -128,7 +130,7 @@ class GastropediaScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
 
             // 3. Section "Rekomendasi Topik"
             Padding(
@@ -136,108 +138,18 @@ class GastropediaScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Badge Rekomendasi Topik
                   _buildSectionBadge('Rekomendasi Topik'),
 
                   const SizedBox(height: 14),
 
-                  // Baris Kartu Rekomendasi & Tombol Panah
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Indikator Panah Kiri Samping
-                      Container(
-                        width: 28,
-                        height: 20,
-                        margin: const EdgeInsets.only(right: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: const Color(0xFF639BC6),
-                            width: 1.2,
-                          ),
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.arrow_back_rounded,
-                            size: 14,
-                            color: Color(0xFF1E5D7D),
-                          ),
-                        ),
-                      ),
+                  // Kartu Rekomendasi Pertama
+                  _buildRecommendedCard(context, recommendedItem),
 
-                      // Kartu Besar Brokoli Chicken
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              AppRoutes.gastropediaDetail,
-                              arguments: recommendedItem,
-                            );
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: const Color(0xFF639BC6),
-                                width: 1.5,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.08),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                // Foto Utama Brokoli Chicken
-                                SizedBox(
-                                  height: 160,
-                                  child: Image.asset(
-                                    recommendedItem.imageAsset,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, _, _) => Container(
-                                      color: const Color(0xFFEBF3F8),
-                                      child: const Icon(
-                                        Icons.image_outlined,
-                                        size: 48,
-                                        color: Color(0xFF639BC6),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                // Label Judul di Bawah
-                                Container(
-                                  color: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 10,
-                                    horizontal: 12,
-                                  ),
-                                  child: Text(
-                                    recommendedItem.name,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w900,
-                                      color: Color(0xFF1E5D7D),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  // Kartu Rekomendasi Kedua (jika data tersedia)
+                  if (secondItem != null) ...[
+                    const SizedBox(height: 12),
+                    _buildRecommendedCard(context, secondItem),
+                  ],
                 ],
               ),
             ),
@@ -273,6 +185,73 @@ class GastropediaScreen extends StatelessWidget {
           fontWeight: FontWeight.w800,
           color: Color(0xFF1E5D7D),
           letterSpacing: -0.2,
+        ),
+      ),
+    );
+  }
+
+  // Helper Kartu Rekomendasi
+  Widget _buildRecommendedCard(BuildContext context, GastropediaItem item) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          AppRoutes.gastropediaDetail,
+          arguments: item,
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFF639BC6),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: 148,
+              child: Image.asset(
+                item.imageAsset,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Container(
+                  color: const Color(0xFFEBF3F8),
+                  child: const Icon(
+                    Icons.image_outlined,
+                    size: 48,
+                    color: Color(0xFF639BC6),
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                vertical: 10,
+                horizontal: 12,
+              ),
+              child: Text(
+                item.name,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF1E5D7D),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

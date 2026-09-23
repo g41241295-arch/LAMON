@@ -142,7 +142,7 @@ class GastropediaDetailScreen extends StatelessWidget {
 
                   // Accordion 3: Kandungan
                   GastropediaAccordion(
-                    title: 'Kandungan',
+                    title: 'Kandungan Gizi',
                     initialExpanded: false,
                     content: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

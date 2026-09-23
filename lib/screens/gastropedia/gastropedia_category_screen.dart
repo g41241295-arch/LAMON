@@ -35,7 +35,7 @@ class GastropediaCategoryScreen extends StatelessWidget {
                 crossAxisCount: 2,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
-                childAspectRatio: 0.88,
+                childAspectRatio: 0.82,
               ),
               itemCount: items.length,
               itemBuilder: (context, index) {
@@ -81,11 +81,11 @@ class GastropediaCategoryScreen extends StatelessWidget {
                         // Foto Lingkaran Makanan/Buah/Sayur (Circular Plate)
                         Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.only(top: 16, bottom: 10),
+                            padding: const EdgeInsets.only(top: 14, bottom: 8),
                             child: Center(
                               child: Container(
-                                width: 108,
-                                height: 108,
+                                width: 96,
+                                height: 96,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: Colors.white,

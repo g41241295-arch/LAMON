@@ -34,82 +34,98 @@ class _GastropediaAccordionState extends State<GastropediaAccordion>
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Tombol Pill Accordion (Embossed 3D)
-        GestureDetector(
-          onTap: _toggle,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFFFFDE8),
-                  Color(0xFFF6E8B6),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFFE4EEF5),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 10,
+            spreadRadius: 0,
+            offset: const Offset(0, 3),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 3,
+            spreadRadius: 0,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header Card (Judul Bold + Toggle Icon)
+          GestureDetector(
+            onTap: _toggle,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFFFFDE8),
+                    Color(0xFFF6E8B6),
+                  ],
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    widget.title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E5D7D),
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _isExpanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInOut,
+                    child: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: Color(0xFF1E5D7D),
+                      size: 24,
+                    ),
+                  ),
                 ],
               ),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: const Color(0xFFDEC99B),
-                width: 1.2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 5,
-                  offset: const Offset(0, 2),
-                ),
-                const BoxShadow(
-                  color: Colors.white,
-                  blurRadius: 1,
-                  offset: Offset(0, -1),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  widget.title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF1E5D7D),
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                AnimatedRotation(
-                  turns: _isExpanded ? 0.5 : 0.0,
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeInOut,
-                  child: const Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: Color(0xFF1E5D7D),
-                    size: 24,
-                  ),
-                ),
-              ],
             ),
           ),
-        ),
 
-        // Konten Animasi yang Terbuka/Tertutup
-        AnimatedCrossFade(
-          firstChild: const SizedBox.shrink(),
-          secondChild: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-            child: widget.content,
+          // Konten Animasi (dengan garis pemisah & padding dalam card)
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Container(
+              decoration: const BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: Color(0xFFDEC99B),
+                    width: 1,
+                  ),
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: widget.content,
+            ),
+            crossFadeState: _isExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 300),
+            sizeCurve: Curves.easeInOutCubic,
           ),
-          crossFadeState: _isExpanded
-              ? CrossFadeState.showSecond
-              : CrossFadeState.showFirst,
-          duration: const Duration(milliseconds: 300),
-          sizeCurve: Curves.easeInOutCubic,
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
