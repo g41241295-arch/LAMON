@@ -19,8 +19,15 @@ import '../screens/food/ringkasan_makanan_screen.dart';
 import '../screens/gastropedia/gastropedia_screen.dart';
 import '../screens/gastropedia/gastropedia_category_screen.dart';
 import '../screens/gastropedia/gastropedia_detail_screen.dart';
+import '../screens/konsultasi/daftar_dokter_screen.dart';
+import '../screens/konsultasi/detail_dokter_screen.dart';
+import '../screens/konsultasi/ringkasan_pembayaran_screen.dart';
+import '../screens/konsultasi/virtual_account_screen.dart';
+import '../screens/konsultasi/payment_success_screen.dart';
+import '../screens/konsultasi/chat_dokter_screen.dart';
 import '../models/reflux_prediction_model.dart';
 import '../models/gastropedia_item_model.dart';
+import '../models/doctor_model.dart';
 
 class AppRoutes {
   static const String initial = '/splash';
@@ -52,6 +59,16 @@ class AppRoutes {
   static const String gastropedia = '/gastropedia';
   static const String gastropediaCategory = '/gastropedia/kategori';
   static const String gastropediaDetail = '/gastropedia/detail';
+
+  // Konsultasi Dokter Routes
+  static const String konsultasi = '/konsultasi';
+  static const String konsulDokterAlias = '/konsul-dokter'; // alias dari menu beranda
+  // Route dinamis konsultasi — path parameter di-parse di onGenerateRoute:
+  // /konsultasi/dokter/:doctorId
+  // /konsultasi/pembayaran/:doctorId
+  // /konsultasi/virtual-account/:consultationId
+  // /konsultasi/payment-success/:consultationId
+  // /konsultasi/chat/:consultationId
 
   /// Helper untuk membuat transisi halaman yang halus (fade + subtle slide 450ms)
   static PageRouteBuilder<T> _createSmoothRoute<T>(
@@ -89,6 +106,78 @@ class AppRoutes {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     final rawName = settings.name ?? '';
     final uri = Uri.parse(rawName);
+
+    // ── Konsultasi: Dynamic Routes ─────────────────────────────────────────
+
+    // /konsultasi/dokter/:doctorId → Detail Dokter
+    if (uri.pathSegments.length == 3 &&
+        uri.pathSegments[0] == 'konsultasi' &&
+        uri.pathSegments[1] == 'dokter') {
+      final doctorId = uri.pathSegments[2];
+      final initialDoctor = settings.arguments is DoctorModel
+          ? settings.arguments as DoctorModel
+          : null;
+      return _createSmoothRoute(
+        DetailDokterScreen(doctorId: doctorId, initialDoctor: initialDoctor),
+        settings: settings,
+      );
+    }
+
+    // /konsultasi/pembayaran/:doctorId → Ringkasan Pembayaran
+    if (uri.pathSegments.length == 3 &&
+        uri.pathSegments[0] == 'konsultasi' &&
+        uri.pathSegments[1] == 'pembayaran') {
+      final doctor = settings.arguments is DoctorModel
+          ? settings.arguments as DoctorModel
+          : null;
+      if (doctor != null) {
+        return _createSmoothRoute(
+          RingkasanPembayaranScreen(doctor: doctor),
+          settings: settings,
+        );
+      }
+      // Fallback jika tidak ada argumen dokter
+      return _createSmoothRoute(
+        const DaftarDokterScreen(),
+        settings: settings,
+      );
+    }
+
+    // /konsultasi/virtual-account/:consultationId → Virtual Account
+    if (uri.pathSegments.length == 3 &&
+        uri.pathSegments[0] == 'konsultasi' &&
+        uri.pathSegments[1] == 'virtual-account') {
+      final consultationId = uri.pathSegments[2];
+      return _createSmoothRoute(
+        VirtualAccountScreen(consultationId: consultationId),
+        settings: settings,
+      );
+    }
+
+    // /konsultasi/payment-success/:consultationId → Payment Success
+    if (uri.pathSegments.length == 3 &&
+        uri.pathSegments[0] == 'konsultasi' &&
+        uri.pathSegments[1] == 'payment-success') {
+      final consultationId = uri.pathSegments[2];
+      return _createSmoothRoute(
+        PaymentSuccessScreen(consultationId: consultationId),
+        settings: settings,
+        isFadeOnly: true,
+      );
+    }
+
+    // /konsultasi/chat/:consultationId → Chat Dokter
+    if (uri.pathSegments.length == 3 &&
+        uri.pathSegments[0] == 'konsultasi' &&
+        uri.pathSegments[1] == 'chat') {
+      final consultationId = uri.pathSegments[2];
+      return _createSmoothRoute(
+        ChatDokterScreen(consultationId: consultationId),
+        settings: settings,
+      );
+    }
+
+    // ── Prediksi: Dynamic Routes ───────────────────────────────────────────
 
     // Dynamic Route untuk Detail Riwayat: /prediksi-penyakit/riwayat/:id atau /prediksi-penyakit/history/:id
     if (uri.pathSegments.length == 3 &&
@@ -246,6 +335,13 @@ class AppRoutes {
             : GastropediaData.items.first;
         return _createSmoothRoute(
           GastropediaDetailScreen(item: item),
+          settings: settings,
+        );
+      // ── Konsultasi Dokter Routes ──────────────────────────────────────────
+      case konsultasi:
+      case konsulDokterAlias: // alias dari menu beranda (/konsul-dokter)
+        return _createSmoothRoute(
+          const DaftarDokterScreen(),
           settings: settings,
         );
       default:

@@ -24,6 +24,19 @@ service cloud.firestore {
       match /prediction_history/{historyId=**} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+
+      // Rules untuk konsultasi dokter (Sub-koleksi users)
+      // Path: /users/{userId}/consultations/{consultationId}
+      // Hanya pemilik uid yang bisa membaca/menulis, mengikuti pola prediction_history.
+      match /consultations/{consultationId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+
+        // Sub-koleksi pesan chat per konsultasi
+        // Path: /users/{userId}/consultations/{consultationId}/messages/{messageId}
+        match /messages/{messageId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+      }
     }
     
     // 2. Rules untuk riwayat login (Root level collection)
@@ -34,6 +47,16 @@ service cloud.firestore {
                                
       allow create: if request.auth != null 
                  && request.resource.data.user_id == request.auth.uid;
+    }
+
+    // 3. Rules untuk koleksi dokter (Root level collection)
+    // Path: /doctors/{doctorId}
+    // Semua user yang sudah login bisa membaca data dokter.
+    // Penulisan/pengeditan data dokter HANYA melalui Firebase Console atau Admin SDK —
+    // tidak bisa dilakukan dari client user biasa.
+    match /doctors/{doctorId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Hanya via Firebase Console / Admin SDK
     }
   }
 }

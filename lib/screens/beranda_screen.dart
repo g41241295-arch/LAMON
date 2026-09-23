@@ -33,6 +33,11 @@ class BerandaScreen extends StatelessWidget {
       Navigator.pushNamed(context, '/ringkasan-makanan');
       return;
     }
+    // Sambungkan menu Konsul Dokter ke fitur Konsultasi Dokter
+    if (menu.route == '/konsul-dokter' || menu.id == 'konsul-dokter') {
+      Navigator.pushNamed(context, '/konsultasi');
+      return;
+    }
     _onMenuClick(context, menu.shortTitle, menu.description);
   }
 
@@ -48,11 +53,7 @@ class BerandaScreen extends StatelessWidget {
           // Already on home
         },
         onChatTap: () {
-          _onMenuClick(
-            context,
-            'Pesan & Konsultasi',
-            'Fitur pesan langsung dengan dokter dan asisten kesehatan lambung sedang dikembangkan.',
-          );
+          Navigator.pushNamed(context, '/konsultasi');
         },
         onProfileTap: () {
           _onMenuClick(
