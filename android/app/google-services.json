@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "360000290906-gt325rbonoqrfkspkcu2e5r1lk51v0tk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.lamon.lamon",
+            "certificate_hash": "3cc2c4565864b8793bdb9b628072108a5c066781"
+          }
+        },
+        {
           "client_id": "360000290906-o2kf8cheif62eajf12ri718r3a3faj65.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
