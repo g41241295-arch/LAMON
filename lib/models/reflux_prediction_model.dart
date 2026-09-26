@@ -142,6 +142,7 @@ class FactorContribution {
   final String userValueDescription;
   final double contributionScore; // 0.0 - 1.0 untuk bar visualisasi
   final IconData icon;
+  final String? imagePath; // Path ke asset gambar kustom (opsional)
 
   const FactorContribution({
     required this.featureName,
@@ -149,6 +150,7 @@ class FactorContribution {
     required this.userValueDescription,
     required this.contributionScore,
     required this.icon,
+    this.imagePath,
   });
 
   Map<String, dynamic> toJson() {
@@ -169,6 +171,36 @@ class FactorContribution {
       'userValueDescription': userValueDescription,
       'contributionScore': contributionScore,
     };
+  }
+
+  static String _imageForFeature(String featureName) {
+    switch (featureName) {
+      case 'alcohol':
+        return 'assets/images/alkohol.png';
+      case 'high_fat_meat':
+        return 'assets/images/daging tinggi lemak.png';
+      case 'salted_snacks':
+      case 'snack_habit':
+        return 'assets/images/camilan asin (2).png';
+      case 'red_meat':
+        return 'assets/images/daging merah (2).png';
+      case 'low_water':
+      case 'water_habit':
+        return 'assets/images/air.png';
+      case 'frozen_dessert':
+        return 'assets/images/beku manis.png';
+      case 'milk_cheese':
+        return 'assets/images/susu keju.png';
+      case 'low_veg':
+      case 'fiber_habit':
+        return 'assets/images/sayur.png';
+      case 'low_fruit':
+        return 'assets/images/buah.png';
+      case 'low_homecooked':
+        return 'assets/images/masak.png';
+      default:
+        return 'assets/images/masak.png'; // Fallback yang relevan
+    }
   }
 
   static IconData _iconForFeature(String featureName) {
@@ -210,6 +242,7 @@ class FactorContribution {
       contributionScore:
           (data['contributionScore'] as num?)?.toDouble() ?? 0.0,
       icon: _iconForFeature(featureName),
+      imagePath: _imageForFeature(featureName),
     );
   }
 
@@ -222,6 +255,7 @@ class FactorContribution {
       contributionScore:
           (json['contributionScore'] as num?)?.toDouble() ?? 0.0,
       icon: _iconForFeature(featureName),
+      imagePath: _imageForFeature(featureName),
     );
   }
 }

@@ -158,27 +158,27 @@ class _DiseasePredictionResultScreenState
     );
   }
 
-  /// Memetakan konten rekomendasi ke icon yang relevan
-  static IconData _iconForRecommendation(String rec) {
+  /// Memetakan konten rekomendasi ke gambar yang relevan
+  static String _imageForRecommendation(String rec) {
     final lower = rec.toLowerCase();
-    if (lower.contains('sayur') || lower.contains('buah') || lower.contains('serat')) {
-      return Icons.eco_rounded;
-    } else if (lower.contains('minum') || lower.contains('air')) {
-      return Icons.water_drop_rounded;
-    } else if (lower.contains('daging') || lower.contains('lemak')) {
-      return Icons.lunch_dining_rounded;
-    } else if (lower.contains('camilan') || lower.contains('gorengan') || lower.contains('asin')) {
-      return Icons.cookie_outlined;
+    if (lower.contains('camilan') || lower.contains('gorengan') || lower.contains('asin') || lower.contains('tinggi lemak')) {
+      return 'assets/images/kurangi camilan asin.png';
     } else if (lower.contains('alkohol')) {
-      return Icons.local_bar_rounded;
-    } else if (lower.contains('dessert') || lower.contains('es krim') || lower.contains('beku')) {
-      return Icons.icecream_outlined;
-    } else if (lower.contains('masak') || lower.contains('rumah')) {
-      return Icons.home_rounded;
-    } else if (lower.contains('berbaring') || lower.contains('jam') || lower.contains('tidur')) {
-      return Icons.schedule_rounded;
+      return 'assets/images/alkohol.png';
+    } else if (lower.contains('tidur') || lower.contains('berbaring') || lower.contains('jam') || lower.contains('makan besar')) {
+      return 'assets/images/hindari makan mendekati jam tidur.png';
     }
-    return Icons.thumb_up_rounded;
+    // Fallback if no matching keyword
+    if (lower.contains('sayur') || lower.contains('buah') || lower.contains('serat')) {
+      return 'assets/images/sayur.png';
+    } else if (lower.contains('minum') || lower.contains('air')) {
+      return 'assets/images/air.png';
+    } else if (lower.contains('daging') || lower.contains('lemak')) {
+      return 'assets/images/daging merah (2).png';
+    } else if (lower.contains('masak') || lower.contains('rumah')) {
+      return 'assets/images/masak.png';
+    }
+    return 'assets/images/omnivora.png'; // A generic fallback icon
   }
 
   @override
@@ -583,10 +583,10 @@ class _DiseasePredictionResultScreenState
               children: [
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
-                  child: Icon(
-                    _iconForRecommendation(rec),
-                    color: AppColors.primary,
-                    size: 18,
+                  child: Image.asset(
+                    _imageForRecommendation(rec),
+                    width: 20,
+                    height: 20,
                   ),
                 ),
                 const SizedBox(width: 10),

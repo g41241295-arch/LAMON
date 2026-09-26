@@ -67,6 +67,7 @@ class RefluxPredictionService {
             _frequencyLabel(input.alcoholFrequency).toLowerCase(),
         'rawScore': score,
         'icon': Icons.local_bar_rounded,
+        'imagePath': 'assets/images/alkohol.png',
       });
     }
 
@@ -78,6 +79,7 @@ class RefluxPredictionService {
         'userValueDescription': 'sering dikonsumsi',
         'rawScore': 0.15,
         'icon': Icons.lunch_dining_rounded,
+        'imagePath': 'assets/images/daging tinggi lemak.png',
       });
     }
 
@@ -91,6 +93,7 @@ class RefluxPredictionService {
             _frequencyLabel(input.saltedSnacksFrequency).toLowerCase(),
         'rawScore': score,
         'icon': Icons.cookie_outlined,
+        'imagePath': 'assets/images/camilan asin (2).png',
       });
     }
 
@@ -104,6 +107,7 @@ class RefluxPredictionService {
             _frequencyLabel(input.redMeatFrequency).toLowerCase(),
         'rawScore': score,
         'icon': Icons.kebab_dining_rounded,
+        'imagePath': 'assets/images/daging merah (2).png',
       });
     }
 
@@ -117,6 +121,7 @@ class RefluxPredictionService {
             '< 1L/hari (${_frequencyLabel(input.oneLiterWaterFrequency).toLowerCase()})',
         'rawScore': score,
         'icon': Icons.water_drop_outlined,
+        'imagePath': 'assets/images/air.png',
       });
     }
 
@@ -130,6 +135,7 @@ class RefluxPredictionService {
             _frequencyLabel(input.frozenDessertFrequency).toLowerCase(),
         'rawScore': score,
         'icon': Icons.icecream_outlined,
+        'imagePath': 'assets/images/beku manis.png',
       });
     }
 
@@ -143,6 +149,7 @@ class RefluxPredictionService {
             _frequencyLabel(input.milkCheeseFrequency).toLowerCase(),
         'rawScore': score,
         'icon': Icons.local_drink_outlined,
+        'imagePath': 'assets/images/susu keju.png',
       });
     }
 
@@ -156,6 +163,7 @@ class RefluxPredictionService {
             _frequencyLabel(input.vegetableFrequency).toLowerCase(),
         'rawScore': score,
         'icon': Icons.eco_outlined,
+        'imagePath': 'assets/images/sayur.png',
       });
     }
 
@@ -169,6 +177,7 @@ class RefluxPredictionService {
             _frequencyLabel(input.fruitFrequency).toLowerCase(),
         'rawScore': score,
         'icon': Icons.apple_outlined,
+        'imagePath': 'assets/images/buah.png',
       });
     }
 
@@ -182,6 +191,7 @@ class RefluxPredictionService {
             'masak di rumah ${_frequencyLabel(input.homecookedMealsFrequency).toLowerCase()}',
         'rawScore': score,
         'icon': Icons.home_filled,
+        'imagePath': 'assets/images/masak.png',
       });
     }
 
@@ -194,6 +204,7 @@ class RefluxPredictionService {
             _frequencyLabel(input.oneLiterWaterFrequency).toLowerCase(),
         'rawScore': 0.05,
         'icon': Icons.water_drop_outlined,
+        'imagePath': 'assets/images/air.png',
       });
       evaluated.add({
         'featureName': 'fiber_habit',
@@ -202,6 +213,7 @@ class RefluxPredictionService {
             _frequencyLabel(input.vegetableFrequency).toLowerCase(),
         'rawScore': 0.04,
         'icon': Icons.eco_outlined,
+        'imagePath': 'assets/images/sayur.png',
       });
       evaluated.add({
         'featureName': 'snack_habit',
@@ -210,6 +222,7 @@ class RefluxPredictionService {
             _frequencyLabel(input.saltedSnacksFrequency).toLowerCase(),
         'rawScore': 0.03,
         'icon': Icons.cookie_outlined,
+        'imagePath': 'assets/images/camilan asin (2).png',
       });
     }
 
@@ -233,6 +246,7 @@ class RefluxPredictionService {
         userValueDescription: item['userValueDescription'] as String,
         contributionScore: normalized,
         icon: item['icon'] as IconData,
+        imagePath: item['imagePath'] as String?,
       );
     }).toList();
   }

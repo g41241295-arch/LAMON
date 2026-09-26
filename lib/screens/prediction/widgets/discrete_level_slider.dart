@@ -6,7 +6,7 @@ import '../../../constants/app_colors.dart';
 class DiscreteLevelSlider extends StatelessWidget {
   final String title;
   final String subtitle;
-  final IconData icon;
+  final String imagePath;
   final int value;
   final ValueChanged<int> onChanged;
 
@@ -22,7 +22,7 @@ class DiscreteLevelSlider extends StatelessWidget {
     super.key,
     required this.title,
     required this.subtitle,
-    required this.icon,
+    required this.imagePath,
     required this.value,
     required this.onChanged,
   });
@@ -56,7 +56,7 @@ class DiscreteLevelSlider extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(icon, size: 18, color: AppColors.primary),
+              Image.asset(imagePath, width: 24, height: 24),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(

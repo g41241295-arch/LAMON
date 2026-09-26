@@ -386,7 +386,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
 
         // 2. Slider Makan Buah
         DiscreteLevelSlider(
-          icon: Icons.spa_rounded,
+          imagePath: 'assets/images/buah.png',
           title: 'Seberapa sering makan buah?',
           subtitle: 'Dalam seminggu terakhir',
           value: _dietInput.fruitFrequency,
@@ -401,7 +401,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
 
         // 3. Slider Makan Sayur
         DiscreteLevelSlider(
-          icon: Icons.eco_rounded,
+          imagePath: 'assets/images/sayur.png',
           title: 'Seberapa sering makan sayur?',
           subtitle: 'Dalam seminggu terakhir',
           value: _dietInput.vegetableFrequency,
@@ -416,7 +416,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
 
         // 4. Slider Masak dan Makan di Rumah
         DiscreteLevelSlider(
-          icon: Icons.home_rounded,
+          imagePath: 'assets/images/masak.png',
           title: 'Seberapa sering masak dan makan di rumah?',
           subtitle: 'Dibanding makan di luar/pesan makanan',
           value: _dietInput.homecookedMealsFrequency,
@@ -431,7 +431,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
 
         // 5. Slider Minum Air > 1 Liter
         DiscreteLevelSlider(
-          icon: Icons.water_drop_rounded,
+          imagePath: 'assets/images/air.png',
           title: 'Seberapa sering minum air >1 liter/hari?',
           subtitle: 'Kebiasaan minum air putih harian',
           value: _dietInput.oneLiterWaterFrequency,
@@ -454,7 +454,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
       children: [
         // 1. Slider Daging Merah
         DiscreteLevelSlider(
-          icon: Icons.kebab_dining_rounded,
+          imagePath: 'assets/images/daging merah.png',
           title: 'Seberapa sering makan daging merah?',
           subtitle: 'Sapi, kambing, domba, dll',
           value: _dietInput.redMeatFrequency,
@@ -473,7 +473,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
 
         // 3. Slider Camilan Asin
         DiscreteLevelSlider(
-          icon: Icons.cookie_outlined,
+          imagePath: 'assets/images/camilan asin.png',
           title: 'Seberapa sering makan camilan asin?',
           subtitle: 'Kripik, kerupuk, kacang asin, gorengan, dll',
           value: _dietInput.saltedSnacksFrequency,
@@ -488,7 +488,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
 
         // 4. Slider Makanan Beku Manis
         DiscreteLevelSlider(
-          icon: Icons.icecream_outlined,
+          imagePath: 'assets/images/beku manis.png',
           title: 'Seberapa sering makan makanan beku manis?',
           subtitle: 'Es krim, dessert dingin olahan',
           value: _dietInput.frozenDessertFrequency,
@@ -531,7 +531,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Icon(Icons.lunch_dining_rounded, size: 18, color: AppColors.primary),
+              Image.asset('assets/images/daging tinggi lemak.png', width: 24, height: 24),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
@@ -654,7 +654,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
       children: [
         // 1. Slider Susu & Keju
         DiscreteLevelSlider(
-          icon: Icons.local_drink_rounded,
+          imagePath: 'assets/images/susu keju.png',
           title: 'Seberapa sering konsumsi susu & keju?',
           subtitle: 'Susu, keju, yoghurt, produk olahan susu lainnya',
           value: _dietInput.milkCheeseFrequency,
@@ -669,7 +669,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
 
         // 2. Slider Konsumsi Alkohol
         DiscreteLevelSlider(
-          icon: Icons.local_bar_rounded,
+          imagePath: 'assets/images/alkohol.png',
           title: 'Seberapa sering konsumsi alkohol?',
           subtitle: 'Bir, anggur, minuman keras beralkohol lainnya',
           value: _dietInput.alcoholFrequency,

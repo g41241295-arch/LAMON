@@ -48,11 +48,18 @@ class FactorContributionBar extends StatelessWidget {
                   color: const Color(0xFFDCEDF7),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
-                  factor.icon,
-                  size: 20,
-                  color: AppColors.primary,
-                ),
+                child: factor.imagePath != null && factor.imagePath!.isNotEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(6.0),
+                        child: Image.asset(
+                          factor.imagePath!,
+                        ),
+                      )
+                    : Icon(
+                        factor.icon,
+                        size: 20,
+                        color: AppColors.primary,
+                      ),
               ),
               const SizedBox(width: 12),
 

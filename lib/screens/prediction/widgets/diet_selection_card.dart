@@ -17,19 +17,19 @@ class DietSelectionCard extends StatelessWidget {
       'id': 'Omnivora',
       'title': 'Omnivora',
       'subtitle': 'Semua jenis',
-      'icon': Icons.restaurant_rounded,
+      'icon': 'assets/images/omnivora.png',
     },
     {
       'id': 'Vegetarian',
       'title': 'Vegetarian',
       'subtitle': 'Tanpa daging',
-      'icon': Icons.spa_rounded,
+      'icon': 'assets/images/vegetarian.png',
     },
     {
       'id': 'Vegan',
       'title': 'Vegan',
       'subtitle': 'Tanpa hewani',
-      'icon': Icons.eco_rounded,
+      'icon': 'assets/images/vegan.png',
     },
   ];
 
@@ -132,18 +132,17 @@ class DietSelectionCard extends StatelessWidget {
                           Container(
                             width: 38,
                             height: 38,
+                            padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: isSelected
                                   ? AppColors.primary
                                   : const Color(0xFFF0F5F8),
                             ),
-                            child: Icon(
-                              diet['icon'] as IconData,
-                              size: 20,
-                              color: isSelected
-                                  ? Colors.white
-                                  : AppColors.primary,
+                            child: Image.asset(
+                              diet['icon'] as String,
+                              width: 20,
+                              height: 20,
                             ),
                           ),
                           const SizedBox(height: 8),
