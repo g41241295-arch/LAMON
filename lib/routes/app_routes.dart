@@ -28,6 +28,8 @@ import '../screens/konsultasi/chat_dokter_screen.dart';
 import '../models/reflux_prediction_model.dart';
 import '../models/gastropedia_item_model.dart';
 import '../models/doctor_model.dart';
+import '../screens/dashboard_dokter_screen.dart';
+import '../screens/dashboard_admin_screen.dart';
 
 class AppRoutes {
   static const String initial = '/splash';
@@ -36,6 +38,8 @@ class AppRoutes {
   static const String register = '/register';
   static const String googleAuth = '/google-auth';
   static const String beranda = '/beranda';
+  static const String doctorDashboard = '/doctor-dashboard';
+  static const String adminDashboard = '/admin-dashboard';
   static const String placeholder = '/placeholder';
 
   // Screening Flow Routes
@@ -257,6 +261,18 @@ class AppRoutes {
       case beranda:
         return _createSmoothRoute(
           const BerandaScreen(),
+          settings: settings,
+          isFadeOnly: true,
+        );
+      case doctorDashboard:
+        return _createSmoothRoute(
+          const DoctorDashboardScreen(),
+          settings: settings,
+          isFadeOnly: true,
+        );
+      case adminDashboard:
+        return _createSmoothRoute(
+          const AdminDashboardScreen(),
           settings: settings,
           isFadeOnly: true,
         );

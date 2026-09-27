@@ -91,36 +91,126 @@ class _LoginScreenState extends State<LoginScreen> {
           debugPrint('Gagal menambahkan riwayat login: $e');
         }
 
-        // Cek status skrining dari Firestore dengan timeout 10 detik
-        // agar tidak macet selamanya jika Firestore Rules memblokir
+        // Cek data user dari Firestore dengan timeout 10 detik
         bool hasCompletedScreening = false;
         String userName = email.split('@')[0];
         if (userName.isNotEmpty) {
           userName = userName[0].toUpperCase() + userName.substring(1);
         }
+        
+        DocumentSnapshot<Map<String, dynamic>>? userDoc;
         try {
-          final userDoc = await FirebaseFirestore.instance
+          userDoc = await FirebaseFirestore.instance
               .collection('users')
               .doc(uid)
               .get()
               .timeout(const Duration(seconds: 10));
-          if (userDoc.exists) {
-            final data = userDoc.data();
-            if (data != null) {
-              hasCompletedScreening = data['hasCompletedScreening'] == true;
-              if (data['nama'] != null && data['nama'].toString().trim().isNotEmpty) {
-                userName = data['nama'];
-              } else if (data['name'] != null && data['name'].toString().trim().isNotEmpty) {
-                userName = data['name'];
-              }
-            }
-          }
         } catch (e) {
           debugPrint('Gagal membaca data user dari Firestore: $e');
-          // Lanjutkan login meski Firestore gagal; default ke skrining jika belum ada data
         }
 
         if (!mounted) return;
+
+        if (userDoc == null || !userDoc.exists) {
+          await FirebaseAuth.instance.signOut();
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.error_outline_rounded, color: Colors.white),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Akun tidak ditemukan atau belum terdaftar dengan benar',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFFD32F2F),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              margin: const EdgeInsets.all(16),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+          return;
+        }
+
+        final data = userDoc.data() ?? {};
+        final role = data['role'] as String?;
+
+        if (role == 'dokter' || role == 'admin') {
+          final statusVerifikasi = data['status_verifikasi'] as String?;
+          if (statusVerifikasi != 'approved') {
+            await FirebaseAuth.instance.signOut();
+            setState(() {
+              _isLoading = false;
+            });
+            ScaffoldMessenger.of(context).clearSnackBars();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.error_outline_rounded, color: Colors.white),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Akun Anda belum diverifikasi, silakan hubungi admin',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: const Color(0xFFD32F2F),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                margin: const EdgeInsets.all(16),
+                duration: const Duration(seconds: 4),
+              ),
+            );
+            return;
+          }
+        } else if (role != null && role != 'pengguna') {
+          await FirebaseAuth.instance.signOut();
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.error_outline_rounded, color: Colors.white),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Role akun tidak dikenali',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFFD32F2F),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              margin: const EdgeInsets.all(16),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+          return;
+        }
+
+        hasCompletedScreening = data['hasCompletedScreening'] == true;
+        if (data['nama'] != null && data['nama'].toString().trim().isNotEmpty) {
+          userName = data['nama'];
+        } else if (data['name'] != null && data['name'].toString().trim().isNotEmpty) {
+          userName = data['name'];
+        }
 
         setState(() {
           _isLoading = false;
@@ -129,10 +219,16 @@ class _LoginScreenState extends State<LoginScreen> {
         final appState = AppState.of(context);
         appState.loginWithGoogle(userName, email);
 
-        if (!hasCompletedScreening) {
-          Navigator.pushNamedAndRemoveUntil(context, '/screening/gender', (route) => false);
+        if (role == 'dokter') {
+          Navigator.pushNamedAndRemoveUntil(context, '/doctor-dashboard', (route) => false);
+        } else if (role == 'admin') {
+          Navigator.pushNamedAndRemoveUntil(context, '/admin-dashboard', (route) => false);
         } else {
-          Navigator.pushNamedAndRemoveUntil(context, '/beranda', (route) => false);
+          if (!hasCompletedScreening) {
+            Navigator.pushNamedAndRemoveUntil(context, '/screening/gender', (route) => false);
+          } else {
+            Navigator.pushNamedAndRemoveUntil(context, '/beranda', (route) => false);
+          }
         }
       } else {
         // userCredential.user == null — kondisi tidak normal, reset loading
