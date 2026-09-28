@@ -1,15 +1,199 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../constants/app_colors.dart';
-import '../constants/app_assets.dart';
-import '../models/menu_item_model.dart';
 import '../providers/app_state.dart';
-import '../widgets/app_scaffold.dart';
-import '../widgets/bottom_nav_bar.dart';
+import 'beranda/models/meal_schedule_model.dart';
+import 'beranda/services/beranda_meal_service.dart';
+import 'beranda/widgets/header_section.dart';
+import 'beranda/widgets/meal_alarm_card.dart';
+import 'beranda/widgets/daily_summary_card.dart';
+import 'beranda/widgets/main_menu_list.dart';
+import 'beranda/widgets/info_cards_section.dart';
 
-class BerandaScreen extends StatelessWidget {
+/// Halaman Beranda utama aplikasi LAMON (Lambung Awareness & Monitoring)
+class BerandaScreen extends StatefulWidget {
   const BerandaScreen({super.key});
 
-  void _onMenuClick(BuildContext context, String title, String description) {
+  @override
+  State<BerandaScreen> createState() => BerandaScreenState();
+}
+
+class BerandaScreenState extends State<BerandaScreen> {
+  final BerandaMealService _mealService = BerandaMealService();
+
+  List<MealScheduleItem> _schedules = BerandaMealService.defaultSchedules;
+  Map<String, MealDailyStatus> _dailyStatus = {
+    'breakfast': const MealDailyStatus(isCompleted: true, actualTime: '08.00'),
+    'lunch': const MealDailyStatus(isCompleted: false, actualTime: null),
+    'dinner': const MealDailyStatus(isCompleted: false, actualTime: null),
+  };
+
+  MealScheduleItem? _displayedSchedule;
+  DateTime _currentDate = DateTime.now();
+  Timer? _tickerTimer;
+  Timer? _transitionTimer;
+  bool _isTransitioningNextMeal = false;
+
+  /// Getter untuk service (berguna untuk testing / debug override)
+  BerandaMealService get mealService => _mealService;
+
+  /// Metode pembantu untuk pengujian debug jam alarm
+  void setDebugTime(DateTime? debugTime) {
+    if (!kDebugMode) return;
+    setState(() {
+      _mealService.debugNow = debugTime;
+      _updateActiveSchedule(_mealService.now);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeData();
+
+    // Timer per 1 detik untuk memantau jam perangkat secara realtime
+    _tickerTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _onTick();
+    });
+  }
+
+  @override
+  void dispose() {
+    _tickerTimer?.cancel();
+    _transitionTimer?.cancel();
+    _mealService.dispose();
+    super.dispose();
+  }
+
+  /// Memuat jadwal dari penyimpanan lokal (shared_preferences) & status harian tervalidasi
+  Future<void> _initializeData() async {
+    final now = _mealService.now;
+    final loadedSchedules = await _mealService.loadSchedules();
+    final loadedStatus = await _mealService.loadDailyStatus(now);
+
+    if (mounted) {
+      setState(() {
+        _schedules = loadedSchedules;
+        _dailyStatus = loadedStatus;
+        _currentDate = now;
+        _updateActiveSchedule(now);
+      });
+    }
+  }
+
+  /// Pengecekan realtime setiap detik
+  void _onTick() {
+    final now = _mealService.now;
+
+    // Reset otomatis saat pergantian tanggal (ganti hari)
+    if (now.day != _currentDate.day ||
+        now.month != _currentDate.month ||
+        now.year != _currentDate.year) {
+      _currentDate = now;
+      _mealService.loadDailyStatus(now).then((freshStatus) {
+        if (mounted) {
+          setState(() {
+            _dailyStatus = freshStatus;
+            _updateActiveSchedule(now);
+          });
+        }
+      });
+      return;
+    }
+
+    _updateActiveSchedule(now);
+  }
+
+  /// Menentukan jadwal yang aktif dan status alarm berdasarkan waktu sekarang
+  void _updateActiveSchedule(DateTime now) {
+    if (_isTransitioningNextMeal) return;
+
+    final determined = _mealService.determineDisplayedSchedule(_schedules, _dailyStatus);
+    final isInRange = _mealService.isMealInTimeRange(determined);
+    final isDone = _dailyStatus[determined.id]?.isCompleted ?? false;
+
+    // Alarm dan efek bergetar HANYA aktif saat waktu berada dalam rentang jam makan dan belum ditandai
+    if (isInRange && !isDone) {
+      if (!_mealService.isAlarmRinging) {
+        _mealService.startAlarm();
+      }
+    } else {
+      if (_mealService.isAlarmRinging) {
+        _mealService.stopAlarm();
+      }
+    }
+
+    if (_displayedSchedule?.id != determined.id) {
+      setState(() {
+        _displayedSchedule = determined;
+      });
+    }
+  }
+
+  /// Aksi ketika pengguna menekan tombol "Tandai selesai"
+  Future<void> _onMarkMealCompleted() async {
+    final active = _displayedSchedule;
+    if (active == null) return;
+
+    final now = _mealService.now;
+
+    // Cek apakah waktu saat ini sah untuk jam makan ini
+    if (!_mealService.isMealInTimeRange(active)) {
+      _showNotMealTimeSnackBar(active);
+      return;
+    }
+
+    _mealService.stopAlarm();
+
+    // Simpan status selesai harian
+    final updatedStatus = await _mealService.markMealCompleted(
+      date: now,
+      mealId: active.id,
+      completedTime: now,
+    );
+
+    if (mounted) {
+      setState(() {
+        _dailyStatus = updatedStatus;
+        _isTransitioningNextMeal = true;
+      });
+
+      // Animasi transisi otomatis berpindah ke jadwal jam makan berikutnya
+      _transitionTimer?.cancel();
+      _transitionTimer = Timer(const Duration(milliseconds: 1400), () {
+        if (!mounted) return;
+
+        final nextSchedule = _mealService.determineDisplayedSchedule(
+          _schedules,
+          updatedStatus,
+        );
+
+        setState(() {
+          _displayedSchedule = nextSchedule;
+          _isTransitioningNextMeal = false;
+        });
+      });
+    }
+  }
+
+  /// Tampilkan SnackBar singkat bila tombol ditekan sebelum waktunya
+  void _showNotMealTimeSnackBar(MealScheduleItem schedule) {
+    final startStr = schedule.startHour.toString().padLeft(2, '0');
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Belum waktunya makan. Tersedia pukul $startStr.00',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  /// Navigasi ke placeholder screen
+  void _navigateToPlaceholder(String title, String description) {
     Navigator.pushNamed(
       context,
       '/placeholder',
@@ -20,7 +204,8 @@ class BerandaScreen extends StatelessWidget {
     );
   }
 
-  void _onMainMenuClick(BuildContext context, MainMenuItem menu) {
+  /// Navigasi untuk kartu-kartu Menu Utama
+  void _onMainMenuTap(BerandaMenuItem menu) {
     if (menu.route == '/prediksi-penyakit' || menu.id == 'prediksi-penyakit') {
       Navigator.pushNamed(context, '/prediksi-penyakit');
       return;
@@ -33,12 +218,14 @@ class BerandaScreen extends StatelessWidget {
       Navigator.pushNamed(context, '/ringkasan-makanan');
       return;
     }
-    // Sambungkan menu Konsul Dokter ke fitur Konsultasi Dokter
-    if (menu.route == '/konsul-dokter' || menu.id == 'konsul-dokter') {
+    if (menu.route == '/konsul-dokter' || menu.id == 'konsul-dokter' || menu.route == '/konsultasi') {
       Navigator.pushNamed(context, '/konsultasi');
       return;
     }
-    _onMenuClick(context, menu.shortTitle, menu.description);
+    _navigateToPlaceholder(
+      menu.title.replaceAll('\n', ' '),
+      menu.description,
+    );
   }
 
 
@@ -46,616 +233,162 @@ class BerandaScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = AppState.of(context);
     final user = appState.currentUser;
-    final lunchDone = appState.lunchDone;
+    final activeSchedule = _displayedSchedule ?? _schedules[1];
+    final isCurrentCompleted = _dailyStatus[activeSchedule.id]?.isCompleted ?? false;
+    final isActiveNow = _mealService.isMealInTimeRange(activeSchedule) && !isCurrentCompleted;
 
-    return AppScaffold(
-      bottomNavigationBar: BottomNavBar(
-        onHomeTap: () {
-          // Already on home
-        },
-        onChatTap: () {
-          Navigator.pushNamed(context, '/konsultasi');
-        },
-        onProfileTap: () {
-          _onMenuClick(
-            context,
-            'Profil Pengguna',
-            'Halaman pengaturan profil pengguna, data medis, dan riwayat kesehatan lambung.',
-          );
-        },
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Tombol logout disembunyikan sementara sesuai permintaan
-            // =========================================================
-            // A. HEADER SAPAAN & MASKOT BERANDA
-            // =========================================================
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Halo, ${user.name} !',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.brownAccent,
-                          height: 1.1,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Sehatkan Lambung,\nMulai dari Hari ini',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.primary,
-                          height: 1.15,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Yuk, jaga pola makan dan pantau kesehatan lambungmu setiap hari',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.brownSubtext,
-                          height: 1.25,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+    // Hitung safe area bawah perangkat
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
-                // Mascot with radial glow
-                SizedBox(
-                  width: 120,
-                  height: 120,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        width: 90,
-                        height: 90,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFFE566).withValues(alpha: 0.65),
-                              blurRadius: 28,
-                              spreadRadius: 8,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Image.asset(
-                        AppAssets.mascotHeader,
-                        width: 110,
-                        height: 110,
-                        fit: BoxFit.contain,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isLargeScreen = constraints.maxWidth > 520;
+
+        Widget content = Container(
+          // Background gambar layar penuh sesuai gambar desain yang dilampirkan
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/images/background_beranda.png'),
+              fit: BoxFit.cover,
             ),
+          ),
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            // HAPUS bottom navigation bar dari tampilan Beranda sesuai Revisi Poin 1
+            body: SafeArea(
+              bottom: false,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 14),
 
-            const SizedBox(height: 16),
+                    // =========================================================
+                    // 1 & 2. HEADER SAPAAN + LOGO MASKOT + KARTU ALARM JAM MAKAN
+                    // Maskot menumpuk di atas tepi atas kartu alarm (Stack Clip.none)
+                    // =========================================================
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Layer 1: Teks Header & Kartu Alarm Jam Makan
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Header Sapaan Kiri Atas
+                              Padding(
+                                padding: const EdgeInsets.only(right: 125),
+                                child: HeaderGreeting(userName: user.name),
+                              ),
+                              const SizedBox(height: 14),
 
-            // =========================================================
-            // B. CARD "JAM MAKAN SIANG"
-            // =========================================================
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    AppColors.lunchCardGradientStart,
-                    AppColors.lunchCardGradientEnd,
+                              // Kartu Alarm Jam Makan
+                              MealAlarmCard(
+                                schedule: activeSchedule,
+                                isCompleted: isCurrentCompleted,
+                                isActiveNow: isActiveNow,
+                                isAlarmRinging: _mealService.isAlarmRinging,
+                                onMarkCompleted: _onMarkMealCompleted,
+                                onDisabledTap: () => _showNotMealTimeSnackBar(activeSchedule),
+                              ),
+                            ],
+                          ),
+
+                          // Layer 2: Maskot Lambung Beranimasi (Urutan Stack paling atas)
+                          const Positioned(
+                            top: 2,
+                            right: -2,
+                            child: AnimatedMascotLogo(size: 152),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // =========================================================
+                    // 3. KARTU "RINGKASAN HARI INI" (TIMELINE)
+                    // =========================================================
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: DailySummaryCard(
+                        dailyStatus: _dailyStatus,
+                        activeMealId: activeSchedule.id,
+                      ),
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    // =========================================================
+                    // 4. SECTION "MENU UTAMA" (HORIZONTAL SCROLL / FULL-BLEED)
+                    // Dibiarkan full-width agar kartu terpotong di tepi layar HP
+                    // =========================================================
+                    MainMenuList(
+                      onMenuTap: _onMainMenuTap,
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    // =========================================================
+                    // 5. SECTION "SEPUTAR INFORMASI" (GASTROPEDIA & BERITA)
+                    // =========================================================
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: InfoCardsSection(
+                        onGastropediaTap: () {
+                          Navigator.pushNamed(context, '/gastropedia');
+                        },
+                        onBeritaTap: () {
+                          Navigator.pushNamed(context, '/berita');
+                        },
+                      ),
+                    ),
+
+                    // Padding bawah cukup ±24 dp + inset sistem (Revisi Poin 2)
+                    SizedBox(height: 24 + bottomInset),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: AppColors.lunchCardBorder,
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  // Clock Container
-                  Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.22),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    padding: const EdgeInsets.all(10),
-                    child: Image.asset(
-                      AppAssets.clockCard,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-
-                  const SizedBox(width: 14),
-
-                  // Text & Button
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Jam makan siang',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.lunchCardText,
-                            height: 1.1,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          '12.00 – 13.00 WIB',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.lunchCardText,
-                          ),
-                        ),
-                        const Text(
-                          'Jangan lupa makan !',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.lunchCardText,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Toggle Finished Button
-                        InkWell(
-                          onTap: () {
-                            appState.toggleLunchDone();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  !lunchDone
-                                      ? 'Jam makan siang telah ditandai selesai! Bagus!'
-                                      : 'Status makan siang direset.',
-                                ),
-                                duration: const Duration(seconds: 2),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: lunchDone
-                                  ? AppColors.successGreen
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.06),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              lunchDone ? 'Telah Selesai ✓' : 'Tandai selesai',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: lunchDone
-                                    ? Colors.white
-                                    : AppColors.primary,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ),
             ),
+          ),
+        );
 
-            const SizedBox(height: 16),
-
-            // =========================================================
-            // C. CARD "RINGKASAN HARI INI" (TIMELINE)
-            // =========================================================
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: AppColors.summaryCardBg,
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: AppColors.summaryCardBorder,
-                  width: 1.2,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Ringkasan hari ini',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.summaryCardText,
+        // Jika dibuka pada browser desktop atau layar lebar, tampilkan bingkai mobile
+        if (isLargeScreen) {
+          final maxH = constraints.maxHeight.isFinite
+              ? constraints.maxHeight.clamp(0.0, 920.0)
+              : 880.0;
+          return Scaffold(
+            backgroundColor: const Color(0xFFECE7BE),
+            body: Center(
+              child: Container(
+                width: 410,
+                height: maxH,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(36),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.18),
+                      blurRadius: 30,
+                      offset: const Offset(0, 10),
                     ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // 3-Stage Timeline
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Node 1: Sarapan (Done)
-                      _buildTimelineNode(
-                        title: 'Sarapan',
-                        time: '08.00',
-                        isCompleted: true,
-                        isActive: false,
-                      ),
-
-                      // Connecting Line 1-2
-                      Expanded(
-                        child: Container(
-                          height: 2.5,
-                          color: AppColors.successGreen,
-                          margin: const EdgeInsets.only(bottom: 32),
-                        ),
-                      ),
-
-                      // Node 2: Makan Siang (Active or Done)
-                      _buildTimelineNode(
-                        title: 'Makan siang',
-                        time: '12.30',
-                        isCompleted: lunchDone,
-                        isActive: !lunchDone,
-                      ),
-
-                      // Connecting Line 2-3
-                      Expanded(
-                        child: Container(
-                          height: 2.5,
-                          color: lunchDone
-                              ? AppColors.successGreen
-                              : const Color(0xFFD7BE7B),
-                          margin: const EdgeInsets.only(bottom: 32),
-                        ),
-                      ),
-
-                      // Node 3: Makan Malam (Upcoming)
-                      _buildTimelineNode(
-                        title: 'Makan malam',
-                        time: '19.00',
-                        isCompleted: false,
-                        isActive: false,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 18),
-
-            // =========================================================
-            // D. SECTION "MENU UTAMA" (HORIZONTAL SCROLL)
-            // =========================================================
-            _buildSectionBadge('Menu utama'),
-            const SizedBox(height: 12),
-
-            SizedBox(
-              height: 172,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: AppMenus.mainMenus.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  final menu = AppMenus.mainMenus[index];
-                  return GestureDetector(
-                    onTap: () => _onMainMenuClick(
-                      context,
-                      menu,
-                    ),
-                    child: Container(
-                      width: 134,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: const Color(0xFF7FA4BA),
-                          width: 1.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Column(
-                        children: [
-                          // Illustration container
-                          Container(
-                            width: double.infinity,
-                            height: 110,
-                            color: const Color(0xFFF2F7FA),
-                            child: Image.asset(
-                              menu.assetPath,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-
-                          // Title Container
-                          Expanded(
-                            child: Container(
-                              alignment: Alignment.center,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 4,
-                              ),
-                              child: Text(
-                                menu.title,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.brownText,
-                                  height: 1.15,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            const SizedBox(height: 18),
-
-            // =========================================================
-            // E. SECTION "SEPUTAR INFORMASI" (VERTICAL STACK)
-            // =========================================================
-            _buildSectionBadge('Seputar Informasi'),
-            const SizedBox(height: 12),
-
-            ...AppMenus.infoMenus.map((info) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: InkWell(
-                  onTap: () {
-                    if (info.id == 'gastropedia' || info.route == '/gastropedia') {
-                      Navigator.pushNamed(context, '/gastropedia');
-                      return;
-                    }
-                    if (info.id == 'berita-kesehatan' || info.route == '/berita-kesehatan') {
-                      Navigator.pushNamed(context, '/berita');
-                      return;
-                    }
-                    _onMenuClick(
-                      context,
-                      info.title,
-                      info.description,
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(18),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: const Color(0xFFE2ECF2),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        // Left Thumbnail
-                        Container(
-                          width: 80,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Image.asset(
-                            info.assetPath,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-
-                        const SizedBox(width: 14),
-
-                        // Title
-                        Expanded(
-                          child: Text(
-                            info.title,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ),
-
-                        // Chevron Right
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: Colors.black87,
-                          size: 32,
-                        ),
-                      ],
-                    ),
+                  ],
+                  border: Border.all(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    width: 3,
                   ),
                 ),
-              );
-            }),
+                child: content,
+              ),
+            ),
+          );
+        }
 
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Section Badge Pill Widget
-  Widget _buildSectionBadge(String title) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.badgeBgStart,
-            AppColors.badgeBgEnd,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: AppColors.badgeBorder,
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w900,
-          color: AppColors.brownDark,
-          letterSpacing: -0.2,
-        ),
-      ),
-    );
-  }
-
-  // Node for 3-Stage Timeline Widget
-  Widget _buildTimelineNode({
-    required String title,
-    required String time,
-    required bool isCompleted,
-    required bool isActive,
-  }) {
-    Widget iconCircle;
-
-    if (isCompleted) {
-      iconCircle = Container(
-        width: 28,
-        height: 28,
-        decoration: const BoxDecoration(
-          color: AppColors.successGreen,
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(
-          Icons.check_rounded,
-          color: Colors.white,
-          size: 18,
-        ),
-      );
-    } else if (isActive) {
-      iconCircle = Container(
-        width: 28,
-        height: 28,
-        decoration: const BoxDecoration(
-          color: AppColors.warningYellow,
-          shape: BoxShape.circle,
-        ),
-      );
-    } else {
-      iconCircle = Container(
-        width: 28,
-        height: 28,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: AppColors.warningYellow,
-            width: 2.2,
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        iconCircle,
-        const SizedBox(height: 6),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: AppColors.summaryCardText,
-            height: 1.1,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          time,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.summaryCardSubtext,
-            height: 1.1,
-          ),
-        ),
-      ],
+        return content;
+      },
     );
   }
 }
