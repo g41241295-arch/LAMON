@@ -1,10 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/consultation_constants.dart';
+import '../../constants/practice_slot_constants.dart';
 import '../../models/doctor_model.dart';
 import '../../services/consultation_service.dart';
+import '../../utils/app_date_formatter.dart';
+import '../../utils/currency_formatter.dart';
 import '../../widgets/app_scaffold.dart';
-import 'widgets/doctor_card.dart';
+import 'widgets/doctor_avatar.dart';
 import 'widgets/payment_method_item.dart';
 
 /// Layar Ringkasan Pembayaran — review booking + pilih metode bayar.
@@ -26,13 +30,53 @@ class _RingkasanPembayaranScreenState
   String? _selectedMethodName;
   int _selectedHourIndex = 0;
   bool _isLoading = false;
+  late List<OperatingHour> _activeHours;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeHours = _doctor.operatingHours;
+    _checkTodaySchedule();
+  }
+
+  void _checkTodaySchedule() async {
+    final todayKey = AppDateFormatter.formatDateKey(DateTime.now());
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('doctors')
+          .doc(_doctor.id)
+          .collection('schedule')
+          .doc(todayKey)
+          .get();
+      if (doc.exists && doc.data() != null) {
+        final rawSlots = doc.data()!['slots'] as List<dynamic>? ?? [];
+        if (rawSlots.isNotEmpty) {
+          final mapped = <OperatingHour>[];
+          for (final sId in rawSlots) {
+            final slot = PracticeSlotConstants.findById(sId.toString());
+            if (slot != null) {
+              mapped.add(OperatingHour(start: slot.startTime, end: slot.endTime));
+            }
+          }
+          if (mapped.isNotEmpty && mounted) {
+            setState(() {
+              _activeHours = mapped;
+              if (_selectedHourIndex >= mapped.length) {
+                _selectedHourIndex = 0;
+              }
+            });
+          }
+        }
+      }
+    } catch (_) {}
+  }
 
   DoctorModel get _doctor => widget.doctor;
   int get _totalFee => _doctor.price + ConsultationConstants.serviceFee;
 
   String get _selectedTime =>
-      _doctor.operatingHours.isNotEmpty
-          ? _doctor.operatingHours[_selectedHourIndex].display
+      _activeHours.isNotEmpty
+          ? _activeHours[_selectedHourIndex.clamp(0, _activeHours.length - 1)].display
           : '-';
 
   @override
@@ -54,7 +98,7 @@ class _RingkasanPembayaranScreenState
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // ── Banner peringatan ──
                   _WarningBanner(),
@@ -64,7 +108,7 @@ class _RingkasanPembayaranScreenState
                   _DoctorSummaryCard(doctor: _doctor),
                   const SizedBox(height: 16),
 
-                  // ── Jadwal konsultasi ──
+                  // ── Jadwal konsultasi (selebar konten) ──
                   _buildScheduleSection(),
                   const SizedBox(height: 16),
 
@@ -89,6 +133,7 @@ class _RingkasanPembayaranScreenState
 
   Widget _buildScheduleSection() {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -127,8 +172,8 @@ class _RingkasanPembayaranScreenState
             Wrap(
               spacing: 8,
               runSpacing: 6,
-              children: List.generate(_doctor.operatingHours.length, (i) {
-                final hour = _doctor.operatingHours[i];
+              children: List.generate(_activeHours.length, (i) {
+                final hour = _activeHours[i];
                 final isSelected = i == _selectedHourIndex;
                 return GestureDetector(
                   onTap: () => setState(() => _selectedHourIndex = i),
@@ -166,6 +211,7 @@ class _RingkasanPembayaranScreenState
 
   Widget _buildFeeSection() {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -262,7 +308,7 @@ class _RingkasanPembayaranScreenState
                   ),
                 ),
                 Text(
-                  _formatRupiah(_totalFee),
+                  formatRupiah(_totalFee),
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
@@ -358,18 +404,6 @@ class _RingkasanPembayaranScreenState
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
-  String _formatRupiah(int amount) {
-    final s = amount.toString();
-    final buf = StringBuffer('Rp');
-    var count = 0;
-    for (var i = s.length - 1; i >= 0; i--) {
-      if (count > 0 && count % 3 == 0) buf.write('.');
-      buf.write(s[i]);
-      count++;
-    }
-    return String.fromCharCodes(buf.toString().codeUnits.reversed);
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -416,6 +450,7 @@ class _DoctorSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -431,7 +466,11 @@ class _DoctorSummaryCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          DoctorAvatar(photoUrl: doctor.photoUrl, size: 52),
+          DoctorAvatar(
+            photoUrl: doctor.photoUrl,
+            size: 52,
+            borderRadius: 14,
+          ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -490,7 +529,7 @@ class _FeeRow extends StatelessWidget {
           ),
         ),
         Text(
-          _formatRupiah(amount),
+          formatRupiah(amount),
           style: TextStyle(
             fontSize: isTotal ? 16 : 14,
             fontWeight: isTotal ? FontWeight.w900 : FontWeight.w600,
@@ -499,17 +538,5 @@ class _FeeRow extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _formatRupiah(int amount) {
-    final s = amount.toString();
-    final buf = StringBuffer('Rp');
-    var count = 0;
-    for (var i = s.length - 1; i >= 0; i--) {
-      if (count > 0 && count % 3 == 0) buf.write('.');
-      buf.write(s[i]);
-      count++;
-    }
-    return String.fromCharCodes(buf.toString().codeUnits.reversed);
   }
 }

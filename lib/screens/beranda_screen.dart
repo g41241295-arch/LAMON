@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_assets.dart';
 import '../models/menu_item_model.dart';
@@ -6,8 +8,39 @@ import '../providers/app_state.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/bottom_nav_bar.dart';
 
-class BerandaScreen extends StatelessWidget {
+class BerandaScreen extends StatefulWidget {
   const BerandaScreen({super.key});
+
+  @override
+  State<BerandaScreen> createState() => _BerandaScreenState();
+}
+
+class _BerandaScreenState extends State<BerandaScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkRoleGuard();
+  }
+
+  void _checkRoleGuard() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (doc.exists) {
+          final role = doc.data()?['role'] as String?;
+          if (role == 'doctor' || role == 'dokter') {
+            if (mounted) {
+              Navigator.pushNamedAndRemoveUntil(context, '/dokter', (route) => false);
+            }
+          }
+        }
+      } catch (_) {}
+    }
+  }
 
   void _onMenuClick(BuildContext context, String title, String description) {
     Navigator.pushNamed(

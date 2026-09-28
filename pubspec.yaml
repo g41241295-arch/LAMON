@@ -15,6 +15,10 @@ dependencies:
   firebase_auth: ^6.7.0
   cloud_firestore: ^6.10.0
   google_sign_in: ^7.2.0
+  image_picker: ^1.1.2
+  file_picker: ^8.1.4
+  firebase_storage: ^13.6.0
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:
@@ -42,6 +46,8 @@ flutter:
   assets:
     - assets/images/
     - assets/images/gastropedia/
+    - assets/images/doctors/
+    - assets/images/banks/
     - assets/fonts/
     - assets/icon/
 

@@ -15,6 +15,11 @@ class PaymentMethodItem extends StatelessWidget {
     required this.onTap,
   });
 
+  String get _bankAssetPath {
+    final fileName = method.id == 'jatim' ? 'bjatim.png' : '${method.id}.png';
+    return 'assets/images/banks/$fileName';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Semantics(
@@ -26,7 +31,8 @@ class PaymentMethodItem extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          constraints: const BoxConstraints(minHeight: 56),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             color: isSelected
                 ? AppColors.primary.withValues(alpha: 0.06)
@@ -46,23 +52,31 @@ class PaymentMethodItem extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Logo bank (label teks dalam container berwarna)
+              // Logo bank (40x28, contain, di dalam wadah rounded)
               Container(
-                width: 54,
-                height: 32,
+                width: 44,
+                height: 30,
+                padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: _bankColor(method.id),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  method.iconLabel,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.3,
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFFE8EFF5),
+                    width: 1,
                   ),
+                ),
+                child: Image.asset(
+                  _bankAssetPath,
+                  width: 40,
+                  height: 28,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.account_balance_rounded,
+                      size: 20,
+                      color: AppColors.primary,
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 14),
@@ -102,21 +116,5 @@ class PaymentMethodItem extends StatelessWidget {
       ),
     );
   }
-
-  Color _bankColor(String bankId) {
-    switch (bankId) {
-      case 'bsi':
-        return const Color(0xFF00694F); // hijau BSI
-      case 'mandiri':
-        return const Color(0xFF003B6F); // biru Mandiri
-      case 'bri':
-        return const Color(0xFF00529B); // biru BRI
-      case 'jatim':
-        return const Color(0xFF1565C0); // biru Bank Jatim
-      case 'bca':
-        return const Color(0xFF006CB4); // biru BCA
-      default:
-        return AppColors.primaryDark;
-    }
-  }
 }
+
