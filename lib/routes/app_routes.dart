@@ -25,6 +25,8 @@ import '../screens/konsultasi/ringkasan_pembayaran_screen.dart';
 import '../screens/konsultasi/virtual_account_screen.dart';
 import '../screens/konsultasi/payment_success_screen.dart';
 import '../screens/konsultasi/chat_dokter_screen.dart';
+import '../screens/berita/berita_list_screen.dart';
+import '../screens/berita/berita_detail_screen.dart';
 import '../models/reflux_prediction_model.dart';
 import '../models/gastropedia_item_model.dart';
 import '../models/doctor_model.dart';
@@ -73,6 +75,10 @@ class AppRoutes {
   // /konsultasi/virtual-account/:consultationId
   // /konsultasi/payment-success/:consultationId
   // /konsultasi/chat/:consultationId
+
+  // Berita Routes
+  static const String berita = '/berita';
+  static const String beritaDetail = '/berita/detail';
 
   /// Helper untuk membuat transisi halaman yang halus (fade + subtle slide 450ms)
   static PageRouteBuilder<T> _createSmoothRoute<T>(
@@ -358,6 +364,19 @@ class AppRoutes {
       case konsulDokterAlias: // alias dari menu beranda (/konsul-dokter)
         return _createSmoothRoute(
           const DaftarDokterScreen(),
+          settings: settings,
+        );
+      case berita:
+        return _createSmoothRoute(
+          const BeritaListScreen(),
+          settings: settings,
+        );
+      case beritaDetail:
+        final beritaId = settings.arguments is String
+            ? settings.arguments as String
+            : '';
+        return _createSmoothRoute(
+          BeritaDetailScreen(articleId: beritaId),
           settings: settings,
         );
       default:

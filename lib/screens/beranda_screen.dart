@@ -41,6 +41,7 @@ class BerandaScreen extends StatelessWidget {
     _onMenuClick(context, menu.shortTitle, menu.description);
   }
 
+
   @override
   Widget build(BuildContext context) {
     final appState = AppState.of(context);
@@ -463,6 +464,10 @@ class BerandaScreen extends StatelessWidget {
                   onTap: () {
                     if (info.id == 'gastropedia' || info.route == '/gastropedia') {
                       Navigator.pushNamed(context, '/gastropedia');
+                      return;
+                    }
+                    if (info.id == 'berita-kesehatan' || info.route == '/berita-kesehatan') {
+                      Navigator.pushNamed(context, '/berita');
                       return;
                     }
                     _onMenuClick(

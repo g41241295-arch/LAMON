@@ -42,6 +42,7 @@ flutter:
   assets:
     - assets/images/
     - assets/images/gastropedia/
+    - assets/images/berita/
     - assets/fonts/
     - assets/icon/
 
