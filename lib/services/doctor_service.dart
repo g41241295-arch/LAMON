@@ -1,12 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import '../models/consultation_model.dart';
 import '../models/doctor_model.dart';
 
-/// Service untuk mengakses data dokter dari koleksi Firestore `doctors`.
-///
-/// Koleksi `doctors` bersifat read-only dari sisi client user biasa
-/// (sesuai Firestore rules). Penulisan/pengeditan data dilakukan
-/// melalui Firebase Console atau Admin SDK.
+/// Service untuk mengelola data dan operasi dokter:
+/// - Daftar dan detail dokter untuk pasien (watchAll, watchRecommended, fetchById)
+/// - Profil dokter
+/// - Jadwal praktik (doctors/{doctorId}/schedule/{yyyy-MM-dd})
+/// - Konsultasi pasien via collection group 'consultations'
 class DoctorService {
   final FirebaseFirestore _db;
 
@@ -16,7 +17,7 @@ class DoctorService {
   CollectionReference<Map<String, dynamic>> get _doctorsRef =>
       _db.collection('doctors');
 
-  /// Stream realtime daftar semua dokter, diurutkan berdasarkan nama.
+  /// Stream realtime seluruh data dokter, diurutkan berdasarkan nama.
   Stream<List<DoctorModel>> watchAll() {
     return _doctorsRef.orderBy('name').snapshots().map(
           (snap) => snap.docs
@@ -50,14 +51,181 @@ class DoctorService {
     }
   }
 
+  /// Mengambil data dokter berdasarkan doctorId (alias untuk fetchById).
+  Future<DoctorModel?> getDoctorById(String doctorId) => fetchById(doctorId);
+
+  /// Mengambil data dokter untuk user login saat ini:
+  /// 1. Cek field `doctorId` di `users/{uid}`
+  /// 2. Jika tidak ada, coba query `doctors` where `uid == uid`
+  Future<DoctorModel?> getDoctorForUser(String uid) async {
+    try {
+      final userDoc = await _db.collection('users').doc(uid).get();
+      if (userDoc.exists) {
+        final doctorId = userDoc.data()?['doctorId'] as String?;
+        if (doctorId != null && doctorId.isNotEmpty) {
+          final doc = await fetchById(doctorId);
+          if (doc != null) return doc;
+        }
+      }
+
+      // Fallback: cari di koleksi doctors where uid == uid
+      final query = await _db
+          .collection('doctors')
+          .where('uid', isEqualTo: uid)
+          .limit(1)
+          .get();
+      if (query.docs.isNotEmpty) {
+        return DoctorModel.fromFirestore(query.docs.first);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[DoctorService] getDoctorForUser error: $e');
+      return null;
+    }
+  }
+
+  /// Stream live daftar konsultasi pasien untuk dokter tertentu
+  /// menggunakan collection group query: `consultations` where `doctorId == doctorId`.
+  ///
+  /// Diurutkan di sisi klien untuk menghindari kebutuhan composite index.
+  Stream<List<ConsultationModel>> watchDoctorConsultations(String doctorId) {
+    if (doctorId.isEmpty) return Stream.value(<ConsultationModel>[]);
+
+    return _db
+        .collectionGroup('consultations')
+        .where('doctorId', isEqualTo: doctorId)
+        .snapshots()
+        .map((snap) {
+      final list = snap.docs
+          .map((doc) => ConsultationModel.fromFirestore(
+              doc as DocumentSnapshot<Map<String, dynamic>>))
+          .toList();
+
+      // Urutkan terbaru: lastMessageAt ?? createdAt descending
+      list.sort((a, b) {
+        final timeA = a.lastMessageAt ?? a.createdAt;
+        final timeB = b.lastMessageAt ?? b.createdAt;
+        return timeB.compareTo(timeA);
+      });
+
+      return list;
+    });
+  }
+
+  /// Konfirmasi konsultasi oleh dokter:
+  /// Ubah status menjadi 'active' dan isi 'doctorConfirmedAt'.
+  Future<void> confirmConsultation({
+    required String patientUid,
+    required String consultationId,
+  }) async {
+    try {
+      await _db
+          .collection('users')
+          .doc(patientUid)
+          .collection('consultations')
+          .doc(consultationId)
+          .update({
+        'status': 'active',
+        'doctorConfirmedAt': FieldValue.serverTimestamp(),
+      });
+      debugPrint('[DoctorService] Konsultasi $consultationId dikonfirmasi dokter.');
+    } catch (e) {
+      debugPrint('[DoctorService] Gagal confirmConsultation: $e');
+      rethrow;
+    }
+  }
+
+  /// Stream jadwal bulanan dokter:
+  /// Mengembalikan Map berformat { '2026-09-28': ['pagi', 'malam'] }
+  Stream<Map<String, List<String>>> watchMonthlySchedule(
+      String doctorId, int year, int month) {
+    if (doctorId.isEmpty) return Stream.value({});
+
+    final monthStr = month.toString().padLeft(2, '0');
+    final startKey = '$year-$monthStr-01';
+    final endKey = '$year-$monthStr-31';
+
+    return _db
+        .collection('doctors')
+        .doc(doctorId)
+        .collection('schedule')
+        .where(FieldPath.documentId, isGreaterThanOrEqualTo: startKey)
+        .where(FieldPath.documentId, isLessThanOrEqualTo: endKey)
+        .snapshots()
+        .map((snap) {
+      final map = <String, List<String>>{};
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        final rawSlots = data['slots'] as List<dynamic>? ?? [];
+        map[doc.id] = rawSlots.map((s) => s.toString()).toList();
+      }
+      return map;
+    });
+  }
+
+  /// Menyimpan jadwal praktik untuk satu tanggal (yyyy-MM-dd).
+  /// Jika [slotIds] kosong, dokumen jadwal tanggal tersebut dihapus (hari libur).
+  Future<void> saveSchedule({
+    required String doctorId,
+    required String dateKey, // "yyyy-MM-dd"
+    required DateTime date,
+    required List<String> slotIds,
+  }) async {
+    final docRef = _db
+        .collection('doctors')
+        .doc(doctorId)
+        .collection('schedule')
+        .doc(dateKey);
+
+    try {
+      if (slotIds.isEmpty) {
+        await docRef.delete();
+        debugPrint('[DoctorService] Jadwal $dateKey dihapus (libur).');
+      } else {
+        await docRef.set({
+          'date': Timestamp.fromDate(DateTime(date.year, date.month, date.day)),
+          'slots': slotIds,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        debugPrint('[DoctorService] Jadwal $dateKey disimpan: $slotIds');
+      }
+    } catch (e) {
+      debugPrint('[DoctorService] Gagal saveSchedule: $e');
+      rethrow;
+    }
+  }
+
+  /// Memperbarui profil dokter: nama, strNumber, gender (+ updatedAt).
+  Future<void> updateDoctorProfile({
+    required String doctorId,
+    required String name,
+    required String strNumber,
+    String? gender,
+  }) async {
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      throw Exception('Nama dokter tidak boleh kosong.');
+    }
+
+    try {
+      final data = <String, dynamic>{
+        'name': trimmedName,
+        'strNumber': strNumber.trim(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      if (gender != null && gender.isNotEmpty) {
+        data['gender'] = gender;
+      }
+
+      await _db.collection('doctors').doc(doctorId).update(data);
+      debugPrint('[DoctorService] Profil dokter $doctorId berhasil diperbarui.');
+    } catch (e) {
+      debugPrint('[DoctorService] Gagal updateDoctorProfile: $e');
+      rethrow;
+    }
+  }
+
   /// [DEBUG ONLY] Mengisi koleksi `doctors` dengan data seed 3 dokter contoh.
-  ///
-  /// Fungsi ini HANYA bisa dipanggil saat `kDebugMode == true`.
-  /// JANGAN dipanggil di production build.
-  /// Jalankan sekali saat pertama kali setup development environment.
-  ///
-  /// TODO(payment-gateway): Saat integrasi dengan sistem dokter sungguhan,
-  /// hapus seed ini dan gunakan sistem manajemen dokter dari admin panel.
   Future<void> seedDoctors() async {
     assert(kDebugMode, 'seedDoctors() hanya boleh dipanggil saat kDebugMode!');
     if (!kDebugMode) return;
@@ -70,7 +238,7 @@ class DoctorService {
         name: 'Dr. Ketut Maulana',
         specialty: 'Dokter Umum',
         experienceYears: 8,
-        photoUrl: '', // Gunakan avatar generik di UI
+        photoUrl: '',
         price: 50000,
         operatingHours: const [
           OperatingHour(start: '07.00', end: '11.00'),

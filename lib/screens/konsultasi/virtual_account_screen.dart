@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import '../../constants/app_colors.dart';
 import '../../models/consultation_model.dart';
 import '../../services/consultation_service.dart';
+import '../../utils/app_date_formatter.dart';
+import '../../utils/currency_formatter.dart';
 import '../../widgets/app_scaffold.dart';
 
 /// Layar Nomor Virtual Account — tampil setelah booking dibuat.
@@ -233,12 +235,15 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen> {
               const Icon(Icons.account_balance_rounded,
                   size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text(
-                'Nomor Virtual Account ($bankName)',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: AppColors.neutralGray,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  'Nomor Virtual Account ($bankName)',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.neutralGray,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -246,35 +251,44 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen> {
           const SizedBox(height: 14),
           Row(
             children: [
+              // Nomor VA 1 baris tidak terpotong
               Expanded(
-                child: Text(
-                  vaNumber,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.primaryText,
-                    letterSpacing: 1.5,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    vaNumber,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: const TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primaryText,
+                      letterSpacing: 1.0,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
                   ),
                 ),
               ),
-              // Tombol Salin
+              const SizedBox(width: 8),
+              // Tombol Salin Ringkas
               Semantics(
                 label: 'Salin nomor virtual account',
                 button: true,
                 child: OutlinedButton.icon(
                   onPressed: () => _copyVA(context, vaNumber),
-                  icon: const Icon(Icons.copy_rounded, size: 16),
+                  icon: const Icon(Icons.copy_rounded, size: 14),
                   label: const Text('Salin'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary, width: 1.5),
+                    side: const BorderSide(color: AppColors.primary, width: 1.3),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
+                        horizontal: 10, vertical: 6),
                     textStyle: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -288,7 +302,7 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen> {
   }
 
   Widget _buildDetailCard(ConsultationModel c) {
-    final deadlineStr = _formatDateTime(c.paymentDeadline);
+    final deadlineStr = AppDateFormatter.formatPaymentDeadline(c.paymentDeadline);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -316,13 +330,17 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          _DetailRow(label: 'Bank', value: c.paymentMethodName),
+          _BankDetailRow(
+            label: 'Bank',
+            bankName: c.paymentMethodName,
+            bankId: c.paymentMethod,
+          ),
           const Divider(height: 16, color: Color(0xFFF0F4F7)),
           _DetailRow(label: 'Nama Dokter', value: c.doctorName),
           const Divider(height: 16, color: Color(0xFFF0F4F7)),
           _DetailRow(
             label: 'Total Transaksi',
-            value: _formatRupiah(c.totalFee),
+            value: formatRupiah(c.totalFee),
             isHighlight: true,
           ),
           const Divider(height: 16, color: Color(0xFFF0F4F7)),
@@ -349,24 +367,75 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen> {
       ),
     );
   }
+}
 
-  String _formatRupiah(int amount) {
-    final s = amount.toString();
-    final buf = StringBuffer('Rp');
-    var count = 0;
-    for (var i = s.length - 1; i >= 0; i--) {
-      if (count > 0 && count % 3 == 0) buf.write('.');
-      buf.write(s[i]);
-      count++;
-    }
-    return String.fromCharCodes(buf.toString().codeUnits.reversed);
+class _BankDetailRow extends StatelessWidget {
+  final String label;
+  final String bankName;
+  final String bankId;
+
+  const _BankDetailRow({
+    required this.label,
+    required this.bankName,
+    required this.bankId,
+  });
+
+  String get _bankAssetPath {
+    final fileName = bankId == 'jatim' ? 'bjatim.png' : '$bankId.png';
+    return 'assets/images/banks/$fileName';
   }
 
-  String _formatDateTime(DateTime dt) {
-    final h = dt.hour.toString().padLeft(2, '0');
-    final m = dt.minute.toString().padLeft(2, '0');
-    final ampm = dt.hour < 12 ? 'AM' : 'PM';
-    return '${dt.day}/${dt.month}/${dt.year} – $h.$m $ampm';
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppColors.neutralGray,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 24,
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: const Color(0xFFE8EFF5),
+                  width: 1,
+                ),
+              ),
+              child: Image.asset(
+                _bankAssetPath,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => const Icon(
+                  Icons.account_balance_rounded,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              bankName,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primaryText,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }
 
@@ -413,3 +482,4 @@ class _DetailRow extends StatelessWidget {
     );
   }
 }
+

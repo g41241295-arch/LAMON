@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/doctor_model.dart';
 import '../../services/doctor_service.dart';
+import '../../utils/currency_formatter.dart';
 import '../../widgets/app_scaffold.dart';
-import 'widgets/doctor_card.dart';
+import 'widgets/doctor_avatar.dart';
 
 /// Layar Detail Dokter — menampilkan profil lengkap satu dokter.
 class DetailDokterScreen extends StatefulWidget {
@@ -92,7 +93,11 @@ class _DetailDokterScreenState extends State<DetailDokterScreen> {
       child: Column(
         children: [
           // ── Foto besar ──
-          DoctorAvatar(photoUrl: doctor.photoUrl, size: 100),
+          DoctorAvatar(
+            photoUrl: doctor.photoUrl,
+            size: 100,
+            borderRadius: 20,
+          ),
           const SizedBox(height: 14),
 
           // ── Nama ──
@@ -187,7 +192,7 @@ class _DetailDokterScreenState extends State<DetailDokterScreen> {
                   ),
                 ),
                 Text(
-                  _formatRupiah(doctor.price),
+                  formatRupiah(doctor.price),
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
@@ -291,18 +296,6 @@ class _DetailDokterScreenState extends State<DetailDokterScreen> {
             .toList(),
       ),
     );
-  }
-
-  String _formatRupiah(int amount) {
-    final s = amount.toString();
-    final buf = StringBuffer('Rp');
-    var count = 0;
-    for (var i = s.length - 1; i >= 0; i--) {
-      if (count > 0 && count % 3 == 0) buf.write('.');
-      buf.write(s[i]);
-      count++;
-    }
-    return String.fromCharCodes(buf.toString().codeUnits.reversed);
   }
 }
 

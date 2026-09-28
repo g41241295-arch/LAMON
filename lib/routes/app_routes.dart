@@ -30,6 +30,7 @@ import '../screens/berita/berita_detail_screen.dart';
 import '../models/reflux_prediction_model.dart';
 import '../models/gastropedia_item_model.dart';
 import '../models/doctor_model.dart';
+import '../models/consultation_model.dart';
 import '../screens/dashboard_dokter_screen.dart';
 import '../screens/dashboard_admin_screen.dart';
 
@@ -40,6 +41,7 @@ class AppRoutes {
   static const String register = '/register';
   static const String googleAuth = '/google-auth';
   static const String beranda = '/beranda';
+  static const String dokter = '/dokter';
   static const String doctorDashboard = '/doctor-dashboard';
   static const String adminDashboard = '/admin-dashboard';
   static const String placeholder = '/placeholder';
@@ -181,8 +183,24 @@ class AppRoutes {
         uri.pathSegments[0] == 'konsultasi' &&
         uri.pathSegments[1] == 'chat') {
       final consultationId = uri.pathSegments[2];
+      bool isDoctor = false;
+      String? patientUid;
+      ConsultationModel? initialConsultation;
+
+      if (settings.arguments is Map<String, dynamic>) {
+        final args = settings.arguments as Map<String, dynamic>;
+        isDoctor = args['isDoctor'] as bool? ?? false;
+        patientUid = args['patientUid'] as String?;
+        initialConsultation = args['initialConsultation'] as ConsultationModel?;
+      }
+
       return _createSmoothRoute(
-        ChatDokterScreen(consultationId: consultationId),
+        ChatDokterScreen(
+          consultationId: consultationId,
+          isDoctor: isDoctor,
+          patientUid: patientUid,
+          initialConsultation: initialConsultation,
+        ),
         settings: settings,
       );
     }
@@ -270,6 +288,7 @@ class AppRoutes {
           settings: settings,
           isFadeOnly: true,
         );
+      case dokter:
       case doctorDashboard:
         return _createSmoothRoute(
           const DoctorDashboardScreen(),

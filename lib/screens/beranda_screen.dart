@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/app_state.dart';
 import 'beranda/models/meal_schedule_model.dart';
 import 'beranda/services/beranda_meal_service.dart';
@@ -49,12 +51,33 @@ class BerandaScreenState extends State<BerandaScreen> {
   @override
   void initState() {
     super.initState();
+    _checkRoleGuard();
     _initializeData();
 
     // Timer per 1 detik untuk memantau jam perangkat secara realtime
     _tickerTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _onTick();
     });
+  }
+
+  /// Redirect dokter ke dashboard dokter jika login sebagai role dokter
+  void _checkRoleGuard() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (doc.exists) {
+          final role = doc.data()?['role'] as String?;
+          if ((role == 'doctor' || role == 'dokter') && mounted) {
+            Navigator.pushNamedAndRemoveUntil(
+                context, '/dokter', (route) => false);
+          }
+        }
+      } catch (_) {}
+    }
   }
 
   @override

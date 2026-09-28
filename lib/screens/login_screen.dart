@@ -143,8 +143,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
         final data = userDoc.data() ?? {};
         final role = data['role'] as String?;
+        final isDoctor = role == 'doctor' || role == 'dokter';
 
-        if (role == 'dokter' || role == 'admin') {
+        if (role == 'admin') {
           final statusVerifikasi = data['status_verifikasi'] as String?;
           if (statusVerifikasi != 'approved') {
             await FirebaseAuth.instance.signOut();
@@ -175,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
             );
             return;
           }
-        } else if (role != null && role != 'pengguna') {
+        } else if (!isDoctor && role != null && role != 'pengguna' && role != 'patient') {
           await FirebaseAuth.instance.signOut();
           setState(() {
             _isLoading = false;
@@ -219,8 +220,8 @@ class _LoginScreenState extends State<LoginScreen> {
         final appState = AppState.of(context);
         appState.loginWithGoogle(userName, email);
 
-        if (role == 'dokter') {
-          Navigator.pushNamedAndRemoveUntil(context, '/doctor-dashboard', (route) => false);
+        if (isDoctor) {
+          Navigator.pushNamedAndRemoveUntil(context, '/dokter', (route) => false);
         } else if (role == 'admin') {
           Navigator.pushNamedAndRemoveUntil(context, '/admin-dashboard', (route) => false);
         } else {

@@ -34,6 +34,9 @@ class OperatingHour {
 ///   practiceLocation: String, // nama rumah sakit / klinik
 ///   strNumber: String,        // nomor STR
 ///   isRecommended: Boolean,
+///   uid: String?,             // Auth UID dokter jika sudah punya akun nyata
+///   gender: String?,          // "Laki-laki" | "Perempuan"
+///   updatedAt: Timestamp?,
 /// }
 /// ```
 class DoctorModel {
@@ -48,6 +51,9 @@ class DoctorModel {
   final String practiceLocation;
   final String strNumber;
   final bool isRecommended;
+  final String? uid;
+  final String? gender;
+  final DateTime? updatedAt;
 
   const DoctorModel({
     required this.id,
@@ -61,6 +67,9 @@ class DoctorModel {
     required this.practiceLocation,
     required this.strNumber,
     required this.isRecommended,
+    this.uid,
+    this.gender,
+    this.updatedAt,
   });
 
   /// Formatted specialty + experience string untuk tampilan kartu.
@@ -69,6 +78,50 @@ class DoctorModel {
   /// Jam operasional pertama untuk ditampilkan di kartu.
   OperatingHour? get primaryHour =>
       operatingHours.isNotEmpty ? operatingHours.first : null;
+
+  /// Nama dokter dengan prefiks "dr." hanya jika belum memilikinya.
+  String get formattedNameWithDoctorTitle {
+    final trimmed = name.trim();
+    if (trimmed.toLowerCase().startsWith('dr.') ||
+        trimmed.toLowerCase().startsWith('dr ')) {
+      return trimmed;
+    }
+    return 'dr. $trimmed';
+  }
+
+  DoctorModel copyWith({
+    String? id,
+    String? name,
+    String? specialty,
+    int? experienceYears,
+    String? photoUrl,
+    int? price,
+    List<OperatingHour>? operatingHours,
+    String? alumni,
+    String? practiceLocation,
+    String? strNumber,
+    bool? isRecommended,
+    String? uid,
+    String? gender,
+    DateTime? updatedAt,
+  }) {
+    return DoctorModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      specialty: specialty ?? this.specialty,
+      experienceYears: experienceYears ?? this.experienceYears,
+      photoUrl: photoUrl ?? this.photoUrl,
+      price: price ?? this.price,
+      operatingHours: operatingHours ?? this.operatingHours,
+      alumni: alumni ?? this.alumni,
+      practiceLocation: practiceLocation ?? this.practiceLocation,
+      strNumber: strNumber ?? this.strNumber,
+      isRecommended: isRecommended ?? this.isRecommended,
+      uid: uid ?? this.uid,
+      gender: gender ?? this.gender,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 
   factory DoctorModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data()!;
@@ -87,6 +140,9 @@ class DoctorModel {
       practiceLocation: data['practiceLocation'] as String? ?? '',
       strNumber: data['strNumber'] as String? ?? '',
       isRecommended: data['isRecommended'] as bool? ?? false,
+      uid: data['uid'] as String?,
+      gender: data['gender'] as String?,
+      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -101,5 +157,8 @@ class DoctorModel {
         'practiceLocation': practiceLocation,
         'strNumber': strNumber,
         'isRecommended': isRecommended,
+        if (uid != null) 'uid': uid,
+        if (gender != null) 'gender': gender,
+        if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
       };
 }
