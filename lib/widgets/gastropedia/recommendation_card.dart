@@ -64,11 +64,11 @@ class _RecommendationCardState extends State<RecommendationCard>
         builder: (context, child) =>
             Transform.scale(scale: _scaleAnim.value, child: child),
         child: Container(
-          // ─── Lebar kartu ~155dp agar ~2 kartu penuh + tepi ketiga terlihat ───
-          width: 155,
+          // Lebar card dikurangi sedikit agar proporsional
+          width: 130,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.10),
@@ -84,14 +84,15 @@ class _RecommendationCardState extends State<RecommendationCard>
               ),
             ],
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // ─── Foto Lingkaran ───
               Container(
-                width: 130, // Diperbesar agar penuh di card
-                height: 130,
+                width: 95, // Lebih besar sedikit dari lingkaran kategori (88)
+                height: 95,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   boxShadow: [
@@ -112,7 +113,7 @@ class _RecommendationCardState extends State<RecommendationCard>
                       color: const Color(0xFFEBF3F8),
                       child: const Icon(
                         Icons.image_outlined,
-                        size: 40,
+                        size: 36,
                         color: Color(0xFF639BC6),
                       ),
                     ),
@@ -120,20 +121,24 @@ class _RecommendationCardState extends State<RecommendationCard>
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // ─── Judul Makanan ───
-              Text(
-                widget.item.name,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF1E5D7D),
-                  height: 1.3,
-                  letterSpacing: -0.1,
+              Expanded(
+                child: Center(
+                  child: Text(
+                    widget.item.name,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E5D7D),
+                      height: 1.2,
+                      letterSpacing: -0.1,
+                    ),
+                  ),
                 ),
               ),
             ],

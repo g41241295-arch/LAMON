@@ -33,19 +33,22 @@ class GastropediaScreen extends StatelessWidget {
     return [
       PopularFoodItem(
         name: "Salad Sayur Segar",
-        imageAsset: "assets/images/gastropedia/food_1.png", // Akan menggunakan errorBuilder jika tidak ada
+        // TODO: Ganti URL sementara ini dengan URL/path asli dari database
+        imageAsset: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=200", 
         rating: 4.8,
         ratingCount: 124,
       ),
       PopularFoodItem(
         name: "Sup Ayam Diet",
-        imageAsset: "assets/images/gastropedia/food_2.png",
+        // TODO: Ganti URL sementara ini dengan URL/path asli dari database
+        imageAsset: "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=200",
         rating: 4.5,
         ratingCount: 89,
       ),
       PopularFoodItem(
         name: "Smoothie Bowl Buah Naga",
-        imageAsset: "assets/images/gastropedia/food_3.png",
+        // TODO: Ganti URL sementara ini dengan URL/path asli dari database
+        imageAsset: "https://images.unsplash.com/photo-1496412705862-e0088f16f791?w=200",
         rating: 4.9,
         ratingCount: 230,
       ),
@@ -109,10 +112,23 @@ class GastropediaScreen extends StatelessWidget {
             // ═══════════════════════════════════════════
             // 3. Section "Rekomendasi Topik"
             // ═══════════════════════════════════════════
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: _SectionHeading(
-                title: 'Rekomendasi Topik',
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const _SectionHeading(
+                    title: 'Rekomendasi',
+                  ),
+                  Text(
+                    'Lihat Semua >',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blueAccent.shade200,
+                    ),
+                  ),
+                ],
               ),
             ),
 

@@ -24,6 +24,15 @@ class PopularFoodCard extends StatelessWidget {
     required this.onTap,
   });
 
+  Widget _fallbackIcon() {
+    return Container(
+      width: 80,
+      height: 80,
+      color: const Color(0xFFEBF3F8),
+      child: const Icon(Icons.fastfood, color: Color(0xFF639BC6)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -47,18 +56,21 @@ class PopularFoodCard extends StatelessWidget {
             // Gambar di sisi kiri
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                item.imageAsset,
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  width: 80,
-                  height: 80,
-                  color: const Color(0xFFEBF3F8),
-                  child: const Icon(Icons.fastfood, color: Color(0xFF639BC6)),
-                ),
-              ),
+              child: item.imageAsset.startsWith('http')
+                  ? Image.network(
+                      item.imageAsset,
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => _fallbackIcon(),
+                    )
+                  : Image.asset(
+                      item.imageAsset,
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => _fallbackIcon(),
+                    ),
             ),
             const SizedBox(width: 16),
             // Info makanan di sisi kanan

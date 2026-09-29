@@ -67,8 +67,8 @@ class _CategoryItemState extends State<CategoryItem>
           children: [
             // ─── Foto Lingkaran ───
             Container(
-              width: 76,
-              height: 76,
+              width: 88,
+              height: 88,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white,
@@ -97,21 +97,21 @@ class _CategoryItemState extends State<CategoryItem>
                     child: const Icon(
                       Icons.restaurant_rounded,
                       color: Colors.white,
-                      size: 30,
+                      size: 34,
                     ),
                   ),
                 ),
               ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
 
             // ─── Label di Bawah Lingkaran ───
             Text(
               widget.category.badgeText,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF1E5D7D),
                 letterSpacing: 0.3,
