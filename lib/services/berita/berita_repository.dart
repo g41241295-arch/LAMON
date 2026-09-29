@@ -5,21 +5,32 @@ class BeritaRepository {
   // Data disimpan statis lokal. Nanti bisa diganti Firestore tanpa mengubah UI.
   static final List<BeritaArticle> _articles = [
     BeritaArticle(
-      id: 'remaja-asam-lambung',
-      kategori: 'Pencernaan',
+      id: 'kenapa-genz-sakit-lambung',
+      kategori: 'Gaya Hidup',
+      tanggal: DateTime(2026, 9, 18),
       gambarAsset: 'assets/images/berita/berita_1.png',
       gambarAlignment: const Alignment(0, -0.6),
-      sumberNama: 'RRI Meulaboh',
-      sumberUrl: 'https://rri.co.id/meulaboh/kesehatan/2128978/remaja-zaman-sekarang-rentan-mengalami-penyakit-asam-lambung',
-      judul: 'Remaja Zaman Sekarang Rentan Mengalami Penyakit Asam Lambung',
-      // TODO: isi tanggal terbit sesuai halaman sumber.
-      tanggal: null,
+      sumberNama: 'ANTARA News',
+      sumberUrl: 'https://www.antaranews.com/berita/5747829/kenapa-gen-z-sering-sakit-lambung-ini-4-penyebabnya',
+      judul: 'Kenapa Gen Z Sering Sakit Lambung? Ini 4 Penyebabnya',
       konten: [
-        // TODO: ganti dengan ringkasan lengkap setelah teks berita tersedia.
         BeritaBlockParagraph(
-            'Keluhan asam lambung kini tidak hanya dialami orang dewasa. Remaja masa kini juga semakin rentan mengalaminya.'),
+            'Sakit lambung adalah gejala gangguan pada saluran pencernaan bagian atas yang ditandai nyeri, perih, atau tidak nyaman di ulu hati, mencakup dispepsia (maag), gastritis, tukak lambung, hingga GERD. Tren kesehatan mencatat sekitar 36 persen kasus asam lambung saat ini ditemukan di kalangan anak muda.'),
+        BeritaBlockSubjudul('4 Faktor yang Membuat Lambung Gen Z Rentan'),
+        BeritaBlockButirAngka(nomor: 1, judul: 'Stres dan GERD Anxiety', isi: 'Tekanan akademis, pekerjaan, hingga tren FOMO meningkatkan produksi hormon kortisol yang memicu produksi asam lambung berlebih.'),
+        BeritaBlockButirAngka(nomor: 2, judul: 'Ketergantungan kopi dan minuman manis', isi: 'Konsumsi kopi berkafein tinggi saat perut kosong mengendurkan otot katup kerongkongan bawah sehingga asam lambung mudah naik.'),
+        BeritaBlockButirAngka(nomor: 3, judul: 'Pola makan tidak teratur', isi: 'Melewatkan sarapan, sering makan pedas atau bersantan, serta makan larut malam memperburuk iritasi dinding lambung.'),
+        BeritaBlockButirAngka(nomor: 4, judul: 'Sering begadang', isi: 'Jam tidur yang berantakan mengganggu irama sirkadian dan fungsi kerja saluran pencernaan.'),
+        BeritaBlockSubjudul('Langkah Mengatasi dan Mencegah'),
+        BeritaBlockBulletList([
+          'Terapkan pola makan mindful eating: porsi kecil tapi sering (4–5 kali sehari), hindari langsung berbaring minimal 2–3 jam setelah makan',
+          'Batasi kafein, makanan bersantan, pedas, dan minuman berkarbonasi',
+          'Kelola stres lewat istirahat, olahraga teratur, atau teknik pernapasan',
+          'Perbaiki jam tidur, usahakan 7–8 jam sehari'
+        ]),
+        BeritaBlockTips('Jika nyeri ulu hati atau rasa terbakar di dada sering kambuh, konsultasikan ke dokter untuk penanganan yang tepat.'),
       ],
-      bacaJuga: ['mengenal-gerd-penanganan-dini'],
+      bacaJuga: ['beda-maag-dan-gerd'],
     ),
     BeritaArticle(
       id: 'mengenal-gerd-penanganan-dini',
@@ -74,7 +85,7 @@ class BeritaRepository {
         BeritaBlockParagraph(
             'Obat penekan asam lambung juga perlu diminum sampai penyakit tuntas. Menurut narasumber, kini telah hadir golongan obat baru bernama P-CAB yang menjadi harapan bagi penderita GERD.'),
       ],
-      bacaJuga: ['begadang-asam-lambung'],
+      bacaJuga: ['beda-jantung-dan-asam-lambung'],
     ),
     BeritaArticle(
       id: 'begadang-asam-lambung',
@@ -120,31 +131,134 @@ class BeritaRepository {
           'Disertai nyeri dada'
         ]),
       ],
-      bacaJuga: ['air-ph-tinggi-sebelum-terbang'],
+      bacaJuga: ['pertolongan-pertama-asam-lambung'],
     ),
     BeritaArticle(
-      id: 'air-ph-tinggi-sebelum-terbang',
+      id: 'makanan-aman-untuk-maag',
       kategori: 'Gizi',
-      // TODO: isi tanggal terbit sesuai halaman sumber.
-      tanggal: null,
-      gambarAsset: 'assets/images/berita/berita_5.png',
+      tanggal: DateTime(2026, 9, 18),
+      gambarAsset: 'assets/images/berita/berita_makanan_maag.png',
       gambarAlignment: const Alignment(0, -0.8),
-      sumberNama: 'RRI Pontianak',
-      sumberUrl: 'https://rri.co.id/pontianak/kesehatan/2525684/penderita-gerd-disarankan-minum-air-ph-tinggi-sebelum-terbang-benarkah-efektif',
-      judul: 'Penderita GERD Disarankan Minum Air pH Tinggi sebelum Terbang, Benarkah Efektif?',
+      sumberNama: 'ANTARA News',
+      sumberUrl: 'https://www.antaranews.com/berita/5747915/makanan-untuk-penderita-maag-ini-yang-aman-dan-harus-dihindari',
+      judul: 'Makanan untuk Penderita Maag: Ini yang Aman dan Harus Dihindari',
       konten: [
         BeritaBlockParagraph(
-            'Tips minum air pH tinggi (air alkali) sebelum naik pesawat ramai dibagikan di media sosial. Cara ini diklaim dapat membantu mencegah asam lambung naik selama penerbangan, terutama bagi penderita GERD.'),
-        BeritaBlockSubjudul('Sudah Terbukti Secara Ilmiah?'),
-        BeritaBlockParagraph(
-            'Hingga saat ini belum ada penelitian yang membuktikan bahwa tekanan kabin pesawat secara langsung menyebabkan refluks asam lambung. Air pH tinggi sendiri adalah air minum yang lebih basa, umumnya berada pada kisaran pH 8–9.'),
-        BeritaBlockParagraph(
-            'Penelitian yang sering dijadikan rujukan, oleh Dr. Jamie A. Koufman dan Dr. Nikki Johnston (Annals of Otology, Rhinology & Laryngology, 2012), menemukan bahwa air dengan pH 8,8 dapat menonaktifkan enzim pepsin di laboratorium. Pepsin berperan dalam kerusakan jaringan akibat refluks.'),
-        BeritaBlockParagraph(
-            'Namun temuan itu berasal dari penelitian in vitro, bukan uji klinis pada manusia. Hasilnya menunjukkan adanya potensi mekanisme biologis, tetapi belum membuktikan bahwa minum air alkali dapat mencegah atau mengatasi GERD pada semua orang, termasuk sebelum penerbangan.'),
-        // TODO: lengkapi ringkasan dengan bagian akhir artikel sumber.
+            'Sakit maag (dispepsia) adalah gejala tidak nyaman di perut bagian atas seperti rasa terbakar, nyeri ulu hati, mual, dan kembung, umumnya dipicu pola makan tidak teratur, stres, infeksi bakteri H. pylori, atau efek samping obat-obatan tertentu.'),
+        BeritaBlockSubjudul('Makanan yang Aman dan Dianjurkan'),
+        BeritaBlockBulletList([
+          'Karbohidrat kompleks: beras merah, gandum utuh, oatmeal, kentang, dan ubi — membantu menyerap kelebihan asam lambung',
+          'Sayuran tinggi antioksidan: bayam, brokoli, labu kuning, wortel — membantu pemulihan peradangan dinding lambung',
+          'Protein rendah lemak: ayam tanpa kulit, ikan, tahu, tempe, telur rebus — lebih mudah dicerna',
+          'Buah non-sitrus: pisang, pepaya, melon, apel — tingkat keasaman rendah'
+        ]),
+        BeritaBlockSubjudul('Makanan dan Minuman yang Harus Dihindari'),
+        BeritaBlockBulletList([
+          'Makanan pedas dan berbumbu tajam: cabai, lada, merica, rempah kuat',
+          'Makanan tinggi lemak dan bersantan: gorengan, olahan bersantan kental, makanan cepat saji',
+          'Buah dan makanan asam: jeruk, lemon, nanas, tomat, cuka',
+          'Minuman berkafein, berkarbonasi, dan beralkohol: kopi, teh pekat, soda, alkohol'
+        ]),
+        BeritaBlockTips('Terapkan porsi kecil tapi sering (5–6 kali sehari), hindari menunda waktu makan, dan beri jeda 2–3 jam setelah makan sebelum berbaring.'),
       ],
-      bacaJuga: ['remaja-asam-lambung'],
+      bacaJuga: ['pola-makan-baik-asam-lambung'],
+    ),
+    BeritaArticle(
+      id: 'pertolongan-pertama-asam-lambung',
+      kategori: 'Gaya Hidup',
+      tanggal: DateTime(2025, 7, 6),
+      gambarAsset: 'assets/images/berita/berita_6.png',
+      gambarAlignment: const Alignment(0, 0),
+      sumberNama: 'ANTARA News',
+      sumberUrl: 'https://www.antaranews.com/berita/4947537/asam-lambung-naik-terapkan-7-langkah-pertolongan-pertama-ini',
+      judul: 'Asam Lambung Naik? Terapkan 7 Langkah Pertolongan Pertama Ini',
+      konten: [
+        BeritaBlockParagraph(
+            'Asam lambung naik sering muncul saat melewatkan waktu makan, stres, atau setelah makanan pemicu; kondisi ini dikenal sebagai GERD.'),
+        BeritaBlockButirAngka(
+            nomor: 1, judul: 'Longgarkan pakaian ketat', isi: 'Kurangi tekanan pada perut dengan mengendurkan ikat pinggang atau kancing celana.'),
+        BeritaBlockButirAngka(
+            nomor: 2, judul: 'Duduk tegak', isi: 'Posisi tegak mengurangi tekanan pada katup lambung-kerongkongan.'),
+        BeritaBlockButirAngka(
+            nomor: 3, judul: 'Tinggikan posisi kepala saat berbaring', isi: 'Gunakan bantal tambahan membentuk sudut 30–45 derajat.'),
+        BeritaBlockButirAngka(
+            nomor: 4, judul: 'Minum air jahe hangat', isi: 'Sifat antiradang jahe membantu meredakan mual.'),
+        BeritaBlockButirAngka(
+            nomor: 5, judul: 'Kunyah permen karet', isi: 'Merangsang air liur yang membantu menetralkan asam.'),
+        BeritaBlockButirAngka(
+            nomor: 6, judul: 'Konsumsi satu sendok teh madu', isi: 'Membantu melindungi lapisan kerongkongan.'),
+        BeritaBlockButirAngka(
+            nomor: 7, judul: 'Tidur miring ke kiri', isi: 'Posisi ini membantu mengurangi tekanan pada lambung.'),
+        BeritaBlockParagraph(
+            'Langkah ini membantu meringankan gejala, tetapi bila keluhan sering berulang atau memberat, tetap perlu konsultasi ke tenaga medis.'),
+      ],
+      bacaJuga: ['kenapa-genz-sakit-lambung'],
+    ),
+    BeritaArticle(
+      id: 'beda-maag-dan-gerd',
+      kategori: 'Pencernaan',
+      tanggal: DateTime(2026, 9, 18),
+      gambarAsset: 'assets/images/berita/berita_7.png',
+      gambarAlignment: const Alignment(0, 0),
+      sumberNama: 'ANTARA News',
+      sumberUrl: 'https://www.antaranews.com/berita/5747907/apa-bedanya-maag-dan-gerd-kenali-gejala-dan-penyebabnya',
+      judul: 'Apa Bedanya Maag dan GERD? Kenali Gejala dan Penyebabnya',
+      konten: [
+        BeritaBlockParagraph(
+            'Maag (gastritis/dispepsia) adalah peradangan dinding lambung, sedangkan GERD adalah kondisi kronis ketika asam lambung naik ke kerongkongan akibat melemahnya katup sfingter esofagus bawah.'),
+        BeritaBlockSubjudul('Gejalanya Berbeda'),
+        BeritaBlockParagraph(
+            'Maag bergejala nyeri ulu hati, mual, kembung, dan cepat kenyang; GERD bergejala rasa terbakar di dada, mulut pahit/asam, bau mulut, dan batuk kering kronis.'),
+        BeritaBlockSubjudul('Penyebabnya Juga Berbeda'),
+        BeritaBlockParagraph(
+            'Maag dipicu infeksi bakteri H. pylori, obat pereda nyeri jangka panjang, atau stres; GERD dipicu obesitas, kebiasaan langsung berbaring setelah makan, merokok, kehamilan, dan makanan tinggi lemak/kafein/pedas.'),
+        BeritaBlockParagraph(
+            'Penanganan mengandalkan perubahan gaya hidup (porsi kecil tapi sering, jeda 2–3 jam sebelum tidur) dan obat penurun asam sesuai anjuran dokter.'),
+      ],
+      bacaJuga: ['mengenal-gerd-penanganan-dini'],
+    ),
+    BeritaArticle(
+      id: 'beda-jantung-dan-asam-lambung',
+      kategori: 'Kesehatan Umum',
+      tanggal: DateTime(2026, 9, 20),
+      gambarAsset: 'assets/images/berita/berita_8.png',
+      gambarAlignment: const Alignment(0, 0),
+      sumberNama: 'ANTARA News',
+      sumberUrl: 'https://www.antaranews.com/berita/5731188/sering-dianggap-mirip-ini-bedanya-sakit-jantung-dan-asam-lambung',
+      judul: 'Sering Dianggap Mirip, Ini Bedanya Sakit Jantung dan Asam Lambung',
+      konten: [
+        BeritaBlockParagraph(
+            'Nyeri dada sering dikaitkan dengan asam lambung, padahal gangguan jantung bisa menimbulkan keluhan serupa.'),
+        BeritaBlockParagraph(
+            'Ciri khas refluks asam lambung adalah heartburn di tengah dada belakang tulang dada, disertai rasa asam/pahit di mulut, makanan terasa naik ke tenggorokan, mual, sulit menelan, batuk kronis, atau suara serak. Pola ini lebih terkait aktivitas pencernaan dan posisi tubuh, meski bukan patokan mutlak.'),
+        BeritaBlockTandaBahaya(items: [
+          'Nyeri dada yang tidak jelas penyebabnya, terutama disertai sesak napas, keringat dingin, atau menjalar ke lengan, perlu segera diperiksakan ke layanan gawat darurat untuk menyingkirkan kemungkinan gangguan jantung.'
+        ]),
+      ],
+      bacaJuga: ['begadang-asam-lambung'],
+    ),
+    BeritaArticle(
+      id: 'pola-makan-baik-asam-lambung',
+      kategori: 'Gizi',
+      tanggal: DateTime(2025, 7, 29),
+      gambarAsset: 'assets/images/berita/berita_9.png',
+      gambarAlignment: const Alignment(0, 0),
+      sumberNama: 'ANTARA News',
+      sumberUrl: 'https://www.antaranews.com/berita/4998689/pola-makan-yang-baik-bagi-penderita-asam-lambung',
+      judul: 'Pola Makan yang Baik bagi Penderita Asam Lambung',
+      konten: [
+        BeritaBlockParagraph(
+            'Pola makan tepat adalah kunci mengendalikan gejala GERD.'),
+        BeritaBlockBulletList([
+          'Makan dalam porsi kecil tapi sering, bukan porsi besar sekaligus',
+          'Hindari makanan pemicu: gorengan/berlemak, pedas, asam, serta minuman berkafein dan bersoda',
+          'Pilih makanan yang direbus, dikukus, atau dipanggang tanpa minyak berlebih',
+          'Hindari makan menjelang tidur, beri jeda 2–3 jam'
+        ]),
+        BeritaBlockTips(
+            'Contoh sarapan sehat pukul 06.00–08.00: oatmeal, sereal, roti gandum, atau pisang.'),
+      ],
+      bacaJuga: ['makanan-aman-untuk-maag'],
     ),
   ];
 
@@ -152,10 +266,7 @@ class BeritaRepository {
     return _articles;
   }
 
-  static BeritaArticle getById(String id) {
-    return _articles.firstWhere(
-      (a) => a.id == id,
-      orElse: () => _articles.first,
-    );
+  static BeritaArticle? getById(String id) {
+    return _articles.where((a) => a.id == id).firstOrNull;
   }
 }
