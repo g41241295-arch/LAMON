@@ -159,28 +159,13 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
 
   Future<void> _pickDocument() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
-        withData: true,
       );
 
-      if (result == null || result.files.isEmpty) return;
-      final file = result.files.first;
-      final bytes = file.bytes;
-
-      if (bytes == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Gagal membaca data file dokumen.'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-        return;
-      }
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
 
       if (bytes.lengthInBytes > 5 * 1024 * 1024) {
         if (mounted) {
