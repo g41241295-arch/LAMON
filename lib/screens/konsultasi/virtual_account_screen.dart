@@ -6,6 +6,7 @@ import '../../services/consultation_service.dart';
 import '../../utils/app_date_formatter.dart';
 import '../../utils/currency_formatter.dart';
 import '../../widgets/app_scaffold.dart';
+import '../screening/widgets/screening_avatars.dart';
 
 /// Layar Nomor Virtual Account — tampil setelah booking dibuat.
 class VirtualAccountScreen extends StatefulWidget {
@@ -101,21 +102,9 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen> {
               children: [
                 const SizedBox(height: 8),
 
-                // ── Ikon sukses ──
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppColors.successGreen.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check_circle_rounded,
-                    size: 52,
-                    color: AppColors.successGreen,
-                  ),
-                ),
-                const SizedBox(height: 14),
+                // ── Ikon sukses (sama persis dengan alur Skrining / Prediksi) ──
+                const GreenCheckmark3DBadge(size: 90),
+                const SizedBox(height: 16),
 
                 const Text(
                   'Virtual Account Berhasil Dibuat!',

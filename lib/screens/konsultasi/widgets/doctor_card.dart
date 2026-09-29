@@ -54,7 +54,9 @@ class DoctorCard extends StatelessWidget {
                 children: [
                   // Foto dokter (76x76, rounded 16)
                   DoctorAvatar(
-                    photoUrl: doctor.photoUrl,
+                    photoUrl: doctor.effectivePhotoUrl,
+                    doctorId: doctor.id,
+                    doctorName: doctor.name,
                     size: 76,
                     borderRadius: 16,
                   ),
@@ -112,75 +114,31 @@ class DoctorCard extends StatelessWidget {
 
               const SizedBox(height: 14),
 
-              // ── Baris Tengah: Label Jam Operasional di kiri & Jam Lainnya di kanan pada baris yang sama ──
+              // ── Baris Tengah: Label Jam Operasional saja ──
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(
-                        Icons.access_time_rounded,
-                        size: 14,
-                        color: AppColors.neutralGray,
-                      ),
-                      SizedBox(width: 6),
-                      Text(
-                        'Jam Operasional',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.neutralGray,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(
+                    Icons.access_time_rounded,
+                    size: 14,
+                    color: AppColors.neutralGray,
                   ),
-                  if (doctor.operatingHours.length > 1 && onTapJamLainnya != null)
-                    GestureDetector(
-                      onTap: onTapJamLainnya,
-                      child: const Text(
-                        'Jam Lainnya',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.primaryLight,
-                          fontWeight: FontWeight.w600,
-                          decoration: TextDecoration.underline,
-                          decorationColor: AppColors.primaryLight,
-                        ),
-                      ),
+                  SizedBox(width: 6),
+                  Text(
+                    'Jam Operasional',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.neutralGray,
+                      fontWeight: FontWeight.w600,
                     ),
+                  ),
                 ],
               ),
 
               const SizedBox(height: 8),
 
-              // Chip pill jam operasional
-              if (doctor.operatingHours.isNotEmpty)
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: doctor.operatingHours.map((h) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F7FA),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: const Color(0xFFE2ECF2),
-                        ),
-                      ),
-                      child: Text(
-                        h.display,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primaryText,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
+              // Chip jam operasional membentang penuh (Expanded) + kotak Jam Lainnya sejajar
+              _buildOperatingHoursRow(),
 
               const SizedBox(height: 14),
 
@@ -216,6 +174,89 @@ class DoctorCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildOperatingHoursRow() {
+    final hasJamLainnya =
+        doctor.operatingHours.length > 1 && onTapJamLainnya != null;
+    final hoursToShow =
+        doctor.operatingHours.take(hasJamLainnya ? 2 : 3).toList();
+
+    final List<Widget> children = [];
+
+    for (int i = 0; i < hoursToShow.length; i++) {
+      if (i > 0) children.add(const SizedBox(width: 8));
+      final h = hoursToShow[i];
+      children.add(
+        Expanded(
+          child: Container(
+            height: 34,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F7FA),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: const Color(0xFFE2ECF2),
+                width: 1,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                h.display,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryText,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (hasJamLainnya) {
+      if (children.isNotEmpty) children.add(const SizedBox(width: 8));
+      children.add(
+        Expanded(
+          child: GestureDetector(
+            onTap: onTapJamLainnya,
+            child: Container(
+              height: 34,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F7FA),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFFE2ECF2),
+                  width: 1,
+                ),
+              ),
+              child: const Center(
+                child: Text(
+                  'Jam Lainnya',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (children.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Row(children: children);
   }
 }
 

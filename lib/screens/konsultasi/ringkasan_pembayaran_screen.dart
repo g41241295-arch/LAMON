@@ -467,7 +467,9 @@ class _DoctorSummaryCard extends StatelessWidget {
       child: Row(
         children: [
           DoctorAvatar(
-            photoUrl: doctor.photoUrl,
+            photoUrl: doctor.effectivePhotoUrl,
+            doctorId: doctor.id,
+            doctorName: doctor.name,
             size: 52,
             borderRadius: 14,
           ),

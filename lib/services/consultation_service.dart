@@ -145,7 +145,10 @@ class ConsultationService {
     );
 
     try {
-      final docRef = await ref.add(consultation.toFirestore());
+      final docRef = ref.doc();
+      final data = consultation.copyWith(id: docRef.id).toFirestore();
+      data['consultationId'] = docRef.id;
+      await docRef.set(data);
       debugPrint('[ConsultationService] Konsultasi dibuat: ${docRef.id}');
       return docRef.id;
     } catch (e) {
@@ -158,14 +161,53 @@ class ConsultationService {
   Future<ConsultationModel?> fetchById(String consultationId, {String? patientUid}) async {
     try {
       final docRef = _consultationDocRef(consultationId, patientUid);
-      if (docRef == null) return null;
-      final doc = await docRef.get();
-      if (!doc.exists || doc.data() == null) return null;
-      return ConsultationModel.fromFirestore(doc);
+      if (docRef != null) {
+        final doc = await docRef.get();
+        if (doc.exists && doc.data() != null) {
+          return ConsultationModel.fromFirestore(doc);
+        }
+      }
+
+      // Fallback via collectionGroup jika patientUid belum ada
+      final groupSnap = await _db
+          .collectionGroup('consultations')
+          .where(FieldPath.documentId, isEqualTo: consultationId)
+          .limit(1)
+          .get();
+      if (groupSnap.docs.isNotEmpty) {
+        return ConsultationModel.fromFirestore(groupSnap.docs.first);
+      }
+      return null;
     } catch (e) {
       debugPrint('[ConsultationService] fetchById error: $e');
       return null;
     }
+  }
+
+  /// Mengambil konsultasi aktif atau menunggu konfirmasi yang sudah lunas (paid)
+  /// antara pasien saat ini dengan dokter tertentu.
+  Future<ConsultationModel?> getActiveOrWaitingConsultation(String doctorId) async {
+    final ref = _consultationsRef;
+    if (ref == null) return null;
+
+    try {
+      final snap = await ref
+          .where('doctorId', isEqualTo: doctorId)
+          .where('paymentStatus', isEqualTo: 'paid')
+          .orderBy('createdAt', descending: true)
+          .limit(1)
+          .get();
+
+      if (snap.docs.isNotEmpty) {
+        final model = ConsultationModel.fromFirestore(snap.docs.first);
+        if (model.isWaiting || model.isActive) {
+          return model;
+        }
+      }
+    } catch (e) {
+      debugPrint('[ConsultationService] Gagal memeriksa konsultasi aktif pasien: $e');
+    }
+    return null;
   }
 
   /// Stream live satu dokumen konsultasi (misal status aktif atau unread counter).

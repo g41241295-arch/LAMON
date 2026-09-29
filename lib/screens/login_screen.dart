@@ -113,6 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (userDoc == null || !userDoc.exists) {
           await FirebaseAuth.instance.signOut();
+          if (!mounted) return;
           setState(() {
             _isLoading = false;
           });
@@ -149,6 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
           final statusVerifikasi = data['status_verifikasi'] as String?;
           if (statusVerifikasi != 'approved') {
             await FirebaseAuth.instance.signOut();
+            if (!mounted) return;
             setState(() {
               _isLoading = false;
             });
@@ -178,6 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         } else if (!isDoctor && role != null && role != 'pengguna' && role != 'patient') {
           await FirebaseAuth.instance.signOut();
+          if (!mounted) return;
           setState(() {
             _isLoading = false;
           });

@@ -49,7 +49,7 @@ flutter:
     - assets/images/
     - assets/images/gastropedia/
     - assets/images/berita/
-    #- assets/images/doctors/
+    - assets/images/doctors/
     - assets/images/banks/
     - assets/fonts/
     - assets/icon/

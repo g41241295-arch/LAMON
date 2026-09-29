@@ -89,6 +89,23 @@ class DoctorModel {
     return 'dr. $trimmed';
   }
 
+  /// URL atau path asset foto dokter lokal sebagai fallback jika photoUrl di DB kosong
+  String get effectivePhotoUrl {
+    if (photoUrl.trim().isNotEmpty) return photoUrl.trim();
+    final lowerId = id.toLowerCase();
+    final lowerName = name.toLowerCase();
+    if (lowerId.contains('ketut') || lowerName.contains('ketut')) {
+      return 'assets/images/doctors/Ketut Maulana.jpg';
+    }
+    if (lowerId.contains('oggy') || lowerName.contains('oggy')) {
+      return 'assets/images/doctors/Oggy Agustin.jpg';
+    }
+    if (lowerId.contains('dandi') || lowerName.contains('dandi')) {
+      return 'assets/images/doctors/Dandi Wijaya.jpg';
+    }
+    return '';
+  }
+
   DoctorModel copyWith({
     String? id,
     String? name,
