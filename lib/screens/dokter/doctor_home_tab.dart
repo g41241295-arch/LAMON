@@ -13,18 +13,22 @@ class DoctorHomeTab extends StatelessWidget {
   final DoctorModel doctor;
   final List<ConsultationModel> consultations;
   final Map<String, List<String>> scheduleMap;
+  final int totalUnreadMessages;
   final VoidCallback onTapProfile;
   final VoidCallback onTapSearch;
   final VoidCallback onTapWaitingResponse;
+  final void Function({bool initialBelumDibalas, bool focusSearch}) onTapMessages;
 
   const DoctorHomeTab({
     super.key,
     required this.doctor,
     required this.consultations,
     required this.scheduleMap,
+    this.totalUnreadMessages = 0,
     required this.onTapProfile,
     required this.onTapSearch,
     required this.onTapWaitingResponse,
+    required this.onTapMessages,
   });
 
   @override
@@ -54,7 +58,7 @@ class DoctorHomeTab extends StatelessWidget {
     }).toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 90),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -324,9 +328,102 @@ class DoctorHomeTab extends StatelessWidget {
             doctorId: doctor.id,
             scheduleMap: scheduleMap,
           ),
+          const SizedBox(height: 20),
+
+          // ── 5. Kartu Akses Cepat "Pesan" ──
+          GestureDetector(
+            onTap: () => onTapMessages(),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: totalUnreadMessages > 0
+                      ? const Color(0xFFFFCDD2)
+                      : const Color(0xFFE2F0F9),
+                  width: totalUnreadMessages > 0 ? 1.5 : 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  // Ikon pesan dengan background
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: totalUnreadMessages > 0
+                          ? const Color(0xFFFFEBEE)
+                          : AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.chat_bubble_rounded,
+                      color: totalUnreadMessages > 0
+                          ? const Color(0xFFD32F2F)
+                          : AppColors.primary,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+
+                  // Label & Badge
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Text(
+                          'Pesan',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryText,
+                          ),
+                        ),
+                        if (totalUnreadMessages > 0) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD32F2F),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              totalUnreadMessages > 99
+                                  ? '99+'
+                                  : '$totalUnreadMessages',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  // Chevron
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.neutralGray,
+                    size: 22,
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 24),
 
-          // ── 5. Section Menunggu Konfirmasi ──
+          // ── 6. Section Menunggu Konfirmasi ──
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

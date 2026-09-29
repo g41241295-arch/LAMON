@@ -7,6 +7,7 @@ import '../../models/doctor_model.dart';
 import '../../services/consultation_service.dart';
 import '../../utils/app_date_formatter.dart';
 import '../../utils/currency_formatter.dart';
+import '../../widgets/app_header_pill.dart';
 import '../../widgets/app_scaffold.dart';
 import 'widgets/doctor_avatar.dart';
 import 'widgets/payment_method_item.dart';
@@ -83,15 +84,7 @@ class _RingkasanPembayaranScreenState
   Widget build(BuildContext context) {
     return AppScaffold(
       resizeToAvoidBottomInset: false,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () => Navigator.pop(context),
-          tooltip: 'Kembali',
-        ),
-        title: const Text('Ringkasan Pembayaran'),
-        centerTitle: true,
-      ),
+      appBar: AppHeaderPill(title: 'Ringkasan Pembayaran'),
       body: Column(
         children: [
           Expanded(
