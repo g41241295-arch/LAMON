@@ -35,6 +35,10 @@ class GastropediaItem {
   final List<String> manfaat;
   final List<String> kandungan;
   final bool isRecommended;
+  final int calories;
+  final int protein;
+  final int carbs;
+  final int fat;
 
   const GastropediaItem({
     required this.id,
@@ -45,6 +49,10 @@ class GastropediaItem {
     required this.manfaat,
     required this.kandungan,
     this.isRecommended = false,
+    this.calories = 150,
+    this.protein = 6,
+    this.carbs = 18,
+    this.fat = 6,
   });
 }
 

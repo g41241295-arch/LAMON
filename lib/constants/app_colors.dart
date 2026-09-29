@@ -43,6 +43,29 @@ class AppColors {
   static const Color neutralGray = Color(0xFF7C8E97);
   static const Color lightGray = Color(0xFFE3EDF2);
 
+  // Admin Theme
+  static const Color adminBlue = Color(0xFF337AA3);
+  static const Color adminBlueDark = Color(0xFF25607F);
+  static const Color adminBlueLight = Color(0xFFE8F4FB);
+  static const Color adminRed = Color(0xFFD32F2F);
+  static const Color adminRedLight = Color(0xFFFDEDED);
+  static const Color adminChipActive = Color(0xFF337AA3);
+  static const Color adminChipInactive = Colors.white;
+  static const Color adminCardBg = Colors.white;
+  static const Color adminOrangeText = Color(0xFFC07030);
+
+  // Admin Dashboard – stat cards & tiles
+  static const Color adminTealLabel = Color(0xFF4EBFB3);     // "Admin" label kecil
+  static const Color adminStatLabel = Color(0xFFA0522D);     // label di bawah angka (coklat kemerahan)
+  static const Color adminBadgeBg = Color(0xFFDEF7EA);       // pill badge hijau muda
+  static const Color adminBadgeText = Color(0xFF27AE60);     // teks badge hijau
+  static const Color adminTileBg = Color(0xFFFFFBEA);        // latar tile kelola konten (krem muda)
+  static const Color adminTileBorder = Color(0xFFEEDFA6);    // border tile (krem keemasan)
+  // Activity log dot colors
+  static const Color activityDotAdd = Color(0xFF27AE60);     // hijau = tambah
+  static const Color activityDotEdit = Color(0xFF337AA3);    // biru = ubah
+  static const Color activityDotDelete = Color(0xFFD32F2F);  // merah = hapus
+
   // Badges & Pills
   static const Color badgeBgStart = Color(0xFFFFFDF2);
   static const Color badgeBgEnd = Color(0xFFF7EAC4);
