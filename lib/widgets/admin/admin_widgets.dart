@@ -11,19 +11,17 @@ class AdminGradientBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFFFF4A8),
-            Color(0xFFFAF4C8),
-            Color(0xFFFFFDE8),
-          ],
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Image.asset(
+            'assets/images/bg_admin_beranda.png',
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => Container(color: const Color(0xFFFBFAE6)),
+          ),
         ),
-      ),
-      child: child,
+        child,
+      ],
     );
   }
 }
@@ -51,19 +49,13 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
     return Container(
       height: preferredSize.height + MediaQuery.of(context).padding.top,
       padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFFFF4A8), Color(0xFFFAF4C8)],
-        ),
-      ),
+      color: Colors.transparent,
       child: Row(
         children: [
           if (showBack)
             IconButton(
               icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-              color: AppColors.adminBlue,
+              color: const Color(0xFF1E3A8A),
               onPressed: () => Navigator.of(context).pop(),
             )
           else
@@ -74,7 +66,7 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
               style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: AppColors.adminBlue,
+                color: const Color(0xFF1E3A8A),
               ),
               overflow: TextOverflow.ellipsis,
             ),
