@@ -57,6 +57,10 @@ class DoctorService {
   /// Mengambil data dokter untuk user login saat ini:
   /// 1. Cek field `doctorId` di `users/{uid}`
   /// 2. Jika tidak ada, coba query `doctors` where `uid == uid`
+  ///
+  /// CATATAN: Method ini dipertahankan untuk kompatibilitas. Untuk dashboard
+  /// dokter gunakan fetchById(doctorId) + getDoctorByUid(uid) secara terpisah
+  /// agar error bisa dibedakan dengan jelas.
   Future<DoctorModel?> getDoctorForUser(String uid) async {
     try {
       final userDoc = await _db.collection('users').doc(uid).get();
@@ -65,21 +69,37 @@ class DoctorService {
         if (doctorId != null && doctorId.isNotEmpty) {
           final doc = await fetchById(doctorId);
           if (doc != null) return doc;
+          // doctorId ada tapi dokumen tidak ditemukan — return null
+          // agar pemanggil bisa menampilkan error yang sesuai.
+          debugPrint('[DoctorService] doctorId "$doctorId" tidak ditemukan di doctors.');
+          return null;
         }
       }
 
       // Fallback: cari di koleksi doctors where uid == uid
+      return await getDoctorByUid(uid);
+    } catch (e) {
+      debugPrint('[DoctorService] getDoctorForUser error: $e');
+      return null;
+    }
+  }
+
+  /// Fallback: cari dokter berdasarkan field `uid` di koleksi doctors.
+  /// Dipakai ketika users/{uid} tidak punya field doctorId.
+  Future<DoctorModel?> getDoctorByUid(String uid) async {
+    try {
       final query = await _db
           .collection('doctors')
           .where('uid', isEqualTo: uid)
           .limit(1)
           .get();
       if (query.docs.isNotEmpty) {
-        return DoctorModel.fromFirestore(query.docs.first);
+        return DoctorModel.fromFirestore(
+            query.docs.first as DocumentSnapshot<Map<String, dynamic>>);
       }
       return null;
     } catch (e) {
-      debugPrint('[DoctorService] getDoctorForUser error: $e');
+      debugPrint('[DoctorService] getDoctorByUid error: $e');
       return null;
     }
   }

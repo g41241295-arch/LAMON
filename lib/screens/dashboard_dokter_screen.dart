@@ -32,61 +32,152 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
 
   StreamSubscription<List<ConsultationModel>>? _consultationsSub;
   StreamSubscription<Map<String, List<String>>>? _scheduleSub;
+  StreamSubscription<User?>? _authSub; // Listener authStateChanges
 
   List<ConsultationModel> _consultations = [];
   Map<String, List<String>> _scheduleMap = {};
 
+  // Guard: uid dokter yang sedang dimuat.
+  // Dipakai untuk mendeteksi pergantian akun tanpa restart app.
+  String? _currentUid;
+
   @override
   void initState() {
     super.initState();
-    _loadDoctorData();
+    // Dengarkan perubahan auth state. Setiap kali user berubah
+    // (logout / login akun lain), state direset total dan data
+    // dokter yang benar dimuat ulang dari Firestore.
+    _authSub = FirebaseAuth.instance.authStateChanges().listen(_onAuthStateChanged);
+  }
+
+  void _onAuthStateChanged(User? user) {
+    if (!mounted) return;
+
+    if (user == null) {
+      // User logout → bersihkan state lama lalu arahkan ke /login
+      _resetAllState();
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      return;
+    }
+
+    // Hanya reload jika uid BERUBAH (pergantian akun) atau belum pernah dimuat.
+    // Ini mencegah data dokter lama nyangkut saat login akun berbeda.
+    if (_currentUid != user.uid) {
+      _resetAllState();
+      _loadDoctorData(user: user);
+    }
+  }
+
+  /// Reset SELURUH state dokter ke kondisi kosong.
+  /// Dipanggil setiap kali ada pergantian akun agar tidak ada
+  /// sisa data sesi dokter sebelumnya.
+  void _resetAllState() {
+    _consultationsSub?.cancel();
+    _consultationsSub = null;
+    _scheduleSub?.cancel();
+    _scheduleSub = null;
+
+    if (mounted) {
+      setState(() {
+        _doctor = null;
+        _consultations = [];
+        _scheduleMap = {};
+        _isLoadingDoctor = true;
+        _errorMessage = null;
+        _currentTabIndex = 0;
+        _currentUid = null;
+      });
+    }
   }
 
   @override
   void dispose() {
     _consultationsSub?.cancel();
     _scheduleSub?.cancel();
+    _authSub?.cancel();
     super.dispose();
   }
 
-  Future<void> _loadDoctorData() async {
-    setState(() {
-      _isLoadingDoctor = true;
-      _errorMessage = null;
-    });
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+  Future<void> _loadDoctorData({User? user}) async {
+    final currentUser = user ?? FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
       }
       return;
     }
 
+    // Catat uid yang sedang dimuat — sumber kebenaran tunggal untuk sesi ini.
+    final String loadingUid = currentUser.uid;
+
+    if (mounted) {
+      setState(() {
+        _isLoadingDoctor = true;
+        _errorMessage = null;
+      });
+    }
+
     try {
-      // Guard: Pastikan role adalah doctor/dokter, jika pasien alihkan ke /beranda
+      // Guard: Pastikan role adalah doctor/dokter, jika bukan alihkan ke /beranda
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
+          .doc(loadingUid)
           .get();
+
+      // Pastikan uid belum berubah selama proses async (antisipasi cepat ganti akun)
+      if (!mounted || FirebaseAuth.instance.currentUser?.uid != loadingUid) return;
+
       if (userDoc.exists) {
         final role = userDoc.data()?['role'] as String?;
         if (role != 'doctor' && role != 'dokter') {
           if (mounted) {
-            Navigator.pushNamedAndRemoveUntil(context, '/beranda', (route) => false);
+            Navigator.pushNamedAndRemoveUntil(
+                context, '/beranda', (route) => false);
           }
           return;
         }
       }
 
-      final doc = await _doctorService.getDoctorForUser(user.uid);
-      if (!mounted) return;
+      // ─── Ambil doctorId dari users/{uid} ─────────────────────────────────────
+      // Ini SATU-SATUNYA sumber kebenaran untuk "dokter yang sedang login".
+      // Tidak boleh menggunakan variabel global/cache yang bisa basi.
+      final doctorId = userDoc.data()?['doctorId'] as String?;
 
-      if (doc == null) {
+      DoctorModel? doc;
+      String? fetchError;
+
+      if (doctorId != null && doctorId.isNotEmpty) {
+        // Ambil langsung dari doctors/{doctorId} — pakai doctorId yang benar
+        doc = await _doctorService.fetchById(doctorId);
+
+        if (doc == null) {
+          // doctorId ada di Firestore users tapi dokumen doctors tidak ditemukan.
+          // Tampilkan pesan error ramah alih-alih diam-diam menampilkan dokter lain.
+          fetchError =
+              'Akun dokter belum terhubung ke data dokter yang benar.\n'
+              '(doctorId: "$doctorId" tidak ditemukan di koleksi doctors)\n'
+              'Silakan hubungi administrator.';
+        }
+      } else {
+        // Tidak ada doctorId → coba fallback: query doctors where uid == uid
+        doc = await _doctorService.getDoctorByUid(loadingUid);
+        if (doc == null) {
+          fetchError =
+              'Akun dokter belum terhubung ke data dokter.\n'
+              'Silakan hubungi administrator.';
+        }
+      }
+
+      // Cek sekali lagi: uid tidak berubah selama proses fetch dokter
+      if (!mounted || FirebaseAuth.instance.currentUser?.uid != loadingUid) return;
+
+      if (fetchError != null || doc == null) {
         setState(() {
           _isLoadingDoctor = false;
-          _errorMessage =
-              'Akun dokter belum terhubung ke data dokter.\nSilakan hubungi administrator.';
+          _errorMessage = fetchError ??
+              'Akun dokter belum terhubung ke data dokter.\n'
+              'Silakan hubungi administrator.';
+          _currentUid = loadingUid;
         });
         return;
       }
@@ -94,15 +185,17 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
       setState(() {
         _doctor = doc;
         _isLoadingDoctor = false;
+        _currentUid = loadingUid;
       });
 
       _listenConsultations(doc.id);
       _listenSchedule(doc.id);
     } catch (e) {
-      if (mounted) {
+      if (mounted && FirebaseAuth.instance.currentUser?.uid == loadingUid) {
         setState(() {
           _isLoadingDoctor = false;
           _errorMessage = 'Terjadi kesalahan saat memuat data: $e';
+          _currentUid = loadingUid;
         });
       }
     }
@@ -235,7 +328,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    _errorMessage ?? 'Akun dokter belum terhubung ke data dokter.',
+                    _errorMessage ??
+                        'Akun dokter belum terhubung ke data dokter.',
                     style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.summaryCardSubtext,
@@ -246,11 +340,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                   const SizedBox(height: 28),
                   ElevatedButton.icon(
                     onPressed: () async {
+                      // Cukup signOut — _onAuthStateChanged akan menangani navigasi ke /login
                       await FirebaseAuth.instance.signOut();
-                      if (context.mounted) {
-                        Navigator.pushNamedAndRemoveUntil(
-                            context, '/login', (route) => false);
-                      }
                     },
                     icon: const Icon(Icons.logout_rounded),
                     label: const Text('Keluar'),
@@ -275,7 +366,9 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     // Hitung total pesan unread untuk badge navigasi tab Pesan
     final totalUnread = _consultations.fold<int>(
       0,
-      (total, c) => total + (c.paymentStatus == PaymentStatus.paid ? c.unreadForDoctor : 0),
+      (total, c) =>
+          total +
+          (c.paymentStatus == PaymentStatus.paid ? c.unreadForDoctor : 0),
     );
 
     return Scaffold(
@@ -298,7 +391,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
 
             // Tab 1: Pesan
             DoctorMessagesTab(
-              key: ValueKey('msg_${_messagesInitialBelumDibalas}_$_messagesFocusSearch'),
+              key: ValueKey(
+                  'msg_${_messagesInitialBelumDibalas}_$_messagesFocusSearch'),
               consultations: _consultations,
               initialBelumDibalas: _messagesInitialBelumDibalas,
               focusSearch: _messagesFocusSearch,
@@ -385,7 +479,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                         color: Color(0xFFD32F2F),
                         shape: BoxShape.circle,
                       ),
-                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      constraints:
+                          const BoxConstraints(minWidth: 16, minHeight: 16),
                       child: Center(
                         child: Text(
                           badgeCount > 99 ? '99+' : '$badgeCount',
