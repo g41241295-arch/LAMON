@@ -71,7 +71,7 @@ class _CategoryItemState extends State<CategoryItem>
               height: 76,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2.5),
+                color: Colors.white,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.14),
@@ -85,16 +85,20 @@ class _CategoryItemState extends State<CategoryItem>
                   ),
                 ],
               ),
-              clipBehavior: Clip.antiAlias,
-              child: Image.asset(
-                widget.category.thumbnailAsset,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(
-                  color: const Color(0xFF639BC6),
-                  child: const Icon(
-                    Icons.restaurant_rounded,
-                    color: Colors.white,
-                    size: 30,
+              padding: const EdgeInsets.all(2.5), // Bingkai putih sebagai padding
+              child: ClipOval(
+                child: Image.asset(
+                  widget.category.thumbnailAsset,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  errorBuilder: (_, _, _) => Container(
+                    color: const Color(0xFF639BC6),
+                    child: const Icon(
+                      Icons.restaurant_rounded,
+                      color: Colors.white,
+                      size: 30,
+                    ),
                   ),
                 ),
               ),

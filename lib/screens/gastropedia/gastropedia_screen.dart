@@ -4,6 +4,7 @@ import '../../widgets/app_scaffold.dart';
 import '../../widgets/gastropedia/gastropedia_header.dart';
 import '../../widgets/gastropedia/category_item.dart';
 import '../../widgets/gastropedia/recommendation_card.dart';
+import '../../widgets/gastropedia/popular_food_card.dart';
 import '../../routes/app_routes.dart';
 
 class GastropediaScreen extends StatelessWidget {
@@ -25,6 +26,30 @@ class GastropediaScreen extends StatelessWidget {
       return [...recommended, ...extras];
     }
     return recommended;
+  }
+
+  // ── Data Makanan Populer Dummy ──
+  static List<PopularFoodItem> _getPopularItems() {
+    return [
+      PopularFoodItem(
+        name: "Salad Sayur Segar",
+        imageAsset: "assets/images/gastropedia/food_1.png", // Akan menggunakan errorBuilder jika tidak ada
+        rating: 4.8,
+        ratingCount: 124,
+      ),
+      PopularFoodItem(
+        name: "Sup Ayam Diet",
+        imageAsset: "assets/images/gastropedia/food_2.png",
+        rating: 4.5,
+        ratingCount: 89,
+      ),
+      PopularFoodItem(
+        name: "Smoothie Bowl Buah Naga",
+        imageAsset: "assets/images/gastropedia/food_3.png",
+        rating: 4.9,
+        ratingCount: 230,
+      ),
+    ];
   }
 
   @override
@@ -84,20 +109,10 @@ class GastropediaScreen extends StatelessWidget {
             // ═══════════════════════════════════════════
             // 3. Section "Rekomendasi Topik"
             // ═══════════════════════════════════════════
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _SectionHeadingWithLink(
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: _SectionHeading(
                 title: 'Rekomendasi Topik',
-                linkText: 'Lihat Semua >',
-                onLinkTap: () {
-                  // Navigasi ke halaman daftar semua rekomendasi
-                  // (saat ini menuju kategori makanan sebagai default)
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.gastropediaCategory,
-                    arguments: GastropediaCategory.makanan,
-                  );
-                },
               ),
             ),
 
@@ -133,6 +148,32 @@ class GastropediaScreen extends StatelessWidget {
                 },
               ),
             ),
+
+            const SizedBox(height: 28),
+
+            // ═══════════════════════════════════════════
+            // 4. Section "Makanan Populer"
+            // ═══════════════════════════════════════════
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: _SectionHeading(
+                title: 'Makanan Populer',
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: _getPopularItems().map((item) {
+                  return PopularFoodCard(
+                    item: item,
+                    onTap: () {
+                      // Tindakan saat diklik (bisa dikosongkan untuk sementara)
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
           ],
         ),
       ),
@@ -162,48 +203,3 @@ class _SectionHeading extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Widget Helper: Judul Section + link "Lihat Semua >" di kanan
-// ─────────────────────────────────────────────────────────────
-class _SectionHeadingWithLink extends StatelessWidget {
-  final String title;
-  final String linkText;
-  final VoidCallback? onLinkTap;
-
-  const _SectionHeadingWithLink({
-    required this.title,
-    required this.linkText,
-    this.onLinkTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF1E5D7D),
-            letterSpacing: -0.3,
-          ),
-        ),
-        GestureDetector(
-          onTap: onLinkTap,
-          child: Text(
-            linkText,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF639BC6),
-              letterSpacing: 0.1,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
