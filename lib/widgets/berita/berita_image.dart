@@ -1,55 +1,58 @@
-// lib/widgets/berita/berita_image.dart
-// Widget gambar berita yang reusable.
-// Jika file gambar belum ada, tampilkan placeholder gradasi kuning dengan ikon.
-// Gunakan widget ini untuk semua gambar berita agar app tidak error.
-
 import 'package:flutter/material.dart';
 
 class BeritaImage extends StatelessWidget {
   final String assetPath;
   final double borderRadius;
-  final double aspectRatio;
+  final Alignment alignment;
+  final double? width;
+  final double? height;
 
   const BeritaImage({
     super.key,
     required this.assetPath,
-    this.borderRadius = 20,
-    this.aspectRatio = 8 / 3,
+    this.borderRadius = 0,
+    this.alignment = Alignment.center,
+    this.width,
+    this.height,
   });
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
-      child: AspectRatio(
-        aspectRatio: aspectRatio,
-        child: Image.asset(
-          assetPath,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            // Placeholder sementara – gradasi kuning lembut dengan ikon
-            return Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFFFFF0B3),
-                    Color(0xFFFFD966),
-                  ],
-                ),
+      child: Image.asset(
+        assetPath,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        alignment: alignment,
+        cacheWidth: 1080,
+        semanticLabel: 'Gambar Berita',
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (wasSynchronouslyLoaded) return child;
+          return AnimatedOpacity(
+            opacity: frame == null ? 0 : 1,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOut,
+            child: child,
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          debugPrint('Error loading image $assetPath: $error');
+          return Container(
+            width: width,
+            height: height,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFFCF9E0), Color(0xFFFBE9A1)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.article_rounded,
-                  color: Color(0xFF9E8000),
-                  size: 48,
-                ),
-              ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 }
+

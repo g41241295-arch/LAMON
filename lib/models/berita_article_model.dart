@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 // lib/models/berita_article_model.dart
 // Model artikel berita LAMON.
 // Sumber data saat ini lokal (BeritaRepository).
@@ -22,12 +24,6 @@ class BeritaBlockSubjudul extends BeritaBlock {
   BeritaBlockSubjudul(this.text);
 }
 
-/// Judul bagian (ukuran lebih besar, warna aksen biru)
-class BeritaBlockJudulBagian extends BeritaBlock {
-  final String text;
-  BeritaBlockJudulBagian(this.text);
-}
-
 /// Butir berangka: nomor + judul bold + paragraf isi di bawahnya
 class BeritaBlockButirAngka extends BeritaBlock {
   final int nomor;
@@ -46,37 +42,16 @@ class BeritaBlockBulletList extends BeritaBlock {
   BeritaBlockBulletList(this.items);
 }
 
-/// Daftar dengan tanda ">"
-class BeritaBlockArrowList extends BeritaBlock {
-  final List<String> items;
-  BeritaBlockArrowList(this.items);
-}
-
 /// Kotak tips (strip biru tebal di kiri, label "Tips:" bold)
 class BeritaBlockTips extends BeritaBlock {
   final String isi;
   BeritaBlockTips(this.isi);
 }
 
-/// Dua kartu perbandingan berdampingan (hijau vs merah)
-class BeritaBlockPerbandingan extends BeritaBlock {
-  final String judulHijau;
-  final String isiHijau;
-  final String judulMerah;
-  final String isiMerah;
-  BeritaBlockPerbandingan({
-    required this.judulHijau,
-    required this.isiHijau,
-    required this.judulMerah,
-    required this.isiMerah,
-  });
-}
-
 /// Kotak tanda bahaya (latar peach, ikon segitiga merah outline, teks merah tua)
 class BeritaBlockTandaBahaya extends BeritaBlock {
-  final String judul;
   final List<String> items;
-  BeritaBlockTandaBahaya({required this.judul, required this.items});
+  BeritaBlockTandaBahaya({required this.items});
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -85,24 +60,26 @@ class BeritaBlockTandaBahaya extends BeritaBlock {
 
 class BeritaArticle {
   final String id;
-  final String judulKartu;
-  final String judulDetail;
+  final String judul;
   final String kategori;
-  final DateTime tanggal;
+  final DateTime? tanggal;
   final String gambarAsset;
+  final Alignment gambarAlignment;
   final List<BeritaBlock> konten;
   final List<String> bacaJuga; // list id berita
-  final String? sumber; // ditampilkan kecil di akhir artikel jika terisi
+  final String sumberNama;
+  final String sumberUrl;
 
   const BeritaArticle({
     required this.id,
-    required this.judulKartu,
-    required this.judulDetail,
+    required this.judul,
     required this.kategori,
-    required this.tanggal,
+    this.tanggal,
     required this.gambarAsset,
+    required this.gambarAlignment,
     required this.konten,
     this.bacaJuga = const [],
-    this.sumber,
+    required this.sumberNama,
+    required this.sumberUrl,
   });
 }
