@@ -168,7 +168,7 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
           child: filteredList.isEmpty
               ? _buildEmptyState()
               : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 90),
+                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 20),
                   itemCount: filteredList.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
