@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/doctor_model.dart';
+import '../../services/consultation_service.dart';
 import '../../services/doctor_service.dart';
 import '../../widgets/app_scaffold.dart';
 import 'widgets/doctor_card.dart';
@@ -19,6 +20,7 @@ class _DaftarDokterScreenState extends State<DaftarDokterScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   final DoctorService _doctorService = DoctorService();
+  final ConsultationService _consultationService = ConsultationService();
   bool _isSeeding = false;
 
   @override
@@ -59,6 +61,34 @@ class _DaftarDokterScreenState extends State<DaftarDokterScreen>
     } finally {
       if (mounted) setState(() => _isSeeding = false);
     }
+  }
+
+  Future<void> _handleChatTap(DoctorModel doctor) async {
+    try {
+      final existing =
+          await _consultationService.getActiveOrWaitingConsultation(doctor.id);
+      if (!mounted) return;
+      if (existing != null) {
+        Navigator.pushNamed(
+          context,
+          '/konsultasi/chat/${existing.id}',
+          arguments: {
+            'initialConsultation': existing,
+            'patientUid': existing.patientUid,
+          },
+        );
+        return;
+      }
+    } catch (e) {
+      debugPrint('[DaftarDokterScreen] Error checking active consultation: $e');
+    }
+
+    if (!mounted) return;
+    Navigator.pushNamed(
+      context,
+      '/konsultasi/pembayaran/${doctor.id}',
+      arguments: doctor,
+    );
   }
 
   void _showJamLainnya(BuildContext context, DoctorModel doctor) {
@@ -129,11 +159,13 @@ class _DaftarDokterScreenState extends State<DaftarDokterScreen>
           // Tab 1: Semua dokter
           _DoctorListTab(
             stream: _doctorService.watchAll(),
+            onTapChat: _handleChatTap,
             onTapJamLainnya: _showJamLainnya,
           ),
           // Tab 2: Rekomendasi
           _DoctorListTab(
             stream: _doctorService.watchRecommended(),
+            onTapChat: _handleChatTap,
             onTapJamLainnya: _showJamLainnya,
           ),
         ],
@@ -148,10 +180,12 @@ class _DaftarDokterScreenState extends State<DaftarDokterScreen>
 
 class _DoctorListTab extends StatelessWidget {
   final Stream<List<DoctorModel>> stream;
+  final void Function(DoctorModel) onTapChat;
   final void Function(BuildContext, DoctorModel) onTapJamLainnya;
 
   const _DoctorListTab({
     required this.stream,
+    required this.onTapChat,
     required this.onTapJamLainnya,
   });
 
@@ -238,13 +272,7 @@ class _DoctorListTab extends StatelessWidget {
                   arguments: doctor,
                 );
               },
-              onTapChatButton: () {
-                Navigator.pushNamed(
-                  context,
-                  '/konsultasi/pembayaran/${doctor.id}',
-                  arguments: doctor,
-                );
-              },
+              onTapChatButton: () => onTapChat(doctor),
               onTapJamLainnya: doctor.operatingHours.length > 1
                   ? () => onTapJamLainnya(context, doctor)
                   : null,

@@ -140,6 +140,24 @@ class ConsultationModel {
     return diff.inHours < 24;
   }
 
+  /// Path asset foto dokter dari pemetaan doctorId atau nama dokter
+  String get doctorPhotoAsset {
+    final lowerId = doctorId.toLowerCase();
+    final lowerName = doctorName.toLowerCase();
+    if (lowerId.contains('ketut') || lowerName.contains('ketut')) {
+      return 'assets/images/doctors/Ketut Maulana.jpg';
+    }
+    if (lowerId.contains('oggy') || lowerName.contains('oggy')) {
+      return 'assets/images/doctors/Oggy Agustin.jpg';
+    }
+    if (lowerId.contains('dandi') || lowerName.contains('dandi')) {
+      return 'assets/images/doctors/Dandi Wijaya.jpg';
+    }
+    return '';
+  }
+
+  String get doctorPhotoUrl => doctorPhotoAsset;
+
   ConsultationModel copyWith({
     String? id,
     String? doctorId,
@@ -251,6 +269,7 @@ class ConsultationModel {
   }
 
   Map<String, dynamic> toFirestore() => {
+        if (id.isNotEmpty) 'consultationId': id,
         'doctorId': doctorId,
         'doctorName': doctorName,
         'doctorSpecialty': doctorSpecialty,
@@ -318,7 +337,7 @@ class ChatMessage {
 
   factory ChatMessage.fromFirestore(
       DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data()!;
+    final data = doc.data() ?? {};
     return ChatMessage(
       id: doc.id,
       senderType: data['senderType'] as String? ?? 'doctor',

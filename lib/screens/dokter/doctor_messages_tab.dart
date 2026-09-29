@@ -29,7 +29,9 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialBelumDibalas) {
+    final hasBelumDibalas = widget.consultations.any(
+        (c) => c.paymentStatus == PaymentStatus.paid && c.lastMessageSenderType != 'doctor');
+    if (widget.initialBelumDibalas || hasBelumDibalas) {
       _selectedTabIndex = 1;
     }
     if (widget.focusSearch) {
@@ -166,7 +168,7 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
           child: filteredList.isEmpty
               ? _buildEmptyState()
               : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 20),
+                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 90),
                   itemCount: filteredList.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {

@@ -18,7 +18,16 @@ service cloud.firestore {
     }
 
     function myDoctorId() {
-      return (isDoctor() && ('doctorId' in userDoc())) ? userDoc().doctorId : '';
+      return (isDoctor() && ('doctorId' in userDoc())) ? userDoc().doctorId :
+             (isDoctor() && ('doctor_id' in userDoc())) ? userDoc().doctor_id : '';
+    }
+
+    function isDoctorForDoc(docData) {
+      return isDoctor() && (
+        (myDoctorId() != '' && docData.doctorId == myDoctorId()) ||
+        (exists(/databases/$(database)/documents/doctors/$(docData.doctorId)) &&
+         get(/databases/$(database)/documents/doctors/$(docData.doctorId)).data.uid == request.auth.uid)
+      );
     }
 
     // ── 1. Users Collection & Sub-collections ──────────────────────────────
@@ -61,11 +70,10 @@ service cloud.firestore {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
 
         // Dokter dapat membaca konsultasi yang ditujukan kepadanya
-        allow read: if isDoctor() && resource.data.doctorId == myDoctorId();
+        allow read: if isDoctorForDoc(resource.data);
 
         // Dokter hanya boleh update field-field status dan pesan tertentu
-        allow update: if isDoctor() 
-                      && resource.data.doctorId == myDoctorId()
+        allow update: if isDoctorForDoc(resource.data)
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                            'status', 'doctorConfirmedAt', 'lastMessageText', 
                            'lastMessageAt', 'lastMessageSenderType', 
@@ -78,12 +86,10 @@ service cloud.firestore {
           allow read, write: if isSignedIn() && request.auth.uid == userId;
 
           // Dokter terkait dapat membaca pesan
-          allow read: if isDoctor() 
-                      && get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data.doctorId == myDoctorId();
+          allow read: if isDoctorForDoc(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data);
 
           // Dokter dapat membuat pesan jika konsultasi sudah paid dan senderType adalah 'doctor'
-          allow create: if isDoctor() 
-                        && get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data.doctorId == myDoctorId()
+          allow create: if isDoctorForDoc(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data)
                         && get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data.paymentStatus == 'paid'
                         && request.resource.data.senderType == 'doctor';
         }
@@ -93,7 +99,7 @@ service cloud.firestore {
     // ── 2. Collection Group Query Konsultasi ────────────────────────────────
     // Diperlukan agar dokter dapat melakukan query: collectionGroup('consultations').where('doctorId', '==', myDoctorId())
     match /{path=**}/consultations/{consultationId} {
-      allow read: if isDoctor() && resource.data.doctorId == myDoctorId();
+      allow read: if isDoctorForDoc(resource.data);
     }
     
     // ── 3. Riwayat Login (Root level collection) ───────────────────────────

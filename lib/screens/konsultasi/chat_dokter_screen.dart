@@ -63,6 +63,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
       _hasLoadedConsultation = true;
     }
 
+    _loadInitialConsultation();
     _listenConsultation();
     _markRead();
 
@@ -82,9 +83,29 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     super.dispose();
   }
 
+  Future<void> _loadInitialConsultation() async {
+    if (_consultation == null) {
+      final data = await _consultationService.fetchById(
+        widget.consultationId,
+        patientUid: widget.patientUid,
+      );
+      if (mounted && data != null) {
+        setState(() {
+          _consultation = data;
+          _hasLoadedConsultation = true;
+        });
+        _markRead();
+      }
+    }
+  }
+
+  String? get _effectivePatientUid =>
+      widget.patientUid ?? _consultation?.patientUid;
+
   void _listenConsultation() {
     _consultationSub = _consultationService
-        .watchConsultation(widget.consultationId, patientUid: widget.patientUid)
+        .watchConsultation(widget.consultationId,
+            patientUid: _effectivePatientUid)
         .listen((c) {
       if (mounted && c != null) {
         setState(() {
@@ -92,6 +113,8 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
           _hasLoadedConsultation = true;
         });
       }
+    }, onError: (e) {
+      debugPrint('[ChatDokterScreen] watchConsultation error: $e');
     });
   }
 
@@ -99,7 +122,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     _consultationService.markChatAsRead(
       consultationId: widget.consultationId,
       role: widget.isDoctor ? 'doctor' : 'patient',
-      patientUid: widget.patientUid,
+      patientUid: _effectivePatientUid,
     );
   }
 
@@ -159,13 +182,16 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
 
   Future<void> _pickDocument() async {
     try {
-      final file = await FilePicker.pickFile(
+            final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
+        withData: true,
       );
 
-      if (file == null) return;
-      final bytes = await file.readAsBytes();
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      final bytes = file.bytes;
+      if (bytes == null) return;
 
       if (bytes.lengthInBytes > 5 * 1024 * 1024) {
         if (mounted) {
@@ -316,7 +342,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
           bytes: attachBytes,
           fileName: attachName ?? 'file',
           mimeType: attachMime,
-          patientUid: widget.patientUid,
+          patientUid: _effectivePatientUid,
         );
       } catch (e) {
         debugPrint('[ChatDokterScreen] Upload Storage gagal: $e');
@@ -351,7 +377,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
         consultationId: widget.consultationId,
         senderType: widget.isDoctor ? 'doctor' : 'patient',
         text: text,
-        patientUid: widget.patientUid,
+        patientUid: _effectivePatientUid,
         type: hasAttachment ? attachType : 'text',
         attachmentUrl: uploadedUrl,
         fileName: attachName,
@@ -432,8 +458,10 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                 ),
               )
             else
-              const DoctorAvatar(
-                photoUrl: '',
+              DoctorAvatar(
+                photoUrl: _consultation?.doctorPhotoUrl ?? '',
+                doctorId: _consultation?.doctorId,
+                doctorName: _consultation?.doctorName,
                 size: 36,
                 borderRadius: 10,
               ),
@@ -528,9 +556,32 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                   : StreamBuilder<List<ChatMessage>>(
                       stream: _consultationService.watchMessages(
                         widget.consultationId,
-                        patientUid: widget.patientUid,
+                        patientUid: _effectivePatientUid,
                       ),
                       builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.error_outline_rounded,
+                                      size: 40, color: Colors.red.shade400),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Gagal memuat pesan: ${snapshot.error}',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                        fontSize: 13,
+                                        color: AppColors.neutralGray),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
                           return const Center(

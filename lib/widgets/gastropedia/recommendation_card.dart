@@ -90,11 +90,10 @@ class _RecommendationCardState extends State<RecommendationCard>
             children: [
               // ─── Foto Lingkaran ───
               Container(
-                width: 100,
-                height: 100,
+                width: 130, // Diperbesar agar penuh di card
+                height: 130,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.12),
@@ -103,16 +102,19 @@ class _RecommendationCardState extends State<RecommendationCard>
                     ),
                   ],
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: Image.asset(
-                  widget.item.imageAsset,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                    color: const Color(0xFFEBF3F8),
-                    child: const Icon(
-                      Icons.image_outlined,
-                      size: 40,
-                      color: Color(0xFF639BC6),
+                child: ClipOval(
+                  child: Image.asset(
+                    widget.item.imageAsset,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    errorBuilder: (_, _, _) => Container(
+                      color: const Color(0xFFEBF3F8),
+                      child: const Icon(
+                        Icons.image_outlined,
+                        size: 40,
+                        color: Color(0xFF639BC6),
+                      ),
                     ),
                   ),
                 ),

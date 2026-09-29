@@ -54,7 +54,7 @@ class DoctorHomeTab extends StatelessWidget {
     }).toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 90),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -64,7 +64,9 @@ class DoctorHomeTab extends StatelessWidget {
               GestureDetector(
                 onTap: onTapProfile,
                 child: DoctorAvatar(
-                  photoUrl: doctor.photoUrl,
+                  photoUrl: doctor.effectivePhotoUrl,
+                  doctorId: doctor.id,
+                  doctorName: doctor.name,
                   size: 44,
                   borderRadius: 12,
                 ),
@@ -133,10 +135,15 @@ class DoctorHomeTab extends StatelessWidget {
             ),
             child: Row(
               children: [
-                DoctorAvatar(
-                  photoUrl: doctor.photoUrl,
-                  size: 52,
-                  borderRadius: 14,
+                GestureDetector(
+                  onTap: onTapProfile,
+                  child: DoctorAvatar(
+                    photoUrl: doctor.effectivePhotoUrl,
+                    doctorId: doctor.id,
+                    doctorName: doctor.name,
+                    size: 52,
+                    borderRadius: 14,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(

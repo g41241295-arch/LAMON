@@ -143,6 +143,41 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     });
   }
 
+  void _openProfileScreen() {
+    if (_doctor == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: AppColors.bgGradientMiddle,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0.5,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: AppColors.primaryText),
+              onPressed: () => Navigator.pop(context),
+              tooltip: 'Kembali',
+            ),
+            title: const Text(
+              'Profil Dokter',
+              style: TextStyle(
+                color: AppColors.primaryText,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            centerTitle: true,
+          ),
+          body: DoctorProfileTab(
+            doctor: _doctor!,
+            onProfileUpdated: _loadDoctorData,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoadingDoctor) {
@@ -255,7 +290,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
               doctor: _doctor!,
               consultations: _consultations,
               scheduleMap: _scheduleMap,
-              onTapProfile: () => _switchToTab(2),
+              onTapProfile: _openProfileScreen,
               onTapSearch: () => _switchToTab(1, focusSearch: true),
               onTapWaitingResponse: () =>
                   _switchToTab(1, initialBelumDibalas: true),
@@ -267,12 +302,6 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
               consultations: _consultations,
               initialBelumDibalas: _messagesInitialBelumDibalas,
               focusSearch: _messagesFocusSearch,
-            ),
-
-            // Tab 2: Profil
-            DoctorProfileTab(
-              doctor: _doctor!,
-              onProfileUpdated: _loadDoctorData,
             ),
           ],
         ),
@@ -316,13 +345,6 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                 icon: Icons.chat_bubble_rounded,
                 label: 'Pesan',
                 badgeCount: totalUnread,
-              ),
-
-              // Tab 2: Profil
-              _buildNavItem(
-                index: 2,
-                icon: Icons.person_rounded,
-                label: 'Profil',
               ),
             ],
           ),

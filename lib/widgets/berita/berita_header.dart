@@ -1,5 +1,16 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 
+/// Header halaman Berita.
+/// Dibuat identik dengan header CatatMakananmu:
+///   - Back button: wadah putih bundar, ikon arrow_back_rounded ukuran 20
+///   - Pill judul: padding (h:18, v:8), radius 24, warna 0xFFFFF7D6,
+///     border 0xFFE8DCAB 1.2 px, shadow kecil
+///   - Font judul: 14 w800 letterSpacing 0.2 warna AppColors.primaryText
+///   - Container padding: fromLTRB(16, 12, 16, 0)  — sama dengan CatatMakanan
+///
+/// Catatan: BeritaListScreen/BeritaDetailScreen memakai Scaffold biasa
+/// (bukan AppScaffold), sehingga SafeArea tetap diperlukan di sini.
 class BeritaHeader extends StatelessWidget {
   const BeritaHeader({super.key});
 
@@ -8,11 +19,12 @@ class BeritaHeader extends StatelessWidget {
     return SafeArea(
       bottom: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        // Padding sama persis dengan CatatMakananmu._buildHeader()
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // Tombol kembali di kiri (disamakan dengan Catat Makananmu)
+            // ── Tombol kembali (kiri) ──────────────────────────────────────
             Align(
               alignment: Alignment.centerLeft,
               child: InkWell(
@@ -26,18 +38,18 @@ class BeritaHeader extends StatelessWidget {
                   ),
                   child: const Icon(
                     Icons.arrow_back_rounded,
-                    color: Color(0xFF1D4E7A),
+                    color: AppColors.primaryText, // 0xFF1C4E68
                     size: 20,
                   ),
                 ),
               ),
             ),
-            
-            // Judul di tengah (disamakan dengan Catat Makananmu)
+
+            // ── Pill judul (tengah) ────────────────────────────────────────
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF7D6), // Mengikuti Catat Makananmu
+                color: const Color(0xFFFFF7D6),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: const Color(0xFFE8DCAB),
@@ -56,7 +68,7 @@ class BeritaHeader extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF1D4E7A),
+                  color: AppColors.primaryText, // 0xFF1C4E68
                   letterSpacing: 0.2,
                 ),
               ),
@@ -67,4 +79,3 @@ class BeritaHeader extends StatelessWidget {
     );
   }
 }
-

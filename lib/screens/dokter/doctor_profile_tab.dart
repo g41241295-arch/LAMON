@@ -156,7 +156,9 @@ class _DoctorProfileTabState extends State<DoctorProfileTab> {
                   ),
                   child: ClipOval(
                     child: DoctorAvatar(
-                      photoUrl: widget.doctor.photoUrl,
+                      photoUrl: widget.doctor.effectivePhotoUrl,
+                      doctorId: widget.doctor.id,
+                      doctorName: widget.doctor.name,
                       size: 96,
                       borderRadius: 48,
                     ),
@@ -383,21 +385,36 @@ class _DoctorProfileTabState extends State<DoctorProfileTab> {
           ),
           const SizedBox(height: 20),
 
-          // ── Tombol Teks "Keluar" ──
-          TextButton.icon(
-            onPressed: _handleSignOut,
-            icon: const Icon(Icons.logout_rounded,
-                color: Color(0xFFD32F2F), size: 20),
-            label: const Text(
-              'Keluar dari Akun Dokter',
-              style: TextStyle(
+          // ── Tombol Kotak Rapi "Keluar dari Akun Dokter" ──
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: _handleSignOut,
+              icon: const Icon(
+                Icons.logout_rounded,
                 color: Color(0xFFD32F2F),
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
+                size: 20,
               ),
-            ),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              label: const Text(
+                'Keluar dari Akun Dokter',
+                style: TextStyle(
+                  color: Color(0xFFD32F2F),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFF8F8),
+                side: const BorderSide(
+                  color: Color(0xFFFFCDD2),
+                  width: 1.2,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
+              ),
             ),
           ),
         ],
