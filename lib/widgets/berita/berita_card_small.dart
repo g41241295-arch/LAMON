@@ -10,73 +10,102 @@ class BeritaCardSmall extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String formattedDate = '';
+    // Format tanggal; null jika tidak tersedia
+    String? formattedDate;
     if (article.tanggal != null) {
-      final months = [
+      const months = [
         'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
       ];
-      formattedDate = '${article.tanggal!.day} ${months[article.tanggal!.month - 1]} ${article.tanggal!.year} • ';
+      final d = article.tanggal!;
+      formattedDate =
+          '${d.day} ${months[d.month - 1]} ${d.year} • ${article.kategori}';
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Material(
+        // Material sebagai pembungkus terluar agar InkWell mendapat hit-test yang benar
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                BeritaImage(
-                  assetPath: article.gambarAsset,
-                  width: 84,
-                  height: 80,
-                  borderRadius: 16,
-                  alignment: article.gambarAlignment,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        article.judul,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1D4E7A),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '$formattedDate${article.kategori}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF2F80A8),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Thumbnail
+                  Semantics(
+                    label: 'Gambar berita: ${article.judul}',
+                    child: BeritaImage(
+                      assetPath: article.gambarAsset,
+                      width: 84,
+                      height: 80,
+                      borderRadius: 16,
+                      alignment: article.gambarAlignment,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  // Teks
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          article.judul,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1D4E7A),
+                            height: 1.4,
+                          ),
+                        ),
+                        // Baris meta: hanya tampil jika tanggal tersedia,
+                        // agar kategori tidak tampil dobel saat tanggal null
+                        if (formattedDate != null) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            formattedDate,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF2F80A8),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ] else ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            article.kategori,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF2F80A8),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

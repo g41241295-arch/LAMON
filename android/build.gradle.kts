@@ -11,27 +11,22 @@ val newBuildDir: Directory =
         .get()
 rootProject.layout.buildDirectory.value(newBuildDir)
 
-subprojects {
-    val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
-    project.layout.buildDirectory.value(newSubprojectBuildDir)
-}
-subprojects {
-    project.evaluationDependsOn(":app")
-}
-
-// Force all plugin subprojects to compile against Android SDK 36
-// to satisfy flutter_plugin_android_lifecycle's AAR metadata requirement.
+// Paksa semua plugin (library) compile ke SDK 36.
+// Harus SEBELUM evaluationDependsOn(":app").
 subprojects {
     plugins.withId("com.android.library") {
         extensions.configure<com.android.build.gradle.LibraryExtension> {
             compileSdk = 36
         }
     }
-    plugins.withId("com.android.application") {
-        extensions.configure<com.android.build.gradle.AppExtension> {
-            compileSdkVersion(36)
-        }
-    }
+}
+
+subprojects {
+    val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
+    project.layout.buildDirectory.value(newSubprojectBuildDir)
+}
+subprojects {
+    project.evaluationDependsOn(":app")
 }
 
 tasks.register<Delete>("clean") {
