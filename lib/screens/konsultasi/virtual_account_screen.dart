@@ -5,6 +5,7 @@ import '../../models/consultation_model.dart';
 import '../../services/consultation_service.dart';
 import '../../utils/app_date_formatter.dart';
 import '../../utils/currency_formatter.dart';
+import '../../widgets/app_header_pill.dart';
 import '../../widgets/app_scaffold.dart';
 import '../screening/widgets/screening_avatars.dart';
 
@@ -74,15 +75,7 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () => Navigator.pop(context),
-          tooltip: 'Kembali',
-        ),
-        title: const Text('Nomor Virtual Account'),
-        centerTitle: true,
-      ),
+      appBar: AppHeaderPill(title: 'Nomor Virtual Account'),
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.primary))
@@ -369,8 +362,11 @@ class _BankDetailRow extends StatelessWidget {
     required this.bankId,
   });
 
+  /// Nama file logo bank dengan suffix -removebg-preview.png
   String get _bankAssetPath {
-    final fileName = bankId == 'jatim' ? 'bjatim.png' : '$bankId.png';
+    final fileName = bankId == 'jatim'
+        ? 'bank_jatim-removebg-preview.png'
+        : '$bankId-removebg-preview.png';
     return 'assets/images/banks/$fileName';
   }
 
@@ -387,41 +383,32 @@ class _BankDetailRow extends StatelessWidget {
             fontWeight: FontWeight.w500,
           ),
         ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 36,
-              height: 24,
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: const Color(0xFFE8EFF5),
-                  width: 1,
-                ),
-              ),
-              child: Image.asset(
-                _bankAssetPath,
-                fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => const Icon(
-                  Icons.account_balance_rounded,
-                  size: 16,
-                  color: AppColors.primary,
-                ),
+        // Logo saja (tanpa teks nama bank) — nama tetap tersedia
+        // via Semantics untuk aksesibilitas (pembaca layar)
+        Semantics(
+          label: bankName,
+          child: Container(
+            height: 32,
+            width: 72,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFFE8EFF5),
+                width: 1,
               ),
             ),
-            const SizedBox(width: 8),
-            Text(
-              bankName,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primaryText,
+            child: Image.asset(
+              _bankAssetPath,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => const Icon(
+                Icons.account_balance_rounded,
+                size: 18,
+                color: AppColors.primary,
               ),
             ),
-          ],
+          ),
         ),
       ],
     );
