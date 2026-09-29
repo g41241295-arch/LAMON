@@ -32,3 +32,6 @@ build/
 .pub/
 android/.gradle
 android/local.properties
+**/generated_plugin_registrant.cc
+**/generated_plugins.cmake
+**/GeneratedPluginRegistrant.swift

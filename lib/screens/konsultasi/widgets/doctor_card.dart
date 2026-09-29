@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
 import '../../../models/doctor_model.dart';
+import '../../../utils/currency_formatter.dart';
+import 'doctor_avatar.dart';
 
-/// Widget kartu dokter untuk Daftar Dokter screen.
-/// Menampilkan foto, nama, spesialisasi, harga, jam operasional,
-/// tombol "Chat Dokter", dan link "Jam Lainnya".
+export 'doctor_avatar.dart';
+
+/// Widget kartu dokter untuk tab "Pilih Dokter" dan "Rekomendasi".
+/// Memiliki susunan dan tinggi konsisten antar kartu.
 class DoctorCard extends StatelessWidget {
   final DoctorModel doctor;
   final VoidCallback onTapCard;
@@ -24,7 +27,7 @@ class DoctorCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTapCard,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
+        margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -34,7 +37,7 @@ class DoctorCard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -43,13 +46,18 @@ class DoctorCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Baris atas: foto + info ──
+              // ── Baris Atas: Foto rounded square + info nama, spesialisasi, harga ──
               Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Foto dokter (avatar generik)
-                  _DoctorAvatar(photoUrl: doctor.photoUrl, size: 64),
+                  // Foto dokter (76x76, rounded 16)
+                  DoctorAvatar(
+                    photoUrl: doctor.photoUrl,
+                    size: 76,
+                    borderRadius: 16,
+                  ),
                   const SizedBox(width: 14),
 
                   // Info dokter
@@ -75,18 +83,20 @@ class DoctorCard extends StatelessWidget {
                             color: AppColors.neutralGray,
                             fontWeight: FontWeight.w500,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 6),
-                        // Harga
+                        const SizedBox(height: 8),
+                        // Chip Harga
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 3),
+                              horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
+                            color: AppColors.primary.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            _formatRupiah(doctor.price),
+                            formatRupiah(doctor.price),
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w800,
@@ -100,43 +110,87 @@ class DoctorCard extends StatelessWidget {
                 ],
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
 
-              // ── Jam operasional ──
-              if (doctor.operatingHours.isNotEmpty)
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.access_time_rounded,
-                      size: 15,
-                      color: AppColors.neutralGray,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        doctor.operatingHours
-                            .map((h) => h.display)
-                            .join('  '),
-                        style: const TextStyle(
+              // ── Baris Tengah: Label Jam Operasional di kiri & Jam Lainnya di kanan pada baris yang sama ──
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 14,
+                        color: AppColors.neutralGray,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'Jam Operasional',
+                        style: TextStyle(
                           fontSize: 12,
                           color: AppColors.neutralGray,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
                         ),
-                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                  if (doctor.operatingHours.length > 1 && onTapJamLainnya != null)
+                    GestureDetector(
+                      onTap: onTapJamLainnya,
+                      child: const Text(
+                        'Jam Lainnya',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.primaryLight,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                          decorationColor: AppColors.primaryLight,
+                        ),
                       ),
                     ),
-                  ],
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              // Chip pill jam operasional
+              if (doctor.operatingHours.isNotEmpty)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: doctor.operatingHours.map((h) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F7FA),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFFE2ECF2),
+                        ),
+                      ),
+                      child: Text(
+                        h.display,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primaryText,
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
 
-              // ── Tombol Chat Dokter ──
+              // ── Baris Bawah: Tombol Chat Dokter lebar penuh, tinggi 48 ──
               Semantics(
                 label: 'Chat Dokter ${doctor.name}',
                 button: true,
                 child: SizedBox(
                   width: double.infinity,
-                  height: 44,
+                  height: 48,
                   child: ElevatedButton(
                     onPressed: onTapChatButton,
                     style: ElevatedButton.styleFrom(
@@ -157,98 +211,11 @@ class DoctorCard extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // ── Link "Jam Lainnya" ──
-              if (doctor.operatingHours.length > 1 && onTapJamLainnya != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: GestureDetector(
-                    onTap: onTapJamLainnya,
-                    child: const Text(
-                      'Jam Lainnya',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.primaryLight,
-                        fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.underline,
-                        decorationColor: AppColors.primaryLight,
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
       ),
     );
   }
-
-  String _formatRupiah(int amount) {
-    final s = amount.toString();
-    final buffer = StringBuffer('Rp');
-    var count = 0;
-    for (var i = s.length - 1; i >= 0; i--) {
-      if (count > 0 && count % 3 == 0) buffer.write('.');
-      buffer.write(s[i]);
-      count++;
-    }
-    return String.fromCharCodes(buffer.toString().codeUnits.reversed);
-  }
 }
 
-/// Avatar dokter: tampilkan foto dari URL jika ada,
-/// atau ikon generik jika URL kosong/gagal load.
-class _DoctorAvatar extends StatelessWidget {
-  final String photoUrl;
-  final double size;
-
-  const _DoctorAvatar({required this.photoUrl, required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    return CircleAvatar(
-      radius: size / 2,
-      backgroundColor: AppColors.lightGray,
-      backgroundImage: photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
-      onBackgroundImageError: photoUrl.isNotEmpty
-          ? (_, _) {}
-          : null,
-      child: photoUrl.isEmpty
-          ? Icon(
-              Icons.person_rounded,
-              size: size * 0.55,
-              color: AppColors.neutralGray,
-            )
-          : null,
-    );
-  }
-}
-
-/// Widget avatar dokter yang dapat dipakai di layar lain.
-class DoctorAvatar extends StatelessWidget {
-  final String photoUrl;
-  final double size;
-
-  const DoctorAvatar({
-    super.key,
-    required this.photoUrl,
-    required this.size,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return CircleAvatar(
-      radius: size / 2,
-      backgroundColor: AppColors.lightGray,
-      backgroundImage: photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
-      onBackgroundImageError: photoUrl.isNotEmpty ? (_, _) {} : null,
-      child: photoUrl.isEmpty
-          ? Icon(
-              Icons.person_rounded,
-              size: size * 0.55,
-              color: AppColors.neutralGray,
-            )
-          : null,
-    );
-  }
-}
