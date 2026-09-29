@@ -159,13 +159,16 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
 
   Future<void> _pickDocument() async {
     try {
-      final file = await FilePicker.pickFile(
+            final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
+        withData: true,
       );
 
-      if (file == null) return;
-      final bytes = await file.readAsBytes();
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      final bytes = file.bytes;
+      if (bytes == null) return;
 
       if (bytes.lengthInBytes > 5 * 1024 * 1024) {
         if (mounted) {
