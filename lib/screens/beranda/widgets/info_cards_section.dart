@@ -1,7 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Section "Seputar Informasi" dengan 2 kartu memanjang (Gastropedia & Berita Kesehatan)
 class InfoCardsSection extends StatelessWidget {
   final VoidCallback onGastropediaTap;
   final VoidCallback onBeritaTap;
@@ -16,213 +16,174 @@ class InfoCardsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
       children: [
-        // 1. Badge Judul "Seputar Informasi"
-        _buildSectionBadge('Seputar Informasi'),
-        const SizedBox(height: 14),
-
-        // 2. Kartu 1: Gastropedia
-        _InfoBannerCard(
-          title: 'Gastropedia',
-          assetPath: 'assets/images/info-gastro1.png',
-          illustrationLeft: -8,
-          illustrationTop: -10,
-          illustrationWidth: 125,
-          onTap: onGastropediaTap,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.6), // glass effect
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.assignment_ind_rounded, color: Color(0xFF6F3F1E), size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'Seputar Informasi',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF6F3F1E),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        const SizedBox(height: 14),
-
-        // 3. Kartu 2: Berita Kesehatan
-        _InfoBannerCard(
-          title: 'Berita Kesehatan',
-          assetPath: 'assets/images/info-berita1.png',
-          illustrationLeft: -8,
-          illustrationTop: -14,
-          illustrationWidth: 120,
-          onTap: onBeritaTap,
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            children: [
+              _InfoCard(
+                title: 'Gastropedia',
+                description: 'Cari tahu lebih banyak tentang pola makan sehat',
+                bgPath: 'assets/images/info_gastropedia_bg.png',
+                assetPath: 'assets/images/info-gastro1.png',
+                isBlue: true,
+                onTap: onGastropediaTap,
+              ),
+              const SizedBox(height: 16),
+              _InfoCard(
+                title: 'Berita Kesehatan',
+                description: 'Dapatkan informasi terbaru seputar kesehatan lambung dan gaya hidup sehat',
+                bgPath: 'assets/images/info_berita_bg.png',
+                assetPath: 'assets/images/info-berita1.png',
+                isBlue: false,
+                onTap: onBeritaTap,
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
-
-  Widget _buildSectionBadge(String title) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5.5),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFFFFDF5),
-            Color(0xFFF7EAC4),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFFD8C496),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF6F3F1E).withValues(alpha: 0.12),
-            blurRadius: 5,
-            offset: const Offset(0, 1.5),
-          ),
-        ],
-      ),
-      child: Text(
-        title,
-        style: GoogleFonts.poppins(
-          fontSize: 18,
-          fontWeight: FontWeight.w800,
-          color: const Color(0xFF6F3F1E),
-          letterSpacing: -0.2,
-        ),
-      ),
-    );
-  }
 }
 
-/// Kartu memanjang untuk info dengan interaksi sentuh scale 1.04 dan teks kontras
-class _InfoBannerCard extends StatefulWidget {
+class _InfoCard extends StatelessWidget {
   final String title;
+  final String description;
+  final String bgPath;
   final String assetPath;
-  final double illustrationLeft;
-  final double illustrationTop;
-  final double illustrationWidth;
+  final bool isBlue;
   final VoidCallback onTap;
 
-  const _InfoBannerCard({
+  const _InfoCard({
     required this.title,
+    required this.description,
+    required this.bgPath,
     required this.assetPath,
-    required this.illustrationLeft,
-    required this.illustrationTop,
-    required this.illustrationWidth,
+    required this.isBlue,
     required this.onTap,
   });
 
   @override
-  State<_InfoBannerCard> createState() => _InfoBannerCardState();
-}
-
-class _InfoBannerCardState extends State<_InfoBannerCard> {
-  bool _isPressed = false;
-
-  void _handleTapDown(TapDownDetails _) {
-    setState(() => _isPressed = true);
-  }
-
-  void _handleTapUp(TapUpDetails _) {
-    setState(() => _isPressed = false);
-    // Jeda sejenak agar animasi sentuh terlihat oleh pengguna
-    Future.delayed(const Duration(milliseconds: 160), () {
-      if (mounted) {
-        widget.onTap();
-      }
-    });
-  }
-
-  void _handleTapCancel() {
-    setState(() => _isPressed = false);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final scale = _isPressed ? 1.04 : 1.0;
-    final textColor = _isPressed
-        ? const Color(0xFF1E5A8C)
-        : const Color(0xFF0C1923);
-
     return GestureDetector(
-      onTapDown: _handleTapDown,
-      onTapUp: _handleTapUp,
-      onTapCancel: _handleTapCancel,
-      child: AnimatedScale(
-        scale: scale,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
-        child: SizedBox(
-          width: double.infinity,
-          height: 72,
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.centerLeft,
-            children: [
-              // 1. Kotak Persegi Panjang Bergradasi Biru Muda ke Putih
-              Container(
-                width: double.infinity,
-                height: 68,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      Color(0xFFCBE5F6),
-                      Color(0xFFF3F9FD),
-                      Color(0xFFFFFFFF),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(
-                    color: const Color(0xFFD0E5F3),
-                    width: 1.2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.only(right: 18),
-                child: Row(
-                  children: [
-                    // Ruang kosong untuk memberi jalan pada ilustrasi di sebelah kiri
-                    const SizedBox(width: 122),
-
-                    // Judul Artikel/Info
-                    Expanded(
-                      child: AnimatedDefaultTextStyle(
-                        duration: const Duration(milliseconds: 200),
-                        style: GoogleFonts.poppins(
-                          fontSize: 18.5,
-                          fontWeight: FontWeight.w800,
-                          color: textColor,
-                          letterSpacing: -0.2,
-                        ),
-                        child: Text(
-                          widget.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-
-                    // Ikon Panah ">" Tebal
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      color: Colors.black,
-                      size: 34,
-                    ),
-                  ],
-                ),
-              ),
-
-              // 2. Gambar Ilustrasi yang SEDIKIT KELUAR dari batas kiri/atas
-              Positioned(
-                left: widget.illustrationLeft,
-                top: widget.illustrationTop,
-                bottom: -4,
-                width: widget.illustrationWidth,
-                child: Image.asset(
-                  widget.assetPath,
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ],
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          image: DecorationImage(
+            image: AssetImage(bgPath),
+            fit: BoxFit.cover,
+            onError: (e, s) {},
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 120, top: 14, bottom: 14, right: 54),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF134563),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF134563),
+                      height: 1.25,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            // Illustration
+            Positioned(
+              left: 10,
+              bottom: 0,
+              child: Image.asset(
+                assetPath,
+                width: 100,
+                height: 90,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: 100,
+                    height: 90,
+                    color: Colors.transparent,
+                    alignment: Alignment.center,
+                    child: kDebugMode ? Text(
+                      assetPath.split('/').last,
+                      style: const TextStyle(fontSize: 8, color: Colors.black54),
+                      textAlign: TextAlign.center,
+                    ) : const SizedBox(),
+                  );
+                },
+              ),
+            ),
+            // Button arrow
+            Positioned(
+              right: 16,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: CircleAvatar(
+                  radius: 11,
+                  backgroundColor: isBlue ? const Color(0xFFCBE5F6) : const Color(0xFFFDE899),
+                  child: const Icon(Icons.chevron_right_rounded, size: 16, color: Color(0xFF134563)),
+                ),
+              ),
+            )
+          ],
         ),
       ),
     );

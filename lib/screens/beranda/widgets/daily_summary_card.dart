@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/meal_schedule_model.dart';
 
-/// Kartu "Ringkasan hari ini" dengan timeline 3 titik simetris dan animasi sinkron
 class DailySummaryCard extends StatelessWidget {
   final Map<String, MealDailyStatus> dailyStatus;
   final String activeMealId;
+  final bool isSick;
 
   const DailySummaryCard({
     super.key,
     required this.dailyStatus,
     required this.activeMealId,
+    this.isSick = false, // Bisa di-pass dari parent jika memungkinkan
   });
 
   @override
@@ -19,160 +20,155 @@ class DailySummaryCard extends StatelessWidget {
     final lunchStatus = dailyStatus['lunch'] ?? const MealDailyStatus();
     final dinnerStatus = dailyStatus['dinner'] ?? const MealDailyStatus();
 
-    // Tentukan status aktif (kuning solid) jika belum selesai
     final isBreakfastActive = !breakfastStatus.isCompleted;
-    final isLunchActive = !lunchStatus.isCompleted &&
-        (breakfastStatus.isCompleted || activeMealId == 'lunch');
-    final isDinnerActive = !dinnerStatus.isCompleted &&
-        (lunchStatus.isCompleted || activeMealId == 'dinner');
+    final isLunchActive = !lunchStatus.isCompleted && (breakfastStatus.isCompleted || activeMealId == 'lunch');
+    final isDinnerActive = !dinnerStatus.isCompleted && (lunchStatus.isCompleted || activeMealId == 'dinner');
 
+    // Menentukan status tiap titik (0 = belum, 1 = aktif, 2 = selesai, 3 = terlewat)
+    // Untuk simplifikasi, asumsikan yang terlewat adalah yang bukan selesai tapi jadwalnya sudah lewat. 
+    // Tapi karena tidak ada info "isPast" di sini, kita gunakan aktif/selesai/belum.
+    
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [
-            Color(0xFFC3E3F7),
-            Color(0xFFF3F9FE),
-            Color(0xFFFFFFFF),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: const Color(0xFFA5D5F0),
-          width: 1.2,
-        ),
-        boxShadow: [
+        color: const Color(0xFFFFFDF5).withOpacity(0.85), // Krem semi-transparan
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
           BoxShadow(
-            color: const Color(0xFF134563).withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
+            color: Colors.black12,
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          )
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // Judul Kartu
-          Text(
-            'Ringkasan hari ini',
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF1E5D7D),
-              height: 1.15,
-            ),
+          Row(
+            children: [
+              const Icon(Icons.bar_chart, color: Color(0xFF134563)),
+              const SizedBox(width: 8),
+              Text(
+                'Ringkasan hari ini',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF134563),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-
-          // Timeline 3 Titik Simetris (Masing-masing kolom dibungkus Expanded)
-          LayoutBuilder(
-            builder: (context, constraints) {
-              const circleSize = 28.0;
-              final colWidth = constraints.maxWidth / 3;
-
-              return Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // Layer 1: Garis Penghubung antar lingkaran
-                  // Garis 1: dari tengah node 1 ke tengah node 2
-                  Positioned(
-                    top: (circleSize / 2) - 1.25,
-                    left: (colWidth * 0.5) + (circleSize / 2) - 2,
-                    width: colWidth - circleSize + 4,
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween<double>(
-                        begin: 0.0,
-                        end: breakfastStatus.isCompleted ? 1.0 : 0.0,
-                      ),
-                      duration: const Duration(milliseconds: 500),
-                      builder: (context, value, child) {
-                        return Container(
-                          height: 2.5,
-                          color: breakfastStatus.isCompleted
-                              ? const Color(0xFF38B249)
-                              : const Color(0xFFF6BC27),
-                        );
-                      },
-                    ),
-                  ),
-
-                  // Garis 2: dari tengah node 2 ke tengah node 3
-                  Positioned(
-                    top: (circleSize / 2) - 1.25,
-                    left: (colWidth * 1.5) + (circleSize / 2) - 2,
-                    width: colWidth - circleSize + 4,
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween<double>(
-                        begin: 0.0,
-                        end: lunchStatus.isCompleted ? 1.0 : 0.0,
-                      ),
-                      duration: const Duration(milliseconds: 500),
-                      builder: (context, value, child) {
-                        return Container(
-                          height: 2.5,
-                          color: lunchStatus.isCompleted
-                              ? const Color(0xFF38B249)
-                              : const Color(0xFFF6BC27),
-                        );
-                      },
-                    ),
-                  ),
-
-                  // Layer 2: Tiga Node Simetris Bersebelahan (Expanded)
-                  Row(
-                    children: [
-                      // Node 1: Sarapan
-                      Expanded(
-                        child: _TimelineNode(
-                          title: 'Sarapan',
-                          time: breakfastStatus.isCompleted
-                              ? breakfastStatus.actualTime
-                              : null,
-                          isCompleted: breakfastStatus.isCompleted,
-                          isActive: isBreakfastActive,
-                        ),
-                      ),
-
-                      // Node 2: Makan Siang
-                      Expanded(
-                        child: _TimelineNode(
-                          title: 'Makan siang',
-                          time: lunchStatus.isCompleted
-                              ? lunchStatus.actualTime
-                              : null,
-                          isCompleted: lunchStatus.isCompleted,
-                          isActive: isLunchActive,
-                        ),
-                      ),
-
-                      // Node 3: Makan Malam
-                      Expanded(
-                        child: _TimelineNode(
-                          title: 'Makan malam',
-                          time: dinnerStatus.isCompleted
-                              ? dinnerStatus.actualTime
-                              : null,
-                          isCompleted: dinnerStatus.isCompleted,
-                          isActive: isDinnerActive,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              );
-            },
+          _buildTimeline(
+            breakfastStatus: breakfastStatus,
+            lunchStatus: lunchStatus,
+            dinnerStatus: dinnerStatus,
+            isBreakfastActive: isBreakfastActive,
+            isLunchActive: isLunchActive,
+            isDinnerActive: isDinnerActive,
           ),
         ],
       ),
     );
   }
+
+  Widget _buildTimeline({
+    required MealDailyStatus breakfastStatus,
+    required MealDailyStatus lunchStatus,
+    required MealDailyStatus dinnerStatus,
+    required bool isBreakfastActive,
+    required bool isLunchActive,
+    required bool isDinnerActive,
+  }) {
+    final int nodeCount = isSick ? 4 : 3;
+    final double lineWidth = (nodeCount == 4) ? 1.0 / 3.0 : 1.0 / 2.0;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final colWidth = constraints.maxWidth / nodeCount;
+        const circleSize = 24.0;
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Garis 1 (Breakfast to Lunch)
+            Positioned(
+              top: (circleSize / 2) - 1,
+              left: (colWidth * 0.5) + (circleSize / 2) - 2,
+              width: colWidth - circleSize + 4,
+              child: Container(
+                height: 2,
+                color: breakfastStatus.isCompleted ? Colors.green : Colors.amber,
+              ),
+            ),
+            // Garis 2 (Lunch to Dinner)
+            Positioned(
+              top: (circleSize / 2) - 1,
+              left: (colWidth * 1.5) + (circleSize / 2) - 2,
+              width: colWidth - circleSize + 4,
+              child: Container(
+                height: 2,
+                color: lunchStatus.isCompleted ? Colors.green : Colors.amber,
+              ),
+            ),
+            // Garis 3 (Dinner to Sleep - Only if Sick)
+            if (isSick)
+              Positioned(
+                top: (circleSize / 2) - 1,
+                left: (colWidth * 2.5) + (circleSize / 2) - 2,
+                width: colWidth - circleSize + 4,
+                child: Container(
+                  height: 2,
+                  color: dinnerStatus.isCompleted ? Colors.green : Colors.amber,
+                ),
+              ),
+
+            // Nodes
+            Row(
+              children: [
+                Expanded(
+                  child: _TimelineNode(
+                    title: 'Sarapan',
+                    time: breakfastStatus.actualTime,
+                    isCompleted: breakfastStatus.isCompleted,
+                    isActive: isBreakfastActive,
+                  ),
+                ),
+                Expanded(
+                  child: _TimelineNode(
+                    title: 'Makan siang',
+                    time: lunchStatus.actualTime,
+                    isCompleted: lunchStatus.isCompleted,
+                    isActive: isLunchActive,
+                  ),
+                ),
+                Expanded(
+                  child: _TimelineNode(
+                    title: 'Makan malam',
+                    time: dinnerStatus.actualTime,
+                    isCompleted: dinnerStatus.isCompleted,
+                    isActive: isDinnerActive,
+                  ),
+                ),
+                if (isSick)
+                  Expanded(
+                    child: _TimelineNode(
+                      title: 'Jam tidur',
+                      time: null,
+                      isCompleted: false,
+                      isActive: false, // Sementara false
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
-/// Komponen node individual dalam timeline
 class _TimelineNode extends StatelessWidget {
   final String title;
   final String? time;
@@ -192,44 +188,27 @@ class _TimelineNode extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // 1. Lingkaran Status (Centang Hijau / Kuning Solid / Kuning Outline)
         _buildCircle(),
-
-        const SizedBox(height: 7),
-
-        // 2. Judul Makan (Lengkap, FittedBox agar tidak terpotong)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF235C7E),
-                height: 1.15,
-              ),
-            ),
+        const SizedBox(height: 8),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF134563),
           ),
         ),
-
         const SizedBox(height: 2),
-
-        // 3. Jam Aktual (HANYA tampil jika makan itu sudah ditandai selesai)
         SizedBox(
-          height: 18,
+          height: 16,
           child: (isCompleted && time != null && time!.isNotEmpty)
               ? Text(
                   time!,
-                  textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF235C7E),
-                    height: 1.1,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF134563),
                   ),
                 )
               : const SizedBox.shrink(),
@@ -239,73 +218,35 @@ class _TimelineNode extends StatelessWidget {
   }
 
   Widget _buildCircle() {
-    const circleSize = 28.0;
-
-    // A. Status Selesai: Lingkaran hijau dengan centang putih & ripple glow
+    const double size = 24.0;
     if (isCompleted) {
-      return TweenAnimationBuilder<double>(
-        tween: Tween<double>(begin: 0.7, end: 1.0),
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeOutBack,
-        builder: (context, scale, child) {
-          return Transform.scale(
-            scale: scale,
-            child: Container(
-              width: circleSize,
-              height: circleSize,
-              decoration: BoxDecoration(
-                color: const Color(0xFF38B249),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF38B249).withValues(alpha: 0.45),
-                    blurRadius: 8,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.check_rounded,
-                color: Colors.white,
-                size: 19,
-              ),
-            ),
-          );
-        },
+      return Container(
+        width: size,
+        height: size,
+        decoration: const BoxDecoration(
+          color: Colors.green,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.check, color: Colors.white, size: 16),
       );
     }
-
-    // B. Status Sedang Berjalan / Jadwal Berikutnya: Lingkaran kuning solid
     if (isActive) {
       return Container(
-        width: circleSize,
-        height: circleSize,
+        width: size,
+        height: size,
         decoration: const BoxDecoration(
-          color: Color(0xFFF6BC27),
+          color: Colors.amber,
           shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x33F6BC27),
-              blurRadius: 4,
-              offset: Offset(0, 1),
-            ),
-          ],
         ),
       );
     }
-
-    // C. Status Belum: Lingkaran putih dengan outline kuning
     return Container(
-      width: circleSize,
-      height: circleSize,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
-        border: Border.all(
-          color: const Color(0xFFF6BC27),
-          width: 2.2,
-        ),
+        border: Border.all(color: Colors.amber, width: 2),
       ),
     );
   }
