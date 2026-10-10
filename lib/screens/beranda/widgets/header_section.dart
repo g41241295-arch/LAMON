@@ -15,7 +15,7 @@ class HeaderChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.6), // Soft glass
+          color: Colors.white.withValues(alpha: 0.6), // Soft glass
           borderRadius: BorderRadius.circular(24),
           boxShadow: const [
             BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
@@ -78,7 +78,7 @@ class SapaanCard extends StatelessWidget {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),

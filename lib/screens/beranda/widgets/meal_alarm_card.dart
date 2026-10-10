@@ -34,7 +34,7 @@ class MealAlarmCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -52,7 +52,7 @@ class MealAlarmCard extends StatelessWidget {
                 width: 64,
                 height: 64,
                 fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Icon(Icons.alarm, color: Colors.white, size: 64),
+                errorBuilder: (_, _, _) => const Icon(Icons.alarm, color: Colors.white, size: 64),
               ),
               const SizedBox(width: 12),
               // Judul & Jam
@@ -120,7 +120,7 @@ class MealAlarmCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: isActiveNow ? Colors.white : Colors.white.withOpacity(0.5),
+                      color: isActiveNow ? Colors.white : Colors.white.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(

@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/app_state.dart';
 import 'beranda/models/meal_schedule_model.dart';
 import 'beranda/services/beranda_meal_service.dart';
@@ -186,15 +184,15 @@ class BerandaScreenState extends State<BerandaScreen> with WidgetsBindingObserve
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     // Gambar dirender 1.25x lebar layar, gadis tetap utuh di sisi kanan
     final bgWidth = screenWidth * 1.25;
-    // girlZone = tinggi gambar yang dirender (rasio gambar 780:1800) + margin bawah
-    final girlZone = bgWidth * 270 / 780 + 12 + bottomInset;
     const topYellow = Color(0xFFFDE88A);
 
     return Scaffold(
       backgroundColor: topYellow,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          return SingleChildScrollView(
+          final isLargeScreen = constraints.maxWidth > 520;
+
+          final content = SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: constraints.maxHeight),
@@ -295,40 +293,44 @@ class BerandaScreenState extends State<BerandaScreen> with WidgetsBindingObserve
                   ],
                 ),
               ),
-            ),
+            ],
           ),
-        );
+        ),
+      );
 
-        // Jika dibuka pada browser desktop atau layar lebar, tampilkan bingkai mobile
-        if (isLargeScreen) {
-          final maxH = constraints.maxHeight.isFinite
-              ? constraints.maxHeight.clamp(0.0, 920.0)
-              : 880.0;
-          return Scaffold(
-            backgroundColor: const Color(0xFFECE7BE),
-            body: Center(
-              child: Container(
-                width: 410,
-                height: maxH,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(36),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.18),
-                      blurRadius: 30,
-                      offset: const Offset(0, 10),
+          // Jika dibuka pada browser desktop atau layar lebar, tampilkan bingkai mobile
+          if (isLargeScreen) {
+            final maxH = constraints.maxHeight.isFinite
+                ? constraints.maxHeight.clamp(0.0, 920.0)
+                : 880.0;
+            return Scaffold(
+              backgroundColor: const Color(0xFFECE7BE),
+              body: Center(
+                child: Container(
+                  width: 410,
+                  height: maxH,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(36),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.18),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                    border: Border.all(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      width: 3,
                     ),
-                  ],
-                  border: Border.all(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    width: 3,
                   ),
+                  child: content,
                 ),
-                child: content,
               ),
-            ),
-          );
+            );
+          }
+
+          return content;
         },
       ),
     );

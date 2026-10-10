@@ -32,7 +32,7 @@ class DailySummaryCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFDF5).withOpacity(0.85), // Krem semi-transparan
+        color: const Color(0xFFFFFDF5).withValues(alpha: 0.85), // Krem semi-transparan
         borderRadius: BorderRadius.circular(24),
         boxShadow: const [
           BoxShadow(
@@ -82,7 +82,6 @@ class DailySummaryCard extends StatelessWidget {
     required bool isDinnerActive,
   }) {
     final int nodeCount = isSick ? 4 : 3;
-    final double lineWidth = (nodeCount == 4) ? 1.0 / 3.0 : 1.0 / 2.0;
 
     return LayoutBuilder(
       builder: (context, constraints) {
