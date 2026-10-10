@@ -162,7 +162,7 @@ class GastropediaDetailScreen extends StatelessWidget {
                   // Accordion 1: Deskripsi
                   GastropediaAccordion(
                     title: 'Deskripsi',
-                    initialExpanded: false,
+                    initialExpanded: true,
                     content: Text(
                       item.deskripsi,
                       textAlign: TextAlign.justify,
@@ -180,7 +180,7 @@ class GastropediaDetailScreen extends StatelessWidget {
                   // Accordion 2: Manfaat
                   GastropediaAccordion(
                     title: 'Manfaat',
-                    initialExpanded: false,
+                    initialExpanded: true,
                     content: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: item.manfaat.map((text) {
@@ -206,7 +206,7 @@ class GastropediaDetailScreen extends StatelessWidget {
                   // Accordion 3: Kandungan
                   GastropediaAccordion(
                     title: 'Kandungan Gizi',
-                    initialExpanded: false,
+                    initialExpanded: true,
                     content: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: item.kandungan.map((text) {
