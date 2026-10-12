@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 
@@ -27,9 +28,62 @@ class AdminGradientBackground extends StatelessWidget {
 }
 
 // ============================================================
+// Scaffold khusus admin untuk menghilangkan area hitam
+// ============================================================
+class AdminScaffold extends StatelessWidget {
+  final Widget? header;
+  final Widget body;
+
+  const AdminScaffold({
+    super.key,
+    this.header,
+    required this.body,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness: Brightness.dark,
+        systemNavigationBarContrastEnforced: false,
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        extendBody: true,
+        extendBodyBehindAppBar: true,
+        resizeToAvoidBottomInset: true,
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/bg_admin_beranda.png',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(color: const Color(0xFFFBFAE6)),
+              ),
+            ),
+            SafeArea(
+              child: Column(
+                children: [
+                  ?header,
+                  Expanded(child: body),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
 // AppBar custom admin: tombol back + judul Poppins + aksi kanan
 // ============================================================
-class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
+class AdminAppBar extends StatelessWidget {
   final String title;
   final Widget? trailing;
   final bool showBack;
@@ -42,13 +96,10 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(64);
-
-  @override
   Widget build(BuildContext context) {
     return Container(
-      height: preferredSize.height + MediaQuery.of(context).padding.top,
-      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+      height: 64,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       color: Colors.transparent,
       child: Row(
         children: [
@@ -217,7 +268,7 @@ class AdminInputField extends StatelessWidget {
         const SizedBox(height: 6),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.inputBackground,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: hasError ? AppColors.adminRed : AppColors.inputBorder,

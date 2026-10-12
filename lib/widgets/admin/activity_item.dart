@@ -56,7 +56,7 @@ class ActivityItem extends StatelessWidget {
       'hapus': 'Menghapus',
     };
     final modulMap = {
-      'ensiklopedia': 'entri ensiklopedia',
+      'ensiklopedia': 'data gastropedia',
     };
     final aksiText = aksiMap[log.aksi.toLowerCase()] ?? log.aksi;
     final modulText = modulMap[log.modul.toLowerCase()] ?? log.modul;

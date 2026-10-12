@@ -121,7 +121,7 @@ class _EnsiklopediaListScreenState extends State<EnsiklopediaListScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Entri "${entry.istilah}" berhasil dihapus.',
+                  'Data gastropedia "${entry.istilah}" berhasil dihapus.',
                   style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ),
@@ -147,15 +147,13 @@ class _EnsiklopediaListScreenState extends State<EnsiklopediaListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: false,
-      appBar: AdminAppBar(
-        title: 'Kelola Ensiklopedia',
+    return AdminScaffold(
+      header: AdminAppBar(
+        title: 'Kelola Gastropedia',
         trailing: IconButton(
           icon: const Icon(Icons.add_rounded, size: 26),
           color: AppColors.adminBlue,
-          tooltip: 'Tambah Entri',
+          tooltip: 'Tambah Gastropedia',
           onPressed: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -167,9 +165,8 @@ class _EnsiklopediaListScreenState extends State<EnsiklopediaListScreen> {
           ),
         ),
       ),
-      body: AdminGradientBackground(
-        child: StreamBuilder<List<EnsiklopediaEntry>>(
-          stream: _service.streamEnsiklopedia(),
+      body: StreamBuilder<List<EnsiklopediaEntry>>(
+        stream: _service.streamEnsiklopedia(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator(color: AppColors.adminBlue));
@@ -252,7 +249,6 @@ class _EnsiklopediaListScreenState extends State<EnsiklopediaListScreen> {
             );
           },
         ),
-      ),
     );
   }
 
@@ -270,7 +266,7 @@ class _EnsiklopediaListScreenState extends State<EnsiklopediaListScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              noData ? 'Belum ada entri' : 'Tidak ditemukan',
+              noData ? 'Belum ada data gastropedia' : 'Tidak ditemukan',
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -314,7 +310,7 @@ class _EntryCard extends StatelessWidget {
     final firstLetter = entry.istilah.isNotEmpty ? entry.istilah[0].toUpperCase() : '?';
 
     return Material(
-      color: AppColors.adminCardBg,
+      color: Colors.white,
       borderRadius: BorderRadius.circular(16),
       elevation: 0,
       child: InkWell(

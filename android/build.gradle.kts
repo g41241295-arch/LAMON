@@ -14,9 +14,11 @@ rootProject.layout.buildDirectory.value(newBuildDir)
 // Paksa semua plugin (library) compile ke SDK 36.
 // Harus SEBELUM evaluationDependsOn(":app").
 subprojects {
-    plugins.withId("com.android.library") {
-        extensions.configure<com.android.build.gradle.LibraryExtension> {
-            compileSdk = 36
+    afterEvaluate {
+        if (plugins.hasPlugin("com.android.library")) {
+            extensions.configure<com.android.build.gradle.LibraryExtension> {
+                compileSdk = 36
+            }
         }
     }
 }

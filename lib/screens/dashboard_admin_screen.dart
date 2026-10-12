@@ -8,7 +8,8 @@ import '../routes/app_routes.dart';
 import '../services/ensiklopedia_service.dart';
 import '../models/activity_log_model.dart';
 import '../widgets/admin/activity_item.dart';
-import '../widgets/admin/admin_background.dart';
+import '../widgets/admin/admin_widgets.dart';
+import '../widgets/admin/content_menu_tile.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -102,187 +103,275 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AdminBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return AdminScaffold(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 20),
+            _buildHeader(),
+            const SizedBox(height: 24),
+            _buildWelcomeBanner(),
+            const SizedBox(height: 24),
+            _buildDraftCard(),
+            _buildStatCards(),
+            const SizedBox(height: 24),
+            _buildSectionTitle('Aksi Cepat'),
+            const SizedBox(height: 12),
+            _buildQuickActions(),
+            const SizedBox(height: 24),
+            _buildSectionTitle('Kelola Konten'),
+            const SizedBox(height: 12),
+            _buildManageContent(),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const SizedBox(height: 20),
-                _buildHeader(),
-                const SizedBox(height: 24),
-                _buildWelcomeBanner(),
-                const SizedBox(height: 24),
-                _buildDraftCard(),
-                _buildStatCards(),
-                const SizedBox(height: 24),
-                _buildSectionTitle('Aksi Cepat'),
-                const SizedBox(height: 12),
-                _buildQuickActions(),
-                const SizedBox(height: 24),
-                _buildSectionTitle('Kelola Konten'),
-                const SizedBox(height: 12),
-                _buildManageContent(),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildSectionTitle('Aktivitas Terbaru'),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => const ActivityHistoryScreen()));
-                      },
-                      child: Text(
-                        'Lihat semua >',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: AdminTheme.navyText,
-                        ),
-                      ),
+                _buildSectionTitle('Aktivitas Terbaru'),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const ActivityHistoryScreen()));
+                  },
+                  child: Text(
+                    'Lihat semua >',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AdminTheme.navyText,
                     ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 12),
-                _buildRecentActivity(),
-                const SizedBox(height: 24),
               ],
             ),
-          ),
+            const SizedBox(height: 12),
+            _buildRecentActivity(),
+            const SizedBox(height: 80), // bottom padding for nav bar
+          ],
         ),
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: AdminTheme.blueGradient,
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _adminPhotoUrl != null && _adminPhotoUrl!.isNotEmpty
-              ? CircleAvatar(
-                  radius: 22,
-                  backgroundImage: NetworkImage(_adminPhotoUrl!),
-                  backgroundColor: AdminTheme.cardColor,
-                  onBackgroundImageError: (e, s) {},
-                )
-              : CircleAvatar(
-                  radius: 22,
-                  backgroundColor: AdminTheme.cardColor,
-                  child: Text(
-                    _adminName.isNotEmpty ? _adminName[0].toUpperCase() : 'A',
-                    style: GoogleFonts.poppins(
-                      color: AdminTheme.navyText,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-          const SizedBox(width: 12),
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Admin',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    color: AdminTheme.navyText.withValues(alpha: 0.8),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                if (_loadingAdmin)
-                  Container(width: 80, height: 16, color: Colors.grey.withValues(alpha: 0.3))
-                else
-                  Text(
-                    _adminName,
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AdminTheme.navyText,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWelcomeBanner() {
-    return Container(
-      height: 150,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Image.asset(
-                'assets/images/Mask group.png',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(color: AdminTheme.blueGradient.colors.first),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(20),
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.65),
+      child: GestureDetector(
+        onTapDown: (d) {},
+        child: PopupMenuButton<String>(
+          onSelected: (value) {
+            if (value == 'keluar') _confirmLogout();
+          },
+          offset: const Offset(0, 50),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          itemBuilder: (_) => [
+            PopupMenuItem(
+              value: 'keluar',
               child: Row(
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Halo, $_adminName!',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            color: AdminTheme.navyText,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Kelola Konten,\nJaga Lambung\nPengguna',
-                          style: GoogleFonts.poppins(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AdminTheme.navyText,
-                            height: 1.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Image.asset(
-                    'assets/images/logo-admin-beranda.png',
-                    width: 125,
-                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.shield, size: 80, color: AdminTheme.navyText),
-                  ),
+                  const Icon(Icons.logout_rounded, color: Color(0xFFD32F2F), size: 18),
+                  const SizedBox(width: 10),
+                  Text('Keluar', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFFD32F2F))),
                 ],
               ),
             ),
           ],
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(999),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Avatar lingkaran
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFE8F4FB),
+                    border: Border.all(color: const Color(0xFF337AA3).withValues(alpha: 0.3), width: 1.5),
+                  ),
+                  child: _adminPhotoUrl != null && _adminPhotoUrl!.isNotEmpty
+                      ? ClipOval(
+                          child: Image.network(
+                            _adminPhotoUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, e, s) => Center(
+                              child: Text(
+                                _adminName.isNotEmpty ? _adminName[0].toUpperCase() : 'A',
+                                style: GoogleFonts.poppins(color: const Color(0xFF337AA3), fontSize: 14, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        )
+                      : Center(
+                          child: Text(
+                            _adminName.isNotEmpty ? _adminName[0].toUpperCase() : 'A',
+                            style: GoogleFonts.poppins(color: const Color(0xFF337AA3), fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Admin',
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          color: AppColors.neutralGray,
+                          fontWeight: FontWeight.w500,
+                          height: 1.1,
+                        ),
+                      ),
+                      _loadingAdmin
+                          ? Container(width: 60, height: 13, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(4)))
+                          : Text(
+                              _adminName,
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF1C4E68),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF337AA3), size: 18),
+              ],
+            ),
+          ),
         ),
+      ),
+    );
+  }
+
+  Future<void> _confirmLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text('Konfirmasi Keluar', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+        content: Text('Apakah Anda yakin ingin keluar dari akun admin?', style: GoogleFonts.poppins()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Batal', style: GoogleFonts.poppins()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Keluar', style: GoogleFonts.poppins(color: const Color(0xFFD32F2F), fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await FirebaseAuth.instance.signOut();
+      if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    }
+  }
+
+  Widget _buildWelcomeBanner() {
+    return Container(
+      height: 140,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFF3B0), Color(0xFFFFE57A)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.amber.withValues(alpha: 0.25),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Dekorasi latar dalam kartu
+          Positioned(
+            top: -16, right: -12,
+            child: Container(
+              width: 110, height: 110,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.12),
+              ),
+            ),
+          ),
+          // Konten teks kiri
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 140, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Halo, $_adminName!',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF8D5B20),
+                    height: 1.1,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Kelola Konten,\nJaga Lambung Pengguna',
+                  style: GoogleFonts.poppins(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF134563),
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Pantau dan kelola berita\nserta gastropedia.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF625232),
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Maskot menonjol di pojok kanan
+          Positioned(
+            right: -8,
+            top: -12,
+            bottom: -4,
+            child: Image.asset(
+              'assets/images/logo-admin-beranda.png',
+              width: 130,
+              fit: BoxFit.contain,
+              errorBuilder: (_, e, s) => const Icon(Icons.shield, size: 80, color: Color(0xFF134563)),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -455,22 +544,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Row(
       children: [
         Expanded(
-          child: Container(
+          child: SizedBox(
             height: 44,
-            decoration: BoxDecoration(
-              gradient: AdminTheme.blueGradient,
-              borderRadius: BorderRadius.circular(12),
-            ),
             child: ElevatedButton.icon(
               onPressed: _showComingSoon,
               icon: const Icon(Icons.add, size: 18, color: AdminTheme.navyText),
               label: Text('Tambah Berita', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold, color: AdminTheme.navyText)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
+                backgroundColor: Colors.white,
+                foregroundColor: AdminTheme.navyText,
                 shadowColor: Colors.transparent,
                 elevation: 0,
                 padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: Color(0xFF337AA3)),
+                ),
               ),
             ),
           ),
@@ -482,10 +571,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             child: OutlinedButton.icon(
               onPressed: _openAddEnsiklopedia,
               icon: const Icon(Icons.add, size: 18, color: AdminTheme.navyText),
-              label: Text('Tambah Makanan', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold, color: AdminTheme.navyText)),
+              label: Text('Tambah Gastropedia', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold, color: AdminTheme.navyText)),
               style: OutlinedButton.styleFrom(
-                backgroundColor: AdminTheme.cardColor,
-                side: const BorderSide(color: AdminTheme.borderBlue),
+                backgroundColor: Colors.white,
+                side: const BorderSide(color: Color(0xFF337AA3)),
                 padding: EdgeInsets.zero,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -499,18 +588,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildManageContent() {
     return Column(
       children: [
-        _buildContentCard(
+        _buildContentStreamCard(
           title: 'Berita Kesehatan',
           stream: FirebaseFirestore.instance.collection('berita').snapshots(),
-          iconPath: 'assets/images/admin-berita.png',
+          imagePath: 'assets/images/admin-berita.png',
           onTap: _showComingSoon,
           isBerita: true,
         ),
         const SizedBox(height: 12),
-        _buildContentCard(
+        _buildContentStreamCard(
           title: 'Gastropedia',
           stream: FirebaseFirestore.instance.collection('ensiklopedia').snapshots(),
-          iconPath: 'assets/images/admin-pisang.png',
+          imagePath: 'assets/images/admin-pisang.png',
           onTap: () => Navigator.pushNamed(context, AppRoutes.adminEnsiklopedia),
           isBerita: false,
         ),
@@ -518,10 +607,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildContentCard({
+  Widget _buildContentStreamCard({
     required String title,
     required Stream<QuerySnapshot> stream,
-    required String iconPath,
+    required String imagePath,
     required VoidCallback onTap,
     required bool isBerita,
   }) {
@@ -542,65 +631,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         
         String subtitle = isBerita 
             ? '$count artikel · $draftCount draft'
-            : '$count makanan rekomendasi';
+            : '$count data gastropedia';
 
-        return GestureDetector(
+        return ContentMenuTile(
+          imagePath: imagePath,
+          title: title,
+          subtitle: subtitle,
           onTap: onTap,
-          child: Container(
-            height: 64,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: AdminTheme.cardColor,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: const BoxDecoration(
-                    gradient: AdminTheme.blueGradient,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: Image.asset(
-                    iconPath,
-                    width: 32,
-                    height: 32,
-                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.folder, color: AdminTheme.navyText),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AdminTheme.navyText,
-                        ),
-                      ),
-                      Text(
-                        subtitle,
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: AdminTheme.navyText.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right, color: AdminTheme.navyText),
-              ],
-            ),
-          ),
         );
       }
     );
@@ -647,42 +684,34 @@ class ActivityHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AdminBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: Text('Riwayat Aktivitas', style: GoogleFonts.poppins(color: AdminTheme.navyText, fontWeight: FontWeight.bold)),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          iconTheme: const IconThemeData(color: AdminTheme.navyText),
-        ),
-        body: StreamBuilder<List<ActivityLogModel>>(
-          stream: EnsiklopediaService().streamRecentActivity(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-            final logs = snapshot.data!;
-            if (logs.isEmpty) {
-              return Center(child: Text('Belum ada aktivitas', style: GoogleFonts.poppins(color: Colors.grey)));
-            }
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: logs.length,
-              itemBuilder: (context, index) {
-                final log = logs[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                  color: AdminTheme.cardColor,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: ActivityItem(log: log),
-                  ),
-                );
-              },
-            );
-          },
-        ),
+    return AdminScaffold(
+      header: AdminAppBar(title: 'Riwayat Aktivitas'),
+      body: StreamBuilder<List<ActivityLogModel>>(
+        stream: EnsiklopediaService().streamRecentActivity(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          final logs = snapshot.data!;
+          if (logs.isEmpty) {
+            return Center(child: Text('Belum ada aktivitas', style: GoogleFonts.poppins(color: Colors.grey)));
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: logs.length,
+            itemBuilder: (context, index) {
+              final log = logs[index];
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+                color: AdminTheme.cardColor,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: ActivityItem(log: log),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }
