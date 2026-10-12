@@ -51,7 +51,7 @@ class AppColors {
   static const Color adminRedLight = Color(0xFFFDEDED);
   static const Color adminChipActive = Color(0xFF337AA3);
   static const Color adminChipInactive = Colors.white;
-  static const Color adminCardBg = Colors.white;
+  static const Color adminCardBg = Color(0xFFFBFAE6);
   static const Color adminOrangeText = Color(0xFFC07030);
 
   // Admin Dashboard – stat cards & tiles

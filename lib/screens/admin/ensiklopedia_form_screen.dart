@@ -145,7 +145,7 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
         );
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(_successSnackbar('Entri berhasil diperbarui.'));
+          ScaffoldMessenger.of(context).showSnackBar(_successSnackbar('Data gastropedia berhasil diperbarui.'));
           // Pop kembali ke list; jika ID berubah, list sudah update via stream sehingga tidak ada "tidak ditemukan"
           Navigator.of(context).pop();
         }
@@ -168,7 +168,7 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
         await _service.createEntry(entry, widget.adminName, widget.adminId);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(_successSnackbar('Entri berhasil ditambahkan.'));
+          ScaffoldMessenger.of(context).showSnackBar(_successSnackbar('Data gastropedia berhasil ditambahkan.'));
           Navigator.of(context).pop();
         }
       }
@@ -219,13 +219,11 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AdminAppBar(
-        title: _isEditMode ? 'Edit Entri Ensiklopedia' : 'Tambah Entri Ensiklopedia',
+    return AdminScaffold(
+      header: AdminAppBar(
+        title: _isEditMode ? 'Edit Gastropedia' : 'Tambah Gastropedia',
       ),
-      body: AdminGradientBackground(
-        child: Form(
+      body: Form(
           key: _formKey,
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
@@ -332,7 +330,6 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
             ),
           ),
         ),
-      ),
     );
   }
 }

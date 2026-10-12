@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
+import '../../constants/admin_theme.dart';
 
 /// Konstanta dimensi tile kelola konten (sesuai Figma 390dp frame).
 class ContentMenuDims {
@@ -20,14 +21,14 @@ class ContentMenuDims {
 /// [subtitle]  – teks kecil cokelat kemerahan (subteks)
 /// [onTap]     – null = nonaktif (placeholder)
 class ContentMenuTile extends StatelessWidget {
-  final IconData icon;
+  final String imagePath;
   final String title;
   final String subtitle;
   final VoidCallback? onTap;
 
   const ContentMenuTile({
     super.key,
-    required this.icon,
+    required this.imagePath,
     required this.title,
     required this.subtitle,
     this.onTap,
@@ -36,7 +37,7 @@ class ContentMenuTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.adminTileBg,
+      color: Colors.white,
       borderRadius: BorderRadius.circular(ContentMenuDims.tileRadius),
       child: InkWell(
         onTap: onTap,
@@ -45,10 +46,13 @@ class ContentMenuTile extends StatelessWidget {
           padding: const EdgeInsets.all(ContentMenuDims.tilePadding),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(ContentMenuDims.tileRadius),
-            border: Border.all(
-              color: AppColors.adminTileBorder,
-              width: 1,
-            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -57,14 +61,18 @@ class ContentMenuTile extends StatelessWidget {
                 width: ContentMenuDims.iconBoxSize,
                 height: ContentMenuDims.iconBoxSize,
                 decoration: BoxDecoration(
-                  color: AppColors.adminBlueLight,
-                  borderRadius:
-                      BorderRadius.circular(ContentMenuDims.iconBoxRadius),
+                  gradient: AdminTheme.blueGradient,
+                  shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  icon,
-                  color: AppColors.adminBlue,
-                  size: ContentMenuDims.iconSize,
+                child: ClipOval(
+                  child: Image.asset(
+                    imagePath,
+                    fit: BoxFit.cover,
+                    width: ContentMenuDims.iconBoxSize,
+                    height: ContentMenuDims.iconBoxSize,
+                    errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.folder, color: AppColors.adminBlue),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),

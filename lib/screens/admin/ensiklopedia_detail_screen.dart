@@ -78,7 +78,7 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Entri "${entry.istilah}" berhasil dihapus.',
+                  'Data gastropedia "${entry.istilah}" berhasil dihapus.',
                   style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ),
@@ -110,11 +110,9 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: const AdminAppBar(title: 'Detail Entri'),
-      body: AdminGradientBackground(
-        child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+    return AdminScaffold(
+      header: const AdminAppBar(title: 'Detail Gastropedia'),
+      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
           stream: FirebaseFirestore.instance
               .collection('encyclopedia')
               .doc(widget.entryId)
@@ -132,7 +130,7 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
                     Icon(Icons.search_off_rounded, size: 56, color: AppColors.adminBlue.withValues(alpha: 0.35)),
                     const SizedBox(height: 12),
                     Text(
-                      'Entri tidak ditemukan.',
+                      'Data gastropedia tidak ditemukan.',
                       style: GoogleFonts.poppins(fontSize: 15, color: AppColors.neutralGray),
                     ),
                   ],
@@ -164,7 +162,6 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
             );
           },
         ),
-      ),
     );
   }
 
