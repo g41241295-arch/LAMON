@@ -26,100 +26,134 @@ class PopularFoodCard extends StatelessWidget {
 
   Widget _fallbackIcon() {
     return Container(
-      width: 80,
-      height: 80,
+      width: 64,
+      height: 64,
       color: const Color(0xFFEBF3F8),
-      child: const Icon(Icons.fastfood, color: Color(0xFF639BC6)),
+      child: const Icon(Icons.fastfood_rounded, color: Color(0xFF639BC6), size: 28),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
+    return Semantics(
+      button: true,
+      label: '${item.name}, rating ${item.rating}, ${item.ratingCount} ulasan',
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFFE2ECF2),
+            width: 1.2,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 3,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
-        child: Row(
-          children: [
-            // Gambar di sisi kiri
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: item.imageAsset.startsWith('http')
-                  ? Image.network(
-                      item.imageAsset,
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => _fallbackIcon(),
-                    )
-                  : Image.asset(
-                      item.imageAsset,
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => _fallbackIcon(),
-                    ),
-            ),
-            const SizedBox(width: 16),
-            // Info makanan di sisi kanan
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
                 children: [
-                  Text(
-                    item.name,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E5D7D),
+                  // ─── Thumbnail Kotak Rounded Konsisten (64x64) ───
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      width: 64,
+                      height: 64,
+                      child: item.imageAsset.startsWith('http')
+                          ? Image.network(
+                              item.imageAsset,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  _fallbackIcon(),
+                            )
+                          : Image.asset(
+                              item.imageAsset,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  _fallbackIcon(),
+                            ),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      // Render rating stars
-                      ...List.generate(
-                        5,
-                        (index) => Icon(
-                          index < item.rating.floor()
-                              ? Icons.star
-                              : index < item.rating
-                                  ? Icons.star_half
-                                  : Icons.star_border,
-                          size: 16,
-                          color: Colors.amber,
+
+                  const SizedBox(width: 14),
+
+                  // ─── Info Makanan: Nama Tebal + Rating Bintang & Ulasan ───
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          item.name,
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1E5D7D),
+                            letterSpacing: -0.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        "(${item.ratingCount})",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            // Render rating stars
+                            ...List.generate(
+                              5,
+                              (index) => Icon(
+                                index < item.rating.floor()
+                                    ? Icons.star_rounded
+                                    : index < item.rating
+                                        ? Icons.star_half_rounded
+                                        : Icons.star_outline_rounded,
+                                size: 16,
+                                color: const Color(0xFFF2B705),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              "${item.rating} (${item.ratingCount})",
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF7C8E97),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  // ─── Ikon Chevron di Ujung Kanan Baris ───
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: Color(0xFF7C8E97),
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

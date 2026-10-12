@@ -49,6 +49,13 @@ class BeritaImage extends StatelessWidget {
                 end: Alignment.bottomCenter,
               ),
             ),
+            child: const Center(
+              child: Icon(
+                Icons.article_outlined,
+                color: Color(0xFF1D4E7A),
+                size: 32,
+              ),
+            ),
           );
         },
       ),

@@ -379,11 +379,15 @@ class AppRoutes {
           settings: settings,
         );
       case gastropediaCategory:
+        final isRec = settings.arguments == 'rekomendasi';
         final category = settings.arguments is GastropediaCategory
             ? settings.arguments as GastropediaCategory
-            : GastropediaCategory.makanan;
+            : (isRec ? null : GastropediaCategory.makanan);
         return _createSmoothRoute(
-          GastropediaCategoryScreen(category: category),
+          GastropediaCategoryScreen(
+            category: category,
+            isRecommendationMode: isRec,
+          ),
           settings: settings,
         );
       case gastropediaDetail:

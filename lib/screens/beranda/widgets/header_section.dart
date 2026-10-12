@@ -1,193 +1,163 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../constants/app_assets.dart';
 
-/// Widget teks sapaan pada bagian atas Beranda
-class HeaderGreeting extends StatelessWidget {
+class HeaderChip extends StatelessWidget {
+  final String userName;
+  final VoidCallback onTap;
+
+  const HeaderChip({super.key, required this.userName, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.6), // Soft glass
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: const [
+            BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: const Color(0xFF134563),
+              child: const Icon(Icons.person, size: 16, color: Colors.white),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              userName,
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF53311C),
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.keyboard_arrow_down, color: Color(0xFF53311C)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class SapaanCard extends StatelessWidget {
   final String userName;
 
-  const HeaderGreeting({
-    super.key,
-    required this.userName,
-  });
+  const SapaanCard({super.key, required this.userName});
 
   @override
   Widget build(BuildContext context) {
-    // Ambil nama panggilan/nama depan bila terlalu panjang
-    final firstName = userName.trim().split(' ').first;
-    final displayName = firstName.isNotEmpty ? firstName : 'Pengguna';
+    final displayName = userName.trim().split(' ').first;
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = constraints.maxWidth;
+        final cardHeight = 138.0;
+        final mascotWidth = cardWidth * 0.35;
+        final mascotHeight = cardHeight * 0.85;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // 1. Sapaan Halo
-        Text(
-          'Halo, $displayName !',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.poppins(
-            fontSize: 16.5,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF8D5B20),
-            height: 1.1,
-          ),
-        ),
-        const SizedBox(height: 5),
-
-        // 2. Judul Tebal 2 Baris
-        Text(
-          'Sehatkan Lambung,\nMulai dari Hari ini',
-          style: GoogleFonts.poppins(
-            fontSize: 21,
-            fontWeight: FontWeight.w800,
-            color: const Color(0xFF134563),
-            height: 1.18,
-          ),
-        ),
-        const SizedBox(height: 5),
-
-        // 3. Subteks Pendukung
-        Text(
-          'Yuk, jaga pola makan dan pantau kesehatan lambungmu setiap hari',
-          style: GoogleFonts.poppins(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w500,
-            color: const Color(0xFF625232),
-            height: 1.25,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Maskot lambung animasi dengan efek glow berpendar dan melayang
-class AnimatedMascotLogo extends StatefulWidget {
-  final double size;
-
-  const AnimatedMascotLogo({
-    super.key,
-    this.size = 148,
-  });
-
-  @override
-  State<AnimatedMascotLogo> createState() => _AnimatedMascotLogoState();
-}
-
-class _AnimatedMascotLogoState extends State<AnimatedMascotLogo>
-    with TickerProviderStateMixin {
-  late final AnimationController _floatingController;
-  late final Animation<double> _floatingAnimation;
-
-  late final AnimationController _pulseController;
-  late final Animation<double> _pulseScaleAnimation;
-  late final Animation<double> _pulseOpacityAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-
-    // 1. Animasi melayang naik-turun perlahan (±6 dp, durasi 4.5 detik, Curves.easeInOut)
-    _floatingController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 4500),
-    );
-    _floatingAnimation = Tween<double>(begin: -6.0, end: 6.0).animate(
-      CurvedAnimation(
-        parent: _floatingController,
-        curve: Curves.easeInOut,
-      ),
-    );
-    _floatingController.repeat(reverse: true);
-
-    // 2. Animasi pulse glow di belakang logo (durasi 2.8 detik)
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2800),
-    );
-    _pulseScaleAnimation = Tween<double>(begin: 0.92, end: 1.08).animate(
-      CurvedAnimation(
-        parent: _pulseController,
-        curve: Curves.easeInOut,
-      ),
-    );
-    _pulseOpacityAnimation = Tween<double>(begin: 0.45, end: 0.85).animate(
-      CurvedAnimation(
-        parent: _pulseController,
-        curve: Curves.easeInOut,
-      ),
-    );
-    _pulseController.repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _floatingController.dispose();
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: widget.size,
-      height: widget.size,
-      child: Stack(
-        alignment: Alignment.center,
-        clipBehavior: Clip.none,
-        children: [
-          // A. Lingkaran radial gradient kuning lembut berpendar (Pulse Glow)
-          AnimatedBuilder(
-            animation: _pulseController,
-            builder: (context, child) {
-              return Opacity(
-                opacity: _pulseOpacityAnimation.value,
-                child: Transform.scale(
-                  scale: _pulseScaleAnimation.value,
-                  child: child,
+        return SizedBox(
+          height: cardHeight,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: double.infinity,
+                height: cardHeight,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  image: const DecorationImage(
+                    image: AssetImage('assets/images/card_sapaan_bg.png'),
+                    fit: BoxFit.cover,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-              );
-            },
-            child: _buildGlowLayer(),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: cardWidth * 0.58,
+                        child: Text(
+                          'Halo, $displayName !',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF8D5B20),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      SizedBox(
+                        width: cardWidth * 0.58,
+                        child: Text(
+                          'Sehatkan Lambung,\nMulai dari Hari ini',
+                          style: GoogleFonts.poppins(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF134563),
+                            height: 1.2,
+                          ),
+                          maxLines: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: cardWidth * 0.58,
+                        child: Text(
+                          'Yuk, jaga pola makan dan\npantau kesehatan lambungmu setiap hari',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF625232),
+                            height: 1.2,
+                          ),
+                          maxLines: 2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                right: -4,
+                bottom: 0,
+                child: Image.asset(
+                  'assets/images/mascot-header.png',
+                  width: mascotWidth,
+                  height: mascotHeight,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.bottomRight,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: mascotWidth,
+                      height: mascotHeight,
+                      color: Colors.transparent,
+                      alignment: Alignment.center,
+                      child: kDebugMode 
+                          ? const Text('mascot-header.png', style: TextStyle(fontSize: 8, color: Colors.black54))
+                          : const SizedBox(),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-
-          // B. Gambar Maskot Lambung Melayang Naik-Turun (Floating)
-          AnimatedBuilder(
-            animation: _floatingAnimation,
-            builder: (context, child) {
-              return Transform.translate(
-                offset: Offset(0, _floatingAnimation.value),
-                child: child,
-              );
-            },
-            child: Image.asset(
-              AppAssets.mascotHeader,
-              width: widget.size * 0.96,
-              height: widget.size * 0.96,
-              fit: BoxFit.contain,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGlowLayer() {
-    return Container(
-      width: widget.size * 0.82,
-      height: widget.size * 0.82,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [
-            const Color(0xFFFFEA79).withValues(alpha: 0.75),
-            const Color(0xFFFFDF66).withValues(alpha: 0.35),
-            Colors.transparent,
-          ],
-          stops: const [0.0, 0.65, 1.0],
-        ),
-      ),
+        );
+      },
     );
   }
 }

@@ -14,21 +14,22 @@ class BeritaContentBlockWidget extends StatelessWidget {
         child: Text(
           (block as BeritaBlockParagraph).text,
           style: const TextStyle(
-            fontSize: 13,
-            height: 1.55,
+            fontSize: 15,
+            fontWeight: FontWeight.w400,
+            height: 1.6,
             color: Color(0xFF1D4E7A),
           ),
-          textAlign: TextAlign.justify,
+          textAlign: TextAlign.left,
         ),
       );
     } else if (block is BeritaBlockSubjudul) {
       return Padding(
-        padding: const EdgeInsets.only(top: 20, bottom: 12),
+        padding: const EdgeInsets.only(top: 20, bottom: 8),
         child: Text(
           (block as BeritaBlockSubjudul).text,
           style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
             color: Color(0xFF1D4E7A),
           ),
         ),
@@ -43,8 +44,8 @@ class BeritaContentBlockWidget extends StatelessWidget {
             Text(
               '${b.nomor}. ${b.judul}',
               style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
                 color: Color(0xFF1D4E7A),
               ),
             ),
@@ -52,11 +53,12 @@ class BeritaContentBlockWidget extends StatelessWidget {
             Text(
               b.isi,
               style: const TextStyle(
-                fontSize: 13,
-                height: 1.55,
+                fontSize: 15,
+                fontWeight: FontWeight.w400,
+                height: 1.6,
                 color: Color(0xFF1D4E7A),
               ),
-              textAlign: TextAlign.justify,
+              textAlign: TextAlign.left,
             ),
           ],
         ),
@@ -69,14 +71,14 @@ class BeritaContentBlockWidget extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: b.items.map((item) {
             return Padding(
-              padding: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     '• ',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 15,
                       height: 1.55,
                       color: Color(0xFF1D4E7A),
                     ),
@@ -85,11 +87,11 @@ class BeritaContentBlockWidget extends StatelessWidget {
                     child: Text(
                       item,
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 15,
                         height: 1.55,
                         color: Color(0xFF1D4E7A),
                       ),
-                      textAlign: TextAlign.justify,
+                      textAlign: TextAlign.left,
                     ),
                   ),
                 ],
@@ -119,8 +121,8 @@ class BeritaContentBlockWidget extends StatelessWidget {
                     child: RichText(
                       text: TextSpan(
                         style: const TextStyle(
-                          fontSize: 13,
-                          height: 1.55,
+                          fontSize: 14,
+                          height: 1.5,
                           color: Color(0xFF1D4E7A),
                           fontFamily: 'Poppins', // Opsional, mengikuti tema
                         ),
@@ -173,8 +175,8 @@ class BeritaContentBlockWidget extends StatelessWidget {
                       child: Text(
                         item,
                         style: const TextStyle(
-                          fontSize: 13,
-                          height: 1.4,
+                          fontSize: 14,
+                          height: 1.5,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFFB3261E),
                         ),

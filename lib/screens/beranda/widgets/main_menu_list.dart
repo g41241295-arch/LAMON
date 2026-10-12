@@ -1,135 +1,142 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Item data untuk Menu Utama Beranda
+/// Ubah nilai ini untuk memperbesar/memperkecil semua kartu Menu Utama sekaligus.
+const double kMenuCardScale = 1.15;
+
 class BerandaMenuItem {
   final String id;
   final String title;
   final String assetPath;
+  final String bgPath;
   final String route;
   final String description;
+  final bool isBlueBg;
 
   const BerandaMenuItem({
     required this.id,
     required this.title,
     required this.assetPath,
+    required this.bgPath,
     required this.route,
     required this.description,
+    required this.isBlueBg,
   });
 }
 
-/// Daftar 5 kartu Menu Utama horizontal (full-bleed ke tepi layar)
 class MainMenuList extends StatelessWidget {
   final void Function(BerandaMenuItem item) onMenuTap;
 
-  const MainMenuList({
-    super.key,
-    required this.onMenuTap,
-  });
+  const MainMenuList({super.key, required this.onMenuTap});
 
   static const List<BerandaMenuItem> items = [
     BerandaMenuItem(
       id: 'pengingat-jam-makan',
       title: 'Pengingat\nJam Makan',
-      assetPath: 'assets/images/menu-pengingat1.png',
+      assetPath: 'assets/images/menu-pengingat1_crop.png',
+      bgPath: 'assets/images/menu_card_bg_oranye.png',
       route: '/pengingat-jam-makan',
-      description: 'Atur jadwal pengingat makan teratur untuk menjaga asam lambung tetap stabil.',
+      description: 'Atur jadwal pengingat makan teratur.',
+      isBlueBg: false,
     ),
     BerandaMenuItem(
       id: 'catat-makananmu',
-      title: 'Catat\nMakananmu',
-      assetPath: 'assets/images/menu-catat1.png',
+      title: 'Catat\nMakan',
+      assetPath: 'assets/images/menu-catat1_crop.png',
+      bgPath: 'assets/images/menu_card_bg_biru.png',
       route: '/catat-makananmu',
-      description: 'Catat asupan makanan harian Anda untuk melacak pemicu maag atau GERD.',
+      description: 'Catat asupan makanan harian Anda.',
+      isBlueBg: true,
     ),
     BerandaMenuItem(
       id: 'ringkasan-makanan',
-      // Menggunakan file _trim: padding transparan besar di-crop agar piringan selebar kartu
-      title: 'Ringkasan\nmakanan',
-      assetPath: 'assets/images/menu-ringkasan1_trim.png',
+      title: 'Ringkasan\nMakan',
+      assetPath: 'assets/images/menu-ringkasan1_crop.png',
+      bgPath: 'assets/images/menu_card_bg_oranye.png',
       route: '/ringkasan-makanan',
-      description: 'Laporan ringkasan konsumsi dan evaluasi nutrisi ramah lambung.',
+      description: 'Laporan ringkasan konsumsi.',
+      isBlueBg: false,
     ),
     BerandaMenuItem(
       id: 'prediksi-penyakit',
-      title: 'Prediksi\nPenyakit',
-      assetPath: 'assets/images/menu-prediksi1.png',
+      title: 'Prediksi\nLambung',
+      assetPath: 'assets/images/menu-prediksi1_crop.png',
+      bgPath: 'assets/images/menu_card_bg_biru.png',
       route: '/prediksi-penyakit',
-      description: 'Cek gejala lambung dan analisis kemungkinan gangguan kesehatan lambung.',
+      description: 'Cek gejala lambung.',
+      isBlueBg: true,
     ),
     BerandaMenuItem(
       id: 'konsul-dokter',
-      title: 'Konsul\nDokter',
-      assetPath: 'assets/images/menu-konsul1.png',
+      title: 'Konsultasi\nDokter',
+      assetPath: 'assets/images/menu-konsul1_crop.png',
+      bgPath: 'assets/images/menu_card_bg_oranye.png',
       route: '/konsultasi',
-      description: 'Konsultasi langsung dengan dokter spesialis lambung dan pencernaan.',
+      description: 'Konsultasi langsung dengan dokter spesialis.',
+      isBlueBg: false,
     ),
   ];
 
-  /// Map konfigurasi rasio lebar gambar terhadap lebar kartu W (W = 118 dp).
-  ///
-  /// Formula render:
-  ///   lebar visual imgW = W * ratio
-  ///   posisi left = (W - imgW) / 2
-  ///   posisi bottom = labelH
-  ///
-  /// Batas Keras (Langkah 3):
-  ///   - Lebar tampilan <= 1.30 * W
-  ///   - Tonjolan ke atas dari batas atas kartu <= 0.12 * W (<= 14.16 dp)
-  ///   - Gambar tidak boleh menyentuh judul "Menu Utama"
-  ///
-  /// Nilai akhir:
-  ///   - menu-pengingat1.png      : 1.00  (imgW = 1.00W, tonjolan = -2.4 dp)
-  ///   - menu-catat1.png          : 1.14  (imgW = 1.14W, tonjolan = 12.6 dp <= 0.12W)
-  ///   - menu-ringkasan1.png      : 1.00  (fallback jika memakai file asli)
-  ///   - menu-ringkasan1_trim.png : 1.00  (imgW = 1.00W, tonjolan = 6.5 dp <= 0.12W)
-  ///   - menu-prediksi1.png       : 1.16  (imgW = 1.16W, tonjolan = 13.4 dp <= 0.12W, diturunkan dari 1.24)
-  ///   - menu-konsul1.png         : 1.00  (imgW = 1.00W, tonjolan = -2.4 dp)
-  static const Map<String, double> menuImageWidthRatio = {
-    'menu-pengingat1.png': 1.00,
-    'menu-catat1.png': 1.14,
-    'menu-ringkasan1.png': 1.00,
-    'menu-ringkasan1_trim.png': 1.00,
-    'menu-prediksi1.png': 1.16,
-    'menu-konsul1.png': 1.00,
-  };
-
   @override
   Widget build(BuildContext context) {
+    final W = MediaQuery.of(context).size.width;
+    final s = W / 390;
+    final cardW = W * 0.374 * kMenuCardScale;
+    final cardH = W * 0.28 * kMenuCardScale;
+    final gap = W * 0.0385;
+    final listPad = 20.0; // sama dengan padding kiri label "Menu Utama"
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
       children: [
-        // 1. Badge Judul "Menu Utama" (dengan padding kiri 20 dp)
+        // Label "Menu Utama"
         Padding(
-          padding: const EdgeInsets.only(left: 20),
-          child: _buildSectionBadge('Menu Utama'),
+          padding: EdgeInsets.symmetric(horizontal: listPad),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.grid_view_rounded, color: Color(0xFF6F3F1E), size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'Menu Utama',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF6F3F1E),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        const SizedBox(height: 10),
-
-        // 2. Horizontal ListView Kartu Menu (Full-Bleed ke Tepi Layar Kanan)
-        // clipBehavior: Clip.none agar gambar yang menonjol atas/samping tidak terpotong
-        // Tinggi SizedBox: tinggi kartu (185.3) + padding atas (24) = 209.3 dp (~210 dp)
+        const SizedBox(height: 12),
+        // Daftar kartu
         SizedBox(
-          height: 210,
+          height: cardH + 12, // +12 untuk ruang bayangan
           child: ListView.separated(
+            padding: EdgeInsets.only(left: listPad, right: listPad, bottom: 12),
             scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
             clipBehavior: Clip.none,
-            // padding atas 24 dp: ruang aman untuk tonjolan gambar di atas kartu
-            padding: const EdgeInsets.only(left: 20, right: 20, top: 24),
             itemCount: items.length,
-            // Jarak antar kartu >= 0.3 * W = 35 dp
-            separatorBuilder: (_, _) => const SizedBox(width: 35),
+            separatorBuilder: (_, index) => SizedBox(width: gap),
             itemBuilder: (context, index) {
-              final item = items[index];
-              final filename = item.assetPath.split('/').last;
-              final ratio = menuImageWidthRatio[filename] ?? 1.00;
-
               return _MenuCard(
-                item: item,
-                widthRatio: ratio,
-                onTap: () => onMenuTap(item),
+                item: items[index],
+                cardW: cardW,
+                cardH: cardH,
+                s: s,
+                W: W,
+                onTap: () => onMenuTap(items[index]),
               );
             },
           ),
@@ -137,209 +144,167 @@ class MainMenuList extends StatelessWidget {
       ],
     );
   }
-
-  Widget _buildSectionBadge(String title) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5.5),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFFFFDF5),
-            Color(0xFFF7EAC4),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFFD8C496),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF6F3F1E).withValues(alpha: 0.12),
-            blurRadius: 5,
-            offset: const Offset(0, 1.5),
-          ),
-        ],
-      ),
-      child: Text(
-        title,
-        style: GoogleFonts.poppins(
-          fontSize: 18,
-          fontWeight: FontWeight.w800,
-          color: const Color(0xFF6F3F1E),
-          letterSpacing: -0.2,
-        ),
-      ),
-    );
-  }
 }
 
-/// Kartu menu dengan animasi sentuh (scale 1.05 / 1.08 dan warna teks kontras #1E5A8C)
-class _MenuCard extends StatefulWidget {
+class _MenuCard extends StatelessWidget {
   final BerandaMenuItem item;
-  final double widthRatio;
+  final double cardW;
+  final double cardH;
+  final double s;
+  final double W;
   final VoidCallback onTap;
 
   const _MenuCard({
     required this.item,
-    required this.widthRatio,
+    required this.cardW,
+    required this.cardH,
+    required this.s,
+    required this.W,
     required this.onTap,
   });
 
   @override
-  State<_MenuCard> createState() => _MenuCardState();
-}
-
-class _MenuCardState extends State<_MenuCard> {
-  bool _isTouched = false;
-  bool _isPressed = false;
-
-  void _handleTapDown(TapDownDetails details) {
-    setState(() {
-      _isTouched = true;
-      _isPressed = true;
-    });
-  }
-
-  void _handleTapUp(TapUpDetails details) {
-    setState(() {
-      _isTouched = false;
-      _isPressed = false;
-    });
-    // Delay sedikit agar efek scale dan perubahan warna terlihat oleh pengguna
-    Future.delayed(const Duration(milliseconds: 160), () {
-      if (mounted) {
-        widget.onTap();
-      }
-    });
-  }
-
-  void _handleTapCancel() {
-    setState(() {
-      _isTouched = false;
-      _isPressed = false;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final double scale = _isPressed ? 1.08 : (_isTouched ? 1.05 : 1.0);
-    final Color textColor =
-        _isPressed ? const Color(0xFF1E5A8C) : const Color(0xFF53311C);
-
-    // Dimensi kartu sesuai desain:
-    //   W = 118 dp (lebar kartu)
-    //   H ≈ 1.57 × W ≈ 185.3 dp
-    //   Area label putih ≈ 35% H ≈ 64.9 dp
-    //   Area biru-abu   ≈ 65% H ≈ 120.4 dp
-    const double cardW = 118.0;
-    const double cardH = cardW * 1.57;   // ≈ 185.3 dp
-    const double labelH = cardH * 0.35;  // ≈ 64.9 dp
-
-    final double imgW = cardW * widget.widthRatio;
-    final double imgLeft = (cardW - imgW) / 2;
-
-    // Batas Keras (Langkah 3 validation)
-    assert(widget.widthRatio <= 1.30, 'Lebar gambar tidak boleh melebihi 1.30 * W');
+    // Strip = 38% dari tinggi kartu
+    final stripH = cardH * 0.38;
+    // Area ilustrasi = 62% tinggi kartu (dari atas sampai batas strip)
+    final illusAreaH = cardH * 0.62;
+    // Padding kiri-kanan ilustrasi
+    final illusPad = W * 0.015 * kMenuCardScale;
+    // Ukuran tombol & padding
+    final btnSize = 20.0 * s * kMenuCardScale;
+    final btnPadR = W * 0.026 * kMenuCardScale;
+    final radius = 16.0 * s * kMenuCardScale;
+    // Font
+    final fontSize = 11.0 * s * kMenuCardScale;
+    final txtPadL = W * 0.032 * kMenuCardScale;
 
     return GestureDetector(
-      onTapDown: _handleTapDown,
-      onTapUp: _handleTapUp,
-      onTapCancel: _handleTapCancel,
-      child: AnimatedScale(
-        scale: scale,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        child: SizedBox(
-          width: cardW,
-          height: cardH,
-          child: Stack(
-            clipBehavior: Clip.none, // gambar boleh menonjol keluar kartu
-            children: [
-              // Layer 1: Kotak Kartu (background + border + shadow)
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: const Color(0xFF7BA2BA),
-                      width: 1.2,
+      onTap: onTap,
+      child: SizedBox(
+        width: cardW,
+        height: cardH,
+        child: Stack(
+          clipBehavior: Clip.none, // bayangan tidak terpotong
+          children: [
+            // Card clipped untuk konten
+            ClipRRect(
+              borderRadius: BorderRadius.circular(radius),
+              child: SizedBox(
+                width: cardW,
+                height: cardH,
+                child: Stack(
+                  children: [
+                    // 1. Latar (sudah include strip kaca)
+                    Positioned.fill(
+                      child: Image.asset(
+                        item.bgPath,
+                        fit: BoxFit.fill,
+                        errorBuilder: (context, error, stack) =>
+                            const ColoredBox(color: Color(0xFFEEEEEE)),
+                      ),
                     ),
+
+                    // 2. Ilustrasi: area 62% atas, tidak menimpa strip
+                    Positioned(
+                      top: 0,
+                      left: illusPad,
+                      right: illusPad,
+                      height: illusAreaH,
+                      child: Image.asset(
+                        item.assetPath,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.bottomCenter,
+                        errorBuilder: (context, error, stack) {
+                          return Center(
+                            child: kDebugMode
+                                ? Text(
+                                    item.assetPath.split('/').last,
+                                    style: const TextStyle(
+                                        fontSize: 7, color: Colors.black45),
+                                    textAlign: TextAlign.center,
+                                  )
+                                : const SizedBox(),
+                          );
+                        },
+                      ),
+                    ),
+
+                    // 3. Strip: judul + tombol (38% bawah)
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: stripH,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          SizedBox(width: txtPadL),
+                          Expanded(
+                            child: Text(
+                              item.title,
+                              style: GoogleFonts.poppins(
+                                fontSize: fontSize,
+                                fontWeight: FontWeight.w600,
+                                color: item.isBlueBg
+                                    ? const Color(0xFF1E4A6B)
+                                    : const Color(0xFF6B4423),
+                                height: 1.12,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          SizedBox(
+                            width: btnSize + btnPadR,
+                            child: Padding(
+                              padding: EdgeInsets.only(right: btnPadR),
+                              child: Center(
+                                child: Container(
+                                  width: btnSize,
+                                  height: btnSize,
+                                  decoration: BoxDecoration(
+                                    color: item.isBlueBg
+                                        ? const Color(0xFFA9CBE6)
+                                        : const Color(0xFFFFE59A),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    Icons.chevron_right_rounded,
+                                    size: 11 * s,
+                                    color: const Color(0xFF1E4A6B),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Bayangan lembut di luar ClipRRect
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(radius),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.07),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // Area Atas: latar biru-abu muda (65% tinggi kartu)
-                      Expanded(
-                        flex: 65,
-                        child: Container(
-                          width: double.infinity,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEFF5F8),
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(15),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Area Bawah: label teks putih (35% tinggi kartu)
-                      SizedBox(
-                        height: labelH,
-                        child: Container(
-                          width: double.infinity,
-                          alignment: Alignment.center,
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.vertical(
-                              bottom: Radius.circular(15),
-                            ),
-                          ),
-                          child: AnimatedDefaultTextStyle(
-                            duration: const Duration(milliseconds: 220),
-                            style: GoogleFonts.poppins(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w800,
-                              color: textColor,
-                              height: 1.15,
-                            ),
-                            child: Text(
-                              widget.item.title,
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 14,
+                        offset: const Offset(0, 5),
                       ),
                     ],
                   ),
                 ),
               ),
-
-              // Layer 2: Gambar Menu (Berbasis Lebar Tampilan Tanpa Transform Scale)
-              // Posisi: bottom = labelH (alas tepat di batas garis label),
-              //         left = (W - imgW) / 2 (terpusat horizontal)
-              Positioned(
-                bottom: labelH,
-                left: imgLeft,
-                width: imgW,
-                child: Image.asset(
-                  widget.item.assetPath,
-                  width: imgW,
-                  fit: BoxFit.fitWidth,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

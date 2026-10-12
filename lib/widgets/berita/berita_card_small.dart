@@ -64,44 +64,44 @@ class BeritaCardSmall extends StatelessWidget {
                   const SizedBox(width: 12),
                   // Teks
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          article.judul,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1D4E7A),
-                            height: 1.4,
-                          ),
-                        ),
-                        // Baris meta: hanya tampil jika tanggal tersedia,
-                        // agar kategori tidak tampil dobel saat tanggal null
-                        if (formattedDate != null) ...[
-                          const SizedBox(height: 6),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 80),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
                           Text(
-                            formattedDate,
+                            article.judul,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF2F80A8),
+                              fontSize: 15,
                               fontWeight: FontWeight.w600,
+                              color: Color(0xFF1D4E7A),
+                              height: 1.3,
                             ),
                           ),
-                        ] else ...[
                           const SizedBox(height: 6),
-                          Text(
-                            article.kategori,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF2F80A8),
-                              fontWeight: FontWeight.w600,
+                          if (formattedDate != null)
+                            Text(
+                              formattedDate,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF2F80A8),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            )
+                          else
+                            Text(
+                              article.kategori,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF2F80A8),
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 ],

@@ -4,6 +4,7 @@ import '../../constants/app_colors.dart';
 import '../../models/doctor_model.dart';
 import '../../services/consultation_service.dart';
 import '../../services/doctor_service.dart';
+import '../../widgets/app_header_pill.dart';
 import '../../widgets/app_scaffold.dart';
 import 'widgets/doctor_card.dart';
 
@@ -103,56 +104,93 @@ class _DaftarDokterScreenState extends State<DaftarDokterScreen>
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () => Navigator.pop(context),
-          tooltip: 'Kembali',
-        ),
-        title: const Text('Chat Dokter'),
-        centerTitle: true,
-        actions: [
-          // Tombol seed HANYA muncul di debug mode
-          if (kDebugMode)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: _isSeeding
-                  ? const Padding(
-                      padding: EdgeInsets.all(14),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    )
-                  : IconButton(
-                      icon: const Icon(Icons.cloud_upload_outlined),
-                      tooltip: '[DEBUG] Seed data dokter',
-                      onPressed: _runSeed,
+    // Tombol debug seed (kanan AppHeaderPill, hanya di debug mode)
+    Widget? rightAction;
+    if (kDebugMode) {
+      rightAction = Padding(
+        padding: const EdgeInsets.only(right: 0),
+        child: _isSeeding
+            ? const SizedBox(
+                width: 40,
+                height: 40,
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppColors.primary),
+                  ),
+                ),
+              )
+            : InkWell(
+                onTap: _runSeed,
+                borderRadius: BorderRadius.circular(24),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFFD6E2E8),
+                      width: 1.2,
                     ),
-            ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.neutralGray,
-          indicatorColor: AppColors.primary,
-          indicatorWeight: 3,
-          labelStyle: const TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 15,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 15,
-          ),
-          tabs: const [
-            Tab(text: 'Pilih Dokter'),
-            Tab(text: 'Rekomendasi'),
-          ],
-        ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.cloud_upload_outlined,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                ),
+              ),
+      );
+    }
+
+    // TabBar untuk dua tab Pilih Dokter / Rekomendasi
+    final tabBar = TabBar(
+      controller: _tabController,
+      labelColor: AppColors.primary,
+      unselectedLabelColor: AppColors.neutralGray,
+      indicatorColor: AppColors.primary,
+      indicatorWeight: 3,
+      labelStyle: const TextStyle(
+        fontWeight: FontWeight.w800,
+        fontSize: 15,
       ),
+      unselectedLabelStyle: const TextStyle(
+        fontWeight: FontWeight.w500,
+        fontSize: 15,
+      ),
+      tabs: const [
+        Tab(text: 'Pilih Dokter'),
+        Tab(text: 'Rekomendasi'),
+      ],
+    );
+
+    // Gabungkan AppHeaderPill + TabBar menjadi satu PreferredSizeWidget
+    final combinedHeader = PreferredSize(
+      preferredSize: const Size.fromHeight(68 + 48), // pill header + tab bar
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppHeaderPill(
+            title: 'Chat Dokter',
+            rightAction: rightAction,
+          ),
+          tabBar,
+        ],
+      ),
+    );
+
+    return AppScaffold(
+      appBar: combinedHeader,
       body: TabBarView(
         controller: _tabController,
         children: [

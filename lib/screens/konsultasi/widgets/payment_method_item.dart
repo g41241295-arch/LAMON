@@ -16,7 +16,9 @@ class PaymentMethodItem extends StatelessWidget {
   });
 
   String get _bankAssetPath {
-    final fileName = method.id == 'jatim' ? 'bjatim.png' : '${method.id}.png';
+    final fileName = method.id == 'jatim'
+        ? 'bank_jatim-removebg-preview.png'
+        : '${method.id}-removebg-preview.png';
     return 'assets/images/banks/$fileName';
   }
 

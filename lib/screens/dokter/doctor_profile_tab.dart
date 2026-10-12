@@ -119,10 +119,9 @@ class _DoctorProfileTabState extends State<DoctorProfileTab> {
     if (confirm != true) return;
 
     try {
+      // Cukup signOut — listener authStateChanges di DoctorDashboardScreen
+      // akan menangani reset state dan navigasi ke /login secara otomatis.
       await FirebaseAuth.instance.signOut();
-      if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
