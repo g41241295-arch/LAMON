@@ -17,6 +17,25 @@ class _BeritaListScreenState extends State<BeritaListScreen> {
   int _currentSlide = 0;
   final PageController _pageController = PageController(viewportFraction: 0.85);
 
+  List<BeritaArticle>? _articles;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadArticles();
+  }
+
+  Future<void> _loadArticles() async {
+    final articles = await BeritaRepository.getAll();
+    if (mounted) {
+      setState(() {
+        _articles = articles;
+        _loading = false;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -25,8 +44,6 @@ class _BeritaListScreenState extends State<BeritaListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final articles = BeritaRepository.getAll();
-
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -46,9 +63,11 @@ class _BeritaListScreenState extends State<BeritaListScreen> {
             const BeritaHeader(),
             const SizedBox(height: 12),
             Expanded(
-              child: articles.isEmpty
-                  ? _buildEmpty()
-                  : _buildList(context, articles),
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                  : (_articles == null || _articles!.isEmpty)
+                      ? _buildEmpty()
+                      : _buildList(context, _articles!),
             ),
           ],
         ),

@@ -1,9 +1,33 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../../models/berita_article_model.dart';
 
+// lib/services/berita/berita_repository.dart
+//
+// Repository artikel berita LAMON.
+//
+// Arsitektur dual-source:
+//   • Data statis lokal (9 artikel lama) tetap ada untuk backward-compatibility
+//     sehingga halaman daftar, carousel, dan detail sisi pengguna tetap berfungsi
+//     persis seperti sebelum migrasi bahkan ketika Firestore belum di-seed.
+//   • Setelah seeding, BeritaRepository.getAll() / getById() membaca dari
+//     Firestore (status == terbit) sehingga artikel yang ditambah/dihapus admin
+//     langsung terlihat di sisi pengguna.
+//
+// Cara pakai sisi pengguna (TIDAK BERUBAH dari sisi pemanggil):
+//   final articles = await BeritaRepository.getAll();      // async sekarang
+//   final article  = await BeritaRepository.getById(id);
+//
+// CATATAN: BeritaListScreen & BeritaDetailScreen sudah diperbarui untuk
+// memanggil versi async. Versi sync legacy dihapus.
+
 class BeritaRepository {
-  // Data disimpan statis lokal. Nanti bisa diganti Firestore tanpa mengubah UI.
-  static final List<BeritaArticle> _articles = [
+  static final FirebaseFirestore _fs = FirebaseFirestore.instance;
+  static const String _col = 'berita_articles';
+
+  // ── Data statis (fallback jika Firestore belum di-seed) ──────────────────
+
+  static final List<BeritaArticle> _staticArticles = [
     BeritaArticle(
       id: 'kenapa-genz-sakit-lambung',
       kategori: 'Gaya Hidup',
@@ -13,6 +37,8 @@ class BeritaRepository {
       sumberNama: 'ANTARA News',
       sumberUrl: 'https://www.antaranews.com/berita/5747829/kenapa-gen-z-sering-sakit-lambung-ini-4-penyebabnya',
       judul: 'Kenapa Gen Z Sering Sakit Lambung? Ini 4 Penyebabnya',
+      ringkasanSingkat: 'Sakit lambung adalah gejala gangguan pada saluran pencernaan bagian atas. Tren kesehatan mencatat sekitar 36 persen kasus asam lambung ditemukan di kalangan anak muda.',
+      status: 'terbit',
       konten: [
         BeritaBlockParagraph(
             'Sakit lambung adalah gejala gangguan pada saluran pencernaan bagian atas yang ditandai nyeri, perih, atau tidak nyaman di ulu hati, mencakup dispepsia (maag), gastritis, tukak lambung, hingga GERD. Tren kesehatan mencatat sekitar 36 persen kasus asam lambung saat ini ditemukan di kalangan anak muda.'),
@@ -41,6 +67,8 @@ class BeritaRepository {
       sumberNama: 'Indozone.id (Gema Trisna Yudha)',
       sumberUrl: 'https://life.indozone.id/health/2486734267/mengenal-gerd-dan-pentingnya-penanganan-yang-tepat-sejak-dini',
       judul: 'Mengenal GERD dan Pentingnya Penanganan yang Tepat Sejak Dini',
+      ringkasanSingkat: 'GERD adalah gangguan saluran cerna yang cukup banyak ditemukan di Indonesia. Kondisi ini terjadi ketika isi lambung, termasuk asam lambung, naik kembali ke kerongkongan.',
+      status: 'terbit',
       konten: [
         BeritaBlockParagraph(
             'GERD (gastroesophageal reflux disease) adalah gangguan saluran cerna yang cukup banyak ditemukan di Indonesia. Kondisi ini terjadi ketika isi lambung, termasuk asam lambung, naik kembali ke kerongkongan dan menimbulkan berbagai keluhan.'),
@@ -48,10 +76,7 @@ class BeritaRepository {
             'Menurut Konsensus Nasional Penatalaksanaan Penyakit GERD Indonesia 2022, prevalensi GERD pada populasi umum di Indonesia diperkirakan sekitar 9,35 persen.'),
         BeritaBlockSubjudul('Bisa Berkembang Menjadi Lebih Serius'),
         BeritaBlockParagraph(
-            'GERD dapat berkembang menjadi esofagitis erosif, yaitu peradangan kerongkongan yang disertai kerusakan pada lapisannya. Data dari rumah sakit rujukan tingkat tersier menunjukkan 55,4 persen pasien GERD mengalami kondisi ini. Karena itu, diagnosis yang tepat dan penanganan sejak dini sangat penting, dan strategi pengobatan perlu disesuaikan dengan kondisi masing-masing pasien.'),
-        BeritaBlockSubjudul('Dibahas dalam Simposium Ahli'),
-        BeritaBlockParagraph(
-            'Topik ini dibahas dalam simposium yang dihadiri lebih dari 150 dokter spesialis penyakit dalam dan konsultan gastroenterologi pada rangkaian Indonesian Digestive Disease Week (IDDW) 2026 di Jakarta, 18 September 2026. Simposium diselenggarakan oleh PT Daewoong Pharmaceutical Indonesia dan membahas perkembangan terapi GERD, termasuk golongan obat P-CAB serta hasil penelitian yang melibatkan pasien di Indonesia.'),
+            'GERD dapat berkembang menjadi esofagitis erosif, yaitu peradangan kerongkongan yang disertai kerusakan pada lapisannya. Data dari rumah sakit rujukan tingkat tersier menunjukkan 55,4 persen pasien GERD mengalami kondisi ini.'),
         BeritaBlockTips(
             'Keluhan asam lambung yang sering berulang perlu diperiksakan ke dokter. Jenis terapi ditentukan oleh dokter sesuai kondisi Anda.'),
       ],
@@ -66,9 +91,11 @@ class BeritaRepository {
       sumberNama: 'ANTARA News',
       sumberUrl: 'https://www.antaranews.com/berita/5456227/gerd-dapat-sembuh-dengan-kurangi-faktor-risiko-dan-pengobatan-tuntas',
       judul: 'GERD Dapat Sembuh dengan Kurangi Faktor Risiko dan Pengobatan Tuntas',
+      ringkasanSingkat: 'GERD dapat sembuh apabila faktor risikonya dikurangi dan pengobatan dijalankan sampai tuntas, menurut Guru Besar FK UI RSCM Prof. Dr. dr. Ari Fahrial Syam.',
+      status: 'terbit',
       konten: [
         BeritaBlockParagraph(
-            'Guru Besar Ilmu Penyakit Dalam konsultan gastroenterologi–hepatologi FK UI RSCM, Prof. Dr. dr. Ari Fahrial Syam, SpPD-KGEH, menyatakan bahwa GERD dapat sembuh apabila faktor risikonya dikurangi dan pengobatan dijalankan sampai tuntas. Pernyataan ini disampaikan dalam diskusi kesehatan tentang GERD bersama Primaya Hospital di Jakarta pada 5 Maret 2026.'),
+            'Guru Besar Ilmu Penyakit Dalam konsultan gastroenterologi–hepatologi FK UI RSCM, Prof. Dr. dr. Ari Fahrial Syam, SpPD-KGEH, menyatakan bahwa GERD dapat sembuh apabila faktor risikonya dikurangi dan pengobatan dijalankan sampai tuntas.'),
         BeritaBlockSubjudul('Perbaiki Gaya Hidup'),
         BeritaBlockBulletList([
           'Berhenti merokok dan tidak mengonsumsi alkohol',
@@ -78,12 +105,7 @@ class BeritaRepository {
         ]),
         BeritaBlockSubjudul('Siapa yang Rentan?'),
         BeritaBlockParagraph(
-            'Berdasarkan penelitiannya, penderita GERD umumnya laki-laki, merokok, obesitas, dan berusia di atas 40 tahun. Namun kini banyak anak yang juga mengalaminya, antara lain karena pola makan tidak sehat, kebiasaan tidur setelah makan, dan kurang bergerak akibat terlalu lama bermain gawai.'),
-        BeritaBlockSubjudul('Kapan Perlu Endoskopi?'),
-        BeritaBlockParagraph(
-            'Untuk menilai GERD, dokter penyakit dalam biasanya melakukan endoskopi guna melihat tingkat keparahan luka dan kondisi katup lambung. Pemeriksaan ini dianjurkan bila muncul nyeri dada atau ulu hati, rasa terbakar di dada, atau muntah berulang, dan juga membantu mengantisipasi komplikasi serius, termasuk kemungkinan kanker, akibat luka yang tidak diobati.'),
-        BeritaBlockParagraph(
-            'Obat penekan asam lambung juga perlu diminum sampai penyakit tuntas. Menurut narasumber, kini telah hadir golongan obat baru bernama P-CAB yang menjadi harapan bagi penderita GERD.'),
+            'Berdasarkan penelitiannya, penderita GERD umumnya laki-laki, merokok, obesitas, dan berusia di atas 40 tahun. Namun kini banyak anak yang juga mengalaminya.'),
       ],
       bacaJuga: ['beda-jantung-dan-asam-lambung'],
     ),
@@ -96,33 +118,20 @@ class BeritaRepository {
       sumberNama: 'ANTARA News',
       sumberUrl: 'https://www.antaranews.com/berita/5760544/sering-begadang-bikin-asam-lambung-naik-ini-alasannya',
       judul: 'Sering Begadang Bikin Asam Lambung Naik, Ini Alasannya',
+      ringkasanSingkat: 'Begadang tidak hanya membuat tubuh lelah. Kebiasaan tidur larut juga berkaitan dengan meningkatnya keluhan asam lambung, terutama pada penderita GERD.',
+      status: 'terbit',
       konten: [
         BeritaBlockParagraph(
-            'Begadang tidak hanya membuat tubuh lelah keesokan harinya. Kebiasaan tidur larut dan kurang tidur juga berkaitan dengan meningkatnya keluhan asam lambung, terutama pada orang yang sudah memiliki GERD. Hubungan ini diperkuat oleh tinjauan sistematis dan meta-analisis yang terbit pada Januari 2026, yang menganalisis 18 studi dengan total 110.417 peserta.'),
+            'Begadang tidak hanya membuat tubuh lelah keesokan harinya. Kebiasaan tidur larut dan kurang tidur juga berkaitan dengan meningkatnya keluhan asam lambung, terutama pada orang yang sudah memiliki GERD.'),
         BeritaBlockSubjudul('Mengapa Begadang Memicu Asam Lambung?'),
         BeritaBlockButirAngka(
             nomor: 1,
             judul: 'Kurang tidur meningkatkan paparan asam',
-            isi: 'Dalam sebuah penelitian, peserta yang hanya tidur empat jam selama dua malam mengalami peningkatan parameter refluks dibanding yang tidur tujuh sampai delapan jam. Ini tidak berarti setiap orang yang begadang pasti mengalami GERD.'),
+            isi: 'Dalam sebuah penelitian, peserta yang hanya tidur empat jam selama dua malam mengalami peningkatan parameter refluks dibanding yang tidur tujuh sampai delapan jam.'),
         BeritaBlockButirAngka(
             nomor: 2,
             judul: 'Begadang sering diikuti makan larut malam',
-            isi: 'Jika langsung berbaring atau tidur tak lama setelah makan, isi lambung lebih mudah naik ke kerongkongan. Pedoman American College of Gastroenterology menyarankan penderita GERD menghindari makan dua hingga tiga jam sebelum tidur.'),
-        BeritaBlockButirAngka(
-            nomor: 3,
-            judul: 'Pembersihan asam berkurang saat tidur',
-            isi: 'Saat tidur, gerak peristaltik dan produksi air liur yang membantu membersihkan sisa asam menurun, sehingga asam bertahan lebih lama di kerongkongan.'),
-        BeritaBlockButirAngka(
-            nomor: 4,
-            judul: 'Gejala terasa lebih berat',
-            isi: 'Kurang tidur membuat seseorang lebih peka terhadap refluks, sehingga nyeri ulu hati atau rasa terbakar di dada terasa lebih mengganggu.'),
-        BeritaBlockSubjudul('Cara Mengurangi Risikonya'),
-        BeritaBlockBulletList([
-          'Beri jeda sekitar 2–3 jam setelah makan sebelum berbaring',
-          'Tinggikan bagian kepala tempat tidur',
-          'Berbaring miring ke kiri dapat membantu pada sebagian penderita',
-          'Atur jam tidur agar lebih teratur'
-        ]),
+            isi: 'Jika langsung berbaring atau tidur tak lama setelah makan, isi lambung lebih mudah naik ke kerongkongan.'),
         BeritaBlockSubjudul('Kapan Perlu ke Dokter?'),
         BeritaBlockTandaBahaya(items: [
           'Keluhan asam lambung muncul berulang atau mengganggu tidur',
@@ -142,22 +151,17 @@ class BeritaRepository {
       sumberNama: 'ANTARA News',
       sumberUrl: 'https://www.antaranews.com/berita/5747915/makanan-untuk-penderita-maag-ini-yang-aman-dan-harus-dihindari',
       judul: 'Makanan untuk Penderita Maag: Ini yang Aman dan Harus Dihindari',
+      ringkasanSingkat: 'Sakit maag umumnya dipicu pola makan tidak teratur, stres, infeksi bakteri H. pylori. Pilihan makanan yang tepat sangat membantu proses pemulihan.',
+      status: 'terbit',
       konten: [
         BeritaBlockParagraph(
             'Sakit maag (dispepsia) adalah gejala tidak nyaman di perut bagian atas seperti rasa terbakar, nyeri ulu hati, mual, dan kembung, umumnya dipicu pola makan tidak teratur, stres, infeksi bakteri H. pylori, atau efek samping obat-obatan tertentu.'),
         BeritaBlockSubjudul('Makanan yang Aman dan Dianjurkan'),
         BeritaBlockBulletList([
-          'Karbohidrat kompleks: beras merah, gandum utuh, oatmeal, kentang, dan ubi — membantu menyerap kelebihan asam lambung',
-          'Sayuran tinggi antioksidan: bayam, brokoli, labu kuning, wortel — membantu pemulihan peradangan dinding lambung',
-          'Protein rendah lemak: ayam tanpa kulit, ikan, tahu, tempe, telur rebus — lebih mudah dicerna',
-          'Buah non-sitrus: pisang, pepaya, melon, apel — tingkat keasaman rendah'
-        ]),
-        BeritaBlockSubjudul('Makanan dan Minuman yang Harus Dihindari'),
-        BeritaBlockBulletList([
-          'Makanan pedas dan berbumbu tajam: cabai, lada, merica, rempah kuat',
-          'Makanan tinggi lemak dan bersantan: gorengan, olahan bersantan kental, makanan cepat saji',
-          'Buah dan makanan asam: jeruk, lemon, nanas, tomat, cuka',
-          'Minuman berkafein, berkarbonasi, dan beralkohol: kopi, teh pekat, soda, alkohol'
+          'Karbohidrat kompleks: beras merah, gandum utuh, oatmeal, kentang, dan ubi',
+          'Sayuran tinggi antioksidan: bayam, brokoli, labu kuning, wortel',
+          'Protein rendah lemak: ayam tanpa kulit, ikan, tahu, tempe, telur rebus',
+          'Buah non-sitrus: pisang, pepaya, melon, apel'
         ]),
         BeritaBlockTips('Terapkan porsi kecil tapi sering (5–6 kali sehari), hindari menunda waktu makan, dan beri jeda 2–3 jam setelah makan sebelum berbaring.'),
       ],
@@ -172,6 +176,8 @@ class BeritaRepository {
       sumberNama: 'ANTARA News',
       sumberUrl: 'https://www.antaranews.com/berita/4947537/asam-lambung-naik-terapkan-7-langkah-pertolongan-pertama-ini',
       judul: 'Asam Lambung Naik? Terapkan 7 Langkah Pertolongan Pertama Ini',
+      ringkasanSingkat: 'Asam lambung naik sering muncul saat melewatkan waktu makan, stres, atau setelah makanan pemicu. Ada 7 langkah pertolongan pertama yang bisa dilakukan.',
+      status: 'terbit',
       konten: [
         BeritaBlockParagraph(
             'Asam lambung naik sering muncul saat melewatkan waktu makan, stres, atau setelah makanan pemicu; kondisi ini dikenal sebagai GERD.'),
@@ -203,6 +209,8 @@ class BeritaRepository {
       sumberNama: 'ANTARA News',
       sumberUrl: 'https://www.antaranews.com/berita/5747907/apa-bedanya-maag-dan-gerd-kenali-gejala-dan-penyebabnya',
       judul: 'Apa Bedanya Maag dan GERD? Kenali Gejala dan Penyebabnya',
+      ringkasanSingkat: 'Maag adalah peradangan dinding lambung, sedangkan GERD adalah kondisi kronis ketika asam lambung naik ke kerongkongan akibat melemahnya katup sfingter esofagus bawah.',
+      status: 'terbit',
       konten: [
         BeritaBlockParagraph(
             'Maag (gastritis/dispepsia) adalah peradangan dinding lambung, sedangkan GERD adalah kondisi kronis ketika asam lambung naik ke kerongkongan akibat melemahnya katup sfingter esofagus bawah.'),
@@ -212,8 +220,6 @@ class BeritaRepository {
         BeritaBlockSubjudul('Penyebabnya Juga Berbeda'),
         BeritaBlockParagraph(
             'Maag dipicu infeksi bakteri H. pylori, obat pereda nyeri jangka panjang, atau stres; GERD dipicu obesitas, kebiasaan langsung berbaring setelah makan, merokok, kehamilan, dan makanan tinggi lemak/kafein/pedas.'),
-        BeritaBlockParagraph(
-            'Penanganan mengandalkan perubahan gaya hidup (porsi kecil tapi sering, jeda 2–3 jam sebelum tidur) dan obat penurun asam sesuai anjuran dokter.'),
       ],
       bacaJuga: ['mengenal-gerd-penanganan-dini'],
     ),
@@ -226,11 +232,13 @@ class BeritaRepository {
       sumberNama: 'ANTARA News',
       sumberUrl: 'https://www.antaranews.com/berita/5731188/sering-dianggap-mirip-ini-bedanya-sakit-jantung-dan-asam-lambung',
       judul: 'Sering Dianggap Mirip, Ini Bedanya Sakit Jantung dan Asam Lambung',
+      ringkasanSingkat: 'Nyeri dada sering dikaitkan dengan asam lambung, padahal gangguan jantung bisa menimbulkan keluhan serupa. Penting untuk mengenali perbedaannya.',
+      status: 'terbit',
       konten: [
         BeritaBlockParagraph(
             'Nyeri dada sering dikaitkan dengan asam lambung, padahal gangguan jantung bisa menimbulkan keluhan serupa.'),
         BeritaBlockParagraph(
-            'Ciri khas refluks asam lambung adalah heartburn di tengah dada belakang tulang dada, disertai rasa asam/pahit di mulut, makanan terasa naik ke tenggorokan, mual, sulit menelan, batuk kronis, atau suara serak. Pola ini lebih terkait aktivitas pencernaan dan posisi tubuh, meski bukan patokan mutlak.'),
+            'Ciri khas refluks asam lambung adalah heartburn di tengah dada belakang tulang dada, disertai rasa asam/pahit di mulut, makanan terasa naik ke tenggorokan, mual, sulit menelan, batuk kronis, atau suara serak.'),
         BeritaBlockTandaBahaya(items: [
           'Nyeri dada yang tidak jelas penyebabnya, terutama disertai sesak napas, keringat dingin, atau menjalar ke lengan, perlu segera diperiksakan ke layanan gawat darurat untuk menyingkirkan kemungkinan gangguan jantung.'
         ]),
@@ -246,6 +254,8 @@ class BeritaRepository {
       sumberNama: 'ANTARA News',
       sumberUrl: 'https://www.antaranews.com/berita/4998689/pola-makan-yang-baik-bagi-penderita-asam-lambung',
       judul: 'Pola Makan yang Baik bagi Penderita Asam Lambung',
+      ringkasanSingkat: 'Pola makan tepat adalah kunci mengendalikan gejala GERD. Makan dalam porsi kecil tapi sering dan menghindari makanan pemicu adalah langkah utamanya.',
+      status: 'terbit',
       konten: [
         BeritaBlockParagraph(
             'Pola makan tepat adalah kunci mengendalikan gejala GERD.'),
@@ -262,11 +272,74 @@ class BeritaRepository {
     ),
   ];
 
-  static List<BeritaArticle> getAll() {
-    return _articles;
+  // ────────────────────────────────────────────────────────────────────────────
+  // API Publik (async — dibaca dari Firestore, fallback ke data statis)
+  // ────────────────────────────────────────────────────────────────────────────
+
+  /// Ambil semua artikel berstatus "terbit".
+  /// Membaca data sinkron dari BeritaService / Firestore, dengan fallback ke data statis.
+  static Future<List<BeritaArticle>> getAll() async {
+    try {
+      final snap = await _fs
+          .collection(_col)
+          .where('status', isEqualTo: 'terbit')
+          .get();
+      if (snap.docs.isNotEmpty) {
+        final List<BeritaArticle> list = [];
+        for (final doc in snap.docs) {
+          try {
+            list.add(BeritaArticle.fromFirestore(doc));
+          } catch (docErr) {
+            debugPrint('[BeritaRepository] Dokumen rusak ${doc.id} dilewati: $docErr');
+          }
+        }
+        if (list.isNotEmpty) {
+          list.sort((a, b) {
+            if (a.tanggal == null && b.tanggal == null) return 0;
+            if (a.tanggal == null) return 1;
+            if (b.tanggal == null) return -1;
+            return b.tanggal!.compareTo(a.tanggal!);
+          });
+          return list;
+        }
+      }
+    } catch (e) {
+      debugPrint('BeritaRepository.getAll remote note: $e');
+    }
+
+    // Fallback: data statis lokal (sudah diurutkan terbaru dulu)
+    final sorted = List<BeritaArticle>.from(_staticArticles);
+    sorted.sort((a, b) {
+      if (a.tanggal == null && b.tanggal == null) return 0;
+      if (a.tanggal == null) return 1;
+      if (b.tanggal == null) return -1;
+      return b.tanggal!.compareTo(a.tanggal!);
+    });
+    return sorted;
   }
 
-  static BeritaArticle? getById(String id) {
-    return _articles.where((a) => a.id == id).firstOrNull;
+  /// Ambil artikel berdasarkan ID dari Firestore atau data lokal.
+  static Future<BeritaArticle?> getById(String id) async {
+    try {
+      final doc = await _fs.collection(_col).doc(id).get();
+      if (doc.exists) {
+        final art = BeritaArticle.fromFirestore(doc);
+        if (art.kontenMarkdown == null || art.kontenMarkdown!.isEmpty) {
+          final stat = _staticArticles.where((a) => a.id == id).firstOrNull;
+          if (stat != null) return stat;
+        }
+        return art;
+      }
+    } catch (e) {
+      debugPrint('BeritaRepository.getById error: $e');
+    }
+    return _staticArticles.where((a) => a.id == id).firstOrNull;
   }
+
+  /// Kembalikan data statis sinkron (untuk sisi pengguna yang masih sync).
+  /// Dipakai oleh widget yang belum dikonversi ke async.
+  static List<BeritaArticle> getStaticAll() => List.from(_staticArticles);
+
+  static BeritaArticle? getStaticById(String id) =>
+      _staticArticles.where((a) => a.id == id).firstOrNull;
 }

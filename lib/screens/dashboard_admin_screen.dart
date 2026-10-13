@@ -79,24 +79,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  void _showComingSoon() {
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Fitur segera hadir', style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
-        backgroundColor: AppColors.adminBlue,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
   void _openAddEnsiklopedia() {
     Navigator.pushNamed(
       context,
       AppRoutes.adminEnsiklopediaForm,
+      arguments: {'adminName': _adminName, 'adminId': _adminId},
+    );
+  }
+
+  void _openAddBerita() {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.adminBeritaForm,
+      arguments: {'adminName': _adminName, 'adminId': _adminId},
+    );
+  }
+
+  void _openKelolaBerita() {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.adminBerita,
       arguments: {'adminName': _adminName, 'adminId': _adminId},
     );
   }
@@ -378,7 +380,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildDraftCard() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('berita').where('status', isEqualTo: 'draft').snapshots(),
+      stream: FirebaseFirestore.instance.collection('berita_articles').where('status', isEqualTo: 'draft').snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const SizedBox.shrink();
@@ -419,7 +421,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               const SizedBox(width: 12),
               ElevatedButton(
-                onPressed: _showComingSoon,
+                onPressed: _openKelolaBerita,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AdminTheme.cardColor,
                   foregroundColor: AdminTheme.navyText,
@@ -440,11 +442,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       children: [
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('berita').snapshots(),
+            stream: FirebaseFirestore.instance.collection('berita_articles').snapshots(),
             builder: (context, snapshot) {
               int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
               return GestureDetector(
-                onTap: _showComingSoon,
+                onTap: _openKelolaBerita,
                 child: Container(
                   height: 72,
                   decoration: BoxDecoration(
@@ -547,7 +549,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: SizedBox(
             height: 44,
             child: ElevatedButton.icon(
-              onPressed: _showComingSoon,
+              onPressed: _openAddBerita,
               icon: const Icon(Icons.add, size: 18, color: AdminTheme.navyText),
               label: Text('Tambah Berita', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold, color: AdminTheme.navyText)),
               style: ElevatedButton.styleFrom(
@@ -590,9 +592,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       children: [
         _buildContentStreamCard(
           title: 'Berita Kesehatan',
-          stream: FirebaseFirestore.instance.collection('berita').snapshots(),
+          stream: FirebaseFirestore.instance.collection('berita_articles').snapshots(),
           imagePath: 'assets/images/admin-berita.png',
-          onTap: _showComingSoon,
+          onTap: _openKelolaBerita,
           isBerita: true,
         ),
         const SizedBox(height: 12),

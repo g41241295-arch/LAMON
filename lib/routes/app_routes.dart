@@ -38,6 +38,9 @@ import '../screens/dashboard_admin_screen.dart';
 import '../screens/admin/ensiklopedia_list_screen.dart';
 import '../screens/admin/ensiklopedia_form_screen.dart';
 import '../screens/admin/ensiklopedia_detail_screen.dart';
+import '../screens/admin/berita_list_admin_screen.dart';
+import '../screens/admin/berita_form_screen.dart';
+import '../models/berita_article_model.dart';
 
 class AppRoutes {
   static const String initial = '/splash';
@@ -91,6 +94,10 @@ class AppRoutes {
   static const String adminEnsiklopedia = '/admin/ensiklopedia';
   static const String adminEnsiklopediaForm = '/admin/ensiklopedia/form';
   static const String adminEnsiklopediaDetail = '/admin/ensiklopedia/detail';
+
+  // Admin Berita Routes
+  static const String adminBerita = '/admin/berita';
+  static const String adminBeritaForm = '/admin/berita/form';
 
   /// Widget wrapper guard untuk rute admin.
   /// Jika bukan admin, tampilkan layar yang redirect ke login.
@@ -448,6 +455,32 @@ class AppRoutes {
             entryId: entryId,
             adminName: adminName,
             adminId: adminId,
+          )),
+          settings: settings,
+        );
+
+      // ── Admin Berita Routes (dengan guard role) ────────────────────────────
+      case adminBerita:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final adminName = args['adminName'] as String? ?? 'Admin';
+        final adminId = args['adminId'] as String? ?? '';
+        return _createSmoothRoute(
+          _adminGuard(BeritaListAdminScreen(
+            adminName: adminName,
+            adminId: adminId,
+          )),
+          settings: settings,
+        );
+      case adminBeritaForm:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final adminName = args['adminName'] as String? ?? 'Admin';
+        final adminId = args['adminId'] as String? ?? '';
+        final initialArtikel = args['initialArtikel'] as BeritaArticle?;
+        return _createSmoothRoute(
+          _adminGuard(BeritaFormScreen(
+            adminName: adminName,
+            adminId: adminId,
+            initialArtikel: initialArtikel,
           )),
           settings: settings,
         );

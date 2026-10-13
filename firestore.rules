@@ -30,6 +30,12 @@ service cloud.firestore {
       );
     }
 
+    function isAdmin() {
+      return isSignedIn() && 
+             ('role' in userDoc()) && 
+             userDoc().role == 'admin';
+    }
+
     // ── 1. Users Collection & Sub-collections ──────────────────────────────
     // Path: /users/{userId}
     match /users/{userId} {
@@ -111,7 +117,35 @@ service cloud.firestore {
                  && request.resource.data.user_id == request.auth.uid;
     }
 
-    // ── 4. Koleksi Dokter & Jadwal Praktik ─────────────────────────────────
+    // ── 4. Koleksi Artikel Berita ────────────────────────────────────────────
+    // Path: /berita_articles/{articleId}
+    match /berita_articles/{articleId} {
+      // Admin: boleh read dan write semua dokumen (terbit dan draft)
+      // Pengguna login biasa: hanya boleh read dokumen dengan status == 'terbit'
+      allow read: if isAdmin() || (isSignedIn() && resource.data.status == 'terbit');
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ── 5. Koleksi Ensiklopedia (Gastropedia) ──────────────────────────────
+    // Path: /encyclopedia/{docId}
+    match /encyclopedia/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ── 6. Koleksi Berita (legacy, tidak dipakai lagi – biarkan read saja) ──
+    match /berita/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ── 7. Log Aktivitas (dipakai oleh admin) ────────────────────────────────
+    match /activity_log/{logId} {
+      allow read, create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ── 8. Koleksi Dokter & Jadwal Praktik ─────────────────────────────────
     // Path: /doctors/{doctorId}
     match /doctors/{doctorId} {
       // Semua user yang sudah login bisa membaca data dokter

@@ -2,15 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../constants/app_colors.dart';
 import '../../services/berita/berita_repository.dart';
+import '../../models/berita_article_model.dart';
 import '../../widgets/berita/berita_image.dart';
-
 import '../../widgets/berita/berita_content_block.dart';
 import '../../widgets/berita/berita_card_small.dart';
 
-class BeritaDetailScreen extends StatelessWidget {
+class BeritaDetailScreen extends StatefulWidget {
   final String articleId;
 
   const BeritaDetailScreen({super.key, required this.articleId});
+
+  @override
+  State<BeritaDetailScreen> createState() => _BeritaDetailScreenState();
+}
+
+class _BeritaDetailScreenState extends State<BeritaDetailScreen> {
+  BeritaArticle? _article;
+  bool _loading = true;
+  bool _notFound = false;
 
   static const _gradient = BoxDecoration(
     gradient: LinearGradient(
@@ -25,12 +34,35 @@ class BeritaDetailScreen extends StatelessWidget {
   );
 
   @override
-  Widget build(BuildContext context) {
-    final article = BeritaRepository.getAll()
-        .where((e) => e.id == articleId)
-        .firstOrNull;
+  void initState() {
+    super.initState();
+    _loadArticle();
+  }
 
-    if (article == null) {
+  Future<void> _loadArticle() async {
+    final article = await BeritaRepository.getById(widget.articleId);
+    if (mounted) {
+      setState(() {
+        _article = article;
+        _notFound = article == null;
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return Container(
+        decoration: _gradient,
+        child: const Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        ),
+      );
+    }
+
+    if (_notFound || _article == null) {
       return Container(
         decoration: _gradient,
         child: Scaffold(
@@ -92,6 +124,8 @@ class BeritaDetailScreen extends StatelessWidget {
         ),
       );
     }
+
+    final article = _article!;
 
     String? formattedDate;
     if (article.tanggal != null) {
@@ -235,7 +269,7 @@ class BeritaDetailScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    article.sumberNama,
+                                    article.sumberNama.isNotEmpty ? article.sumberNama : 'LAMON',
                                     style: const TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
@@ -260,40 +294,41 @@ class BeritaDetailScreen extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                            ElevatedButton.icon(
-                              onPressed: () async {
-                                final Uri url = Uri.parse(article.sumberUrl);
-                                if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: const Text('Tidak dapat membuka tautan'),
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
+                            if (article.sumberUrl.isNotEmpty)
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  final Uri url = Uri.parse(article.sumberUrl);
+                                  if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: const Text('Tidak dapat membuka tautan'),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
                                         ),
-                                      ),
-                                    );
+                                      );
+                                    }
                                   }
-                                }
-                              },
-                              icon: const Icon(Icons.open_in_new, size: 16),
-                              label: const Text(
-                                'Baca Sumber',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                                },
+                                icon: const Icon(Icons.open_in_new, size: 16),
+                                label: const Text(
+                                  'Baca Sumber',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF1D4E7A),
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                                  minimumSize: const Size(0, 36),
+                                  shape: const StadiumBorder(),
                                 ),
                               ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1D4E7A),
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                                minimumSize: const Size(0, 36),
-                                shape: const StadiumBorder(),
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -330,7 +365,8 @@ class BeritaDetailScreen extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 24),
                           child: Column(
                             children: article.bacaJuga.map((id) {
-                              final related = BeritaRepository.getById(id);
+                              // Cari di data statis untuk bacaJuga (sinkron, cepat)
+                              final related = BeritaRepository.getStaticById(id);
                               if (related == null) return const SizedBox.shrink();
                               return BeritaCardSmall(
                                 article: related,
@@ -350,7 +386,7 @@ class BeritaDetailScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-              ),
+            ),
           ],
         ),
     );
