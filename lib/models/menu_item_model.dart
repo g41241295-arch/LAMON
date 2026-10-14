@@ -94,7 +94,7 @@ class AppMenus {
     InfoMenuItem(
       id: 'berita-kesehatan',
       title: 'Berita Kesehatan',
-      route: '/berita-kesehatan',
+      route: '/berita',
       assetPath: AppAssets.infoBerita,
       description: 'Kumpulan berita dan artikel terkini seputar pola hidup sehat dan kesehatan pencernaan.',
     ),

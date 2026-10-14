@@ -280,10 +280,7 @@ class BerandaScreenState extends State<BerandaScreen> with WidgetsBindingObserve
                           Navigator.pushNamed(context, '/gastropedia');
                         },
                         onBeritaTap: () {
-                          _navigateToPlaceholder(
-                            'Berita Kesehatan',
-                            'Kumpulan artikel berita dan informasi gaya hidup sehat seputar lambung dan pencernaan.',
-                          );
+                          Navigator.pushNamed(context, '/berita');
                         },
                       ),
                     ),
