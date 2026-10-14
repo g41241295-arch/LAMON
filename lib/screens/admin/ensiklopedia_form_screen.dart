@@ -31,9 +31,27 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
   late final TextEditingController _definisiCtrl;
   late final TextEditingController _penjelasanCtrl;
   late final TextEditingController _referensiCtrl;
+  late final TextEditingController _imageAssetCtrl;
+  late final TextEditingController _manfaatCtrl;
+  late final TextEditingController _kandunganCtrl;
+  late final TextEditingController _caloriesCtrl;
+  late final TextEditingController _proteinCtrl;
+  late final TextEditingController _carbsCtrl;
+  late final TextEditingController _fatCtrl;
 
-  String _kategori = 'Pencernaan';
-  final List<String> _kategoriOptions = ['Pencernaan', 'Gizi', 'Gaya Hidup'];
+  String _kategori = 'Makanan';
+  final List<String> _kategoriOptions = [
+    'Makanan',
+    'Buah',
+    'Sayuran',
+    'Pencernaan',
+    'Gizi',
+    'Gaya Hidup',
+  ];
+
+  String _status = 'terbit';
+  final List<String> _statusOptions = ['terbit', 'draft'];
+  bool _isRecommended = false;
 
   String? _istilahError;
   String? _definisiError;
@@ -52,7 +70,17 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
     _definisiCtrl = TextEditingController(text: e?.definisiSingkat ?? '');
     _penjelasanCtrl = TextEditingController(text: e?.penjelasanLengkap ?? '');
     _referensiCtrl = TextEditingController(text: e?.referensi ?? '');
-    _kategori = e?.kategori ?? 'Pencernaan';
+    _imageAssetCtrl = TextEditingController(text: e?.imageAsset ?? '');
+    _manfaatCtrl = TextEditingController(text: e?.manfaat.join('\n') ?? '');
+    _kandunganCtrl = TextEditingController(text: e?.kandungan.join('\n') ?? '');
+    _caloriesCtrl = TextEditingController(text: e?.calories != null ? '${e!.calories}' : '');
+    _proteinCtrl = TextEditingController(text: e?.protein != null ? '${e!.protein}' : '');
+    _carbsCtrl = TextEditingController(text: e?.carbs != null ? '${e!.carbs}' : '');
+    _fatCtrl = TextEditingController(text: e?.fat != null ? '${e!.fat}' : '');
+
+    _kategori = e?.kategori ?? 'Makanan';
+    _status = e?.status ?? 'terbit';
+    _isRecommended = e?.isRecommended ?? false;
   }
 
   @override
@@ -62,6 +90,13 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
     _definisiCtrl.dispose();
     _penjelasanCtrl.dispose();
     _referensiCtrl.dispose();
+    _imageAssetCtrl.dispose();
+    _manfaatCtrl.dispose();
+    _kandunganCtrl.dispose();
+    _caloriesCtrl.dispose();
+    _proteinCtrl.dispose();
+    _carbsCtrl.dispose();
+    _fatCtrl.dispose();
     super.dispose();
   }
 
@@ -114,6 +149,17 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
 
     final istilah = _istilahCtrl.text.trim();
     final now = DateTime.now();
+    final imageAsset = _imageAssetCtrl.text.trim().isNotEmpty ? _imageAssetCtrl.text.trim() : null;
+    final manfaatList = _manfaatCtrl.text.trim().isNotEmpty
+        ? _manfaatCtrl.text.split('\n').map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
+        : <String>[];
+    final kandunganList = _kandunganCtrl.text.trim().isNotEmpty
+        ? _kandunganCtrl.text.split('\n').map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
+        : <String>[];
+    final cal = int.tryParse(_caloriesCtrl.text.trim()) ?? 150;
+    final prot = int.tryParse(_proteinCtrl.text.trim()) ?? 6;
+    final car = int.tryParse(_carbsCtrl.text.trim()) ?? 18;
+    final f = int.tryParse(_fatCtrl.text.trim()) ?? 6;
 
     try {
       if (_isEditMode) {
@@ -126,6 +172,15 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
           penjelasanLengkap: _penjelasanCtrl.text.trim(),
           kategori: _kategori,
           referensi: _referensiCtrl.text.trim().isNotEmpty ? _referensiCtrl.text.trim() : null,
+          status: _status,
+          imageAsset: imageAsset,
+          manfaat: manfaatList,
+          kandungan: kandunganList,
+          isRecommended: _isRecommended,
+          calories: cal,
+          protein: prot,
+          carbs: car,
+          fat: f,
           // Data dibawah akan diisi oleh service dari oldData:
           createdBy: '',
           createdById: '',
@@ -146,7 +201,6 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(_successSnackbar('Data gastropedia berhasil diperbarui.'));
-          // Pop kembali ke list; jika ID berubah, list sudah update via stream sehingga tidak ada "tidak ditemukan"
           Navigator.of(context).pop();
         }
       } else {
@@ -159,6 +213,15 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
           penjelasanLengkap: _penjelasanCtrl.text.trim(),
           kategori: _kategori,
           referensi: _referensiCtrl.text.trim().isNotEmpty ? _referensiCtrl.text.trim() : null,
+          status: _status,
+          imageAsset: imageAsset,
+          manfaat: manfaatList,
+          kandungan: kandunganList,
+          isRecommended: _isRecommended,
+          calories: cal,
+          protein: prot,
+          carbs: car,
+          fat: f,
           createdBy: widget.adminName,
           createdById: widget.adminId,
           createdByType: 'admin',
@@ -224,60 +287,88 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
         title: _isEditMode ? 'Edit Gastropedia' : 'Tambah Gastropedia',
       ),
       body: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AdminInputField(
-                  label: 'Istilah Medis',
-                  hint: 'Contoh : Dyspepsia',
-                  controller: _istilahCtrl,
-                  errorText: _istilahError,
-                  onChanged: (_) => setState(() => _istilahError = null),
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Status Publikasi
+              Text(
+                'Status Publikasi',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryText,
                 ),
-                const SizedBox(height: 16),
-                AdminInputField(
-                  label: 'Nama Lain/Singkatan',
-                  hint: 'Contoh : Maag',
-                  controller: _namaLainCtrl,
-                ),
-                const SizedBox(height: 16),
-                AdminInputField(
-                  label: 'Definisi Singkat',
-                  hint: '1-2 kalimat untuk ringkasan card',
-                  controller: _definisiCtrl,
-                  maxLines: 3,
-                  errorText: _definisiError,
-                  onChanged: (_) => setState(() => _definisiError = null),
-                ),
-                const SizedBox(height: 16),
-                AdminInputField(
-                  label: 'Penjelasan Lengkap',
-                  hint: 'Penjelasan detail istilah medis ini...',
-                  controller: _penjelasanCtrl,
-                  maxLines: 6,
-                  errorText: _penjelasanError,
-                  onChanged: (_) => setState(() => _penjelasanError = null),
-                ),
-                const SizedBox(height: 16),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: _statusOptions.map((s) {
+                  final active = _status == s;
+                  final label = s == 'terbit' ? 'Terbitkan' : 'Draft';
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: AdminFilterChip(
+                      label: label,
+                      isActive: active,
+                      onTap: () => setState(() => _status = s),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
 
-                // Kategori single-select chips
-                Text(
-                  'Kategori Terkait',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primaryText,
-                  ),
+              AdminInputField(
+                label: 'Nama Makanan / Istilah',
+                hint: 'Contoh : Oatmeal / Pisang',
+                controller: _istilahCtrl,
+                errorText: _istilahError,
+                onChanged: (_) => setState(() => _istilahError = null),
+              ),
+              const SizedBox(height: 16),
+              AdminInputField(
+                label: 'Nama Lain / Singkatan (opsional)',
+                hint: 'Contoh : Havermut',
+                controller: _namaLainCtrl,
+              ),
+              const SizedBox(height: 16),
+              AdminInputField(
+                label: 'Deskripsi Singkat',
+                hint: '1-2 kalimat untuk ringkasan kartu...',
+                controller: _definisiCtrl,
+                maxLines: 3,
+                errorText: _definisiError,
+                onChanged: (_) => setState(() => _definisiError = null),
+              ),
+              const SizedBox(height: 16),
+              AdminInputField(
+                label: 'Penjelasan Lengkap',
+                hint: 'Penjelasan lengkap untuk halaman detail...',
+                controller: _penjelasanCtrl,
+                maxLines: 5,
+                errorText: _penjelasanError,
+                onChanged: (_) => setState(() => _penjelasanError = null),
+              ),
+              const SizedBox(height: 16),
+
+              // Kategori single-select chips
+              Text(
+                'Kategori',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryText,
                 ),
-                const SizedBox(height: 8),
-                Row(
+              ),
+              const SizedBox(height: 8),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
                   children: _kategoriOptions.map((k) {
                     final active = _kategori == k;
                     return Padding(
-                      padding: const EdgeInsets.only(right: 10),
+                      padding: const EdgeInsets.only(right: 8),
                       child: AdminFilterChip(
                         label: k,
                         isActive: active,
@@ -286,50 +377,172 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 16),
+              ),
+              const SizedBox(height: 16),
 
-                AdminInputField(
-                  label: 'Referensi/Sumber (opsional)',
-                  hint: 'Link jurnal/sumber medis',
-                  controller: _referensiCtrl,
-                  keyboardType: TextInputType.url,
-                  errorText: _referensiError,
-                  onChanged: (_) => setState(() => _referensiError = null),
+              AdminInputField(
+                label: 'Gambar (Asset Path / URL Web)',
+                hint: 'Contoh : assets/images/gastropedia/oatmeal.jpg atau https://...',
+                controller: _imageAssetCtrl,
+              ),
+              const SizedBox(height: 16),
+
+              // Switch Ramah Lambung (Rekomendasi)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.inputBorder, width: 1.2),
                 ),
-                const SizedBox(height: 32),
-
-                // Tombol Simpan
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isSaving ? null : _save,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.adminBlue,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: AppColors.adminBlue.withValues(alpha: 0.5),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      elevation: 0,
-                    ),
-                    child: _isSaving
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                          )
-                        : Text(
-                            'Simpan',
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Rekomendasi Ramah Lambung',
                             style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primaryText,
                             ),
                           ),
-                  ),
+                          Text(
+                            'Tampilkan di bagian Rekomendasi Teratas untuk penderita maag/GERD',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: AppColors.neutralGray,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _isRecommended,
+                      activeThumbColor: AppColors.adminBlue,
+                      onChanged: (val) => setState(() => _isRecommended = val),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 16),
+
+              AdminInputField(
+                label: 'Manfaat (1 baris per poin)',
+                hint: 'Meredakan iritasi lambung\nMembantu menetralkan asam lambung',
+                controller: _manfaatCtrl,
+                maxLines: 4,
+              ),
+              const SizedBox(height: 16),
+
+              AdminInputField(
+                label: 'Kandungan Gizi / Senyawa (1 baris per poin)',
+                hint: 'Serat Beta-Glukan\nKalium dan Vitamin B',
+                controller: _kandunganCtrl,
+                maxLines: 4,
+              ),
+              const SizedBox(height: 16),
+
+              // Baris Info Nutrisi Opsional
+              Text(
+                'Informasi Nutrisi Opsional (per porsi)',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryText,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: AdminInputField(
+                      label: 'Kalori (kkal)',
+                      hint: '150',
+                      controller: _caloriesCtrl,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: AdminInputField(
+                      label: 'Protein (g)',
+                      hint: '5.0',
+                      controller: _proteinCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: AdminInputField(
+                      label: 'Karbo (g)',
+                      hint: '27.0',
+                      controller: _carbsCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: AdminInputField(
+                      label: 'Lemak (g)',
+                      hint: '2.5',
+                      controller: _fatCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              AdminInputField(
+                label: 'Referensi / Sumber (opsional)',
+                hint: 'Link jurnal medis / https://...',
+                controller: _referensiCtrl,
+                keyboardType: TextInputType.url,
+                errorText: _referensiError,
+                onChanged: (_) => setState(() => _referensiError = null),
+              ),
+              const SizedBox(height: 32),
+
+              // Tombol Simpan
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : _save,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.adminBlue,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: AppColors.adminBlue.withValues(alpha: 0.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 0,
+                  ),
+                  child: _isSaving
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                        )
+                      : Text(
+                          'Simpan',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                ),
+              ),
+            ],
           ),
         ),
+      ),
     );
   }
 }

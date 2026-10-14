@@ -486,7 +486,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         const SizedBox(width: 16),
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('ensiklopedia').snapshots(),
+            stream: FirebaseFirestore.instance.collection('encyclopedia').snapshots(),
             builder: (context, snapshot) {
               int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
               return GestureDetector(

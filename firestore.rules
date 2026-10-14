@@ -129,7 +129,8 @@ service cloud.firestore {
     // ── 5. Koleksi Ensiklopedia (Gastropedia) ──────────────────────────────
     // Path: /encyclopedia/{docId}
     match /encyclopedia/{docId} {
-      allow read: if isSignedIn();
+      // Admin dapat membaca semua entri (termasuk draft). Pengguna hanya membaca entri berstatus 'terbit'
+      allow read: if isAdmin() || (isSignedIn() && (!('status' in resource.data) || resource.data.status == 'terbit'));
       allow write: if isAdmin();
     }
 

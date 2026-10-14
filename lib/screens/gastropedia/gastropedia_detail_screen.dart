@@ -81,18 +81,31 @@ class GastropediaDetailScreen extends StatelessWidget {
                     // Gambar Utama
                     SizedBox(
                       height: 220,
-                      child: Image.asset(
-                        item.imageAsset,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          color: const Color(0xFFEBF3F8),
-                          child: const Icon(
-                            Icons.restaurant_rounded,
-                            size: 48,
-                            color: Color(0xFF639BC6),
-                          ),
-                        ),
-                      ),
+                      child: item.imageAsset.startsWith('http')
+                          ? Image.network(
+                              item.imageAsset,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                color: const Color(0xFFEBF3F8),
+                                child: const Icon(
+                                  Icons.restaurant_rounded,
+                                  size: 48,
+                                  color: Color(0xFF639BC6),
+                                ),
+                              ),
+                            )
+                          : Image.asset(
+                              item.imageAsset,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                color: const Color(0xFFEBF3F8),
+                                child: const Icon(
+                                  Icons.restaurant_rounded,
+                                  size: 48,
+                                  color: Color(0xFF639BC6),
+                                ),
+                              ),
+                            ),
                     ),
                     // Nama Item di bawah gambar
                     Padding(

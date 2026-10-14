@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/gastropedia_item_model.dart';
+import '../../services/ensiklopedia_service.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/gastropedia/gastropedia_header.dart';
 import '../../widgets/gastropedia/category_item.dart';
@@ -31,14 +32,14 @@ class _GastropediaScreenState extends State<GastropediaScreen> {
 
   // ── Data Rekomendasi: ambil semua item yg isRecommended=true,
   //    fallback ke 2 item pertama agar selalu terisi.
-  static List<GastropediaItem> _getRecommendedItems() {
-    final recommended =
-        GastropediaData.items.where((i) => i.isRecommended).toList();
+  static List<GastropediaItem> _getRecommendedItems(List<GastropediaItem> items) {
+    final pool = items.isNotEmpty ? items : GastropediaData.items;
+    final recommended = pool.where((i) => i.isRecommended).toList();
     if (recommended.isEmpty) {
-      return GastropediaData.items.take(2).toList();
+      return pool.take(2).toList();
     }
     if (recommended.length < 2) {
-      final extras = GastropediaData.items
+      final extras = pool
           .where((i) => !i.isRecommended)
           .take(2 - recommended.length);
       return [...recommended, ...extras];
@@ -77,21 +78,26 @@ class _GastropediaScreenState extends State<GastropediaScreen> {
   Widget build(BuildContext context) {
     final query = _searchController.text.trim().toLowerCase();
     final isSearching = query.isNotEmpty;
-    final searchResults = isSearching
-        ? GastropediaData.items
-            .where((item) => item.name.toLowerCase().contains(query))
-            .toList()
-        : <GastropediaItem>[];
-
-    final recommendedItems = _getRecommendedItems();
 
     return AppScaffold(
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 36),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: StreamBuilder<List<GastropediaItem>>(
+        stream: EnsiklopediaService().streamPublishedGastropedia(),
+        builder: (context, snapshot) {
+          final allItems = snapshot.data ?? GastropediaData.items;
+          final searchResults = isSearching
+              ? allItems
+                  .where((item) => item.name.toLowerCase().contains(query))
+                  .toList()
+              : <GastropediaItem>[];
+
+          final recommendedItems = _getRecommendedItems(allItems);
+
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.only(bottom: 36),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
             // ═══════════════════════════════════════════
             // 1. Header (Tombol kembali bulat + pill judul)
             // ═══════════════════════════════════════════
@@ -399,7 +405,7 @@ class _GastropediaScreenState extends State<GastropediaScreen> {
                       item: item,
                       onTap: () {
                         // Buka detail jika nama cocok dengan katalog data
-                        final matched = GastropediaData.items.firstWhere(
+                        final matched = allItems.firstWhere(
                           (g) =>
                               item.name
                                   .toLowerCase()
@@ -407,7 +413,7 @@ class _GastropediaScreenState extends State<GastropediaScreen> {
                               g.name
                                   .toLowerCase()
                                   .contains(item.name.toLowerCase()),
-                          orElse: () => GastropediaData.items.first,
+                          orElse: () => allItems.isNotEmpty ? allItems.first : GastropediaData.items.first,
                         );
                         Navigator.pushNamed(
                           context,
@@ -422,8 +428,10 @@ class _GastropediaScreenState extends State<GastropediaScreen> {
             ],
           ],
         ),
-      ),
-    );
+      );
+    },
+  ),
+);
   }
 }
 

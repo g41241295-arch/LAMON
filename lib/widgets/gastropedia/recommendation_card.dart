@@ -93,19 +93,33 @@ class _RecommendationCardState extends State<RecommendationCard>
                 // ─── Foto Makanan Mengisi Bagian Atas ───
                 SizedBox(
                   height: 105,
-                  child: Image.asset(
-                    widget.item.imageAsset,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    errorBuilder: (_, _, _) => Container(
-                      color: const Color(0xFFEBF3F8),
-                      child: const Icon(
-                        Icons.image_outlined,
-                        size: 36,
-                        color: Color(0xFF639BC6),
-                      ),
-                    ),
-                  ),
+                  child: widget.item.imageAsset.startsWith('http')
+                      ? Image.network(
+                          widget.item.imageAsset,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          errorBuilder: (_, _, _) => Container(
+                            color: const Color(0xFFEBF3F8),
+                            child: const Icon(
+                              Icons.image_outlined,
+                              size: 36,
+                              color: Color(0xFF639BC6),
+                            ),
+                          ),
+                        )
+                      : Image.asset(
+                          widget.item.imageAsset,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          errorBuilder: (_, _, _) => Container(
+                            color: const Color(0xFFEBF3F8),
+                            child: const Icon(
+                              Icons.image_outlined,
+                              size: 36,
+                              color: Color(0xFF639BC6),
+                            ),
+                          ),
+                        ),
                 ),
 
                 // ─── Baris Bawah: Judul Makanan + Chevron Bulat Akses ───

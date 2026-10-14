@@ -19,6 +19,17 @@ class EnsiklopediaEntry {
   final String? updatedById;
   final DateTime? updatedAt;
 
+  // Field baru untuk integrasi Gastropedia pengguna
+  final String status; // 'terbit' | 'draft'
+  final String? imageAsset;
+  final List<String> manfaat;
+  final List<String> kandungan;
+  final bool isRecommended;
+  final int calories;
+  final int protein;
+  final int carbs;
+  final int fat;
+
   EnsiklopediaEntry({
     required this.id,
     required this.istilah,
@@ -35,26 +46,55 @@ class EnsiklopediaEntry {
     this.updatedBy,
     this.updatedById,
     this.updatedAt,
+    this.status = 'terbit',
+    this.imageAsset,
+    this.manfaat = const [],
+    this.kandungan = const [],
+    this.isRecommended = false,
+    this.calories = 150,
+    this.protein = 6,
+    this.carbs = 18,
+    this.fat = 6,
   });
 
   factory EnsiklopediaEntry.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final raw = doc.data();
+    final Map<String, dynamic> data = (raw is Map<String, dynamic>)
+        ? raw
+        : (raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{});
+
+    List<String> parseStringList(dynamic val) {
+      if (val is Iterable) {
+        return val.where((e) => e != null).map((e) => e.toString()).toList();
+      }
+      return [];
+    }
+
     return EnsiklopediaEntry(
       id: doc.id,
-      istilah: data['istilah'] ?? '',
-      istilahLower: data['istilahLower'] ?? '',
-      namaLain: data['namaLain'],
-      definisiSingkat: data['definisiSingkat'] ?? '',
-      penjelasanLengkap: data['penjelasanLengkap'] ?? '',
-      kategori: data['kategori'] ?? '',
-      referensi: data['referensi'],
-      createdBy: data['createdBy'] ?? '',
-      createdById: data['createdById'] ?? '',
-      createdByType: data['createdByType'] ?? 'admin',
+      istilah: data['istilah']?.toString() ?? '',
+      istilahLower: data['istilahLower']?.toString() ?? (data['istilah']?.toString().toLowerCase() ?? ''),
+      namaLain: data['namaLain']?.toString(),
+      definisiSingkat: data['definisiSingkat']?.toString() ?? '',
+      penjelasanLengkap: data['penjelasanLengkap']?.toString() ?? '',
+      kategori: data['kategori']?.toString() ?? 'Makanan',
+      referensi: data['referensi']?.toString(),
+      createdBy: data['createdBy']?.toString() ?? '',
+      createdById: data['createdById']?.toString() ?? '',
+      createdByType: data['createdByType']?.toString() ?? 'admin',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      updatedBy: data['updatedBy'],
-      updatedById: data['updatedById'],
+      updatedBy: data['updatedBy']?.toString(),
+      updatedById: data['updatedById']?.toString(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      status: data['status']?.toString() ?? 'terbit',
+      imageAsset: data['imageAsset']?.toString() ?? data['imageUrl']?.toString(),
+      manfaat: parseStringList(data['manfaat']),
+      kandungan: parseStringList(data['kandungan']),
+      isRecommended: data['isRecommended'] == true,
+      calories: (data['calories'] is num) ? (data['calories'] as num).toInt() : 150,
+      protein: (data['protein'] is num) ? (data['protein'] as num).toInt() : 6,
+      carbs: (data['carbs'] is num) ? (data['carbs'] as num).toInt() : 18,
+      fat: (data['fat'] is num) ? (data['fat'] as num).toInt() : 6,
     );
   }
 
@@ -74,6 +114,15 @@ class EnsiklopediaEntry {
       'updatedBy': updatedBy,
       'updatedById': updatedById,
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'status': status,
+      'imageAsset': imageAsset ?? '',
+      'manfaat': manfaat,
+      'kandungan': kandungan,
+      'isRecommended': isRecommended,
+      'calories': calories,
+      'protein': protein,
+      'carbs': carbs,
+      'fat': fat,
     };
   }
 }

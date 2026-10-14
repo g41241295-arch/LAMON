@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/ensiklopedia_entry_model.dart';
+import '../models/gastropedia_item_model.dart';
 import '../models/activity_log_model.dart';
 import '../utils/app_exception.dart';
 
@@ -28,20 +29,62 @@ class EnsiklopediaService {
             .toList());
   }
 
+  Stream<List<GastropediaItem>> streamPublishedGastropedia() {
+    return _firestore.collection('encyclopedia').snapshots().map((snap) {
+      final list = <GastropediaItem>[];
+      for (final doc in snap.docs) {
+        try {
+          final item = GastropediaItem.fromFirestore(doc);
+          if (item.status == 'terbit') {
+            list.add(item);
+          }
+        } catch (e) {
+          debugPrint('[EnsiklopediaService] Gagal parse doc ${doc.id}: $e');
+        }
+      }
+      if (list.isEmpty) {
+        // Fallback aman: jika Firestore kosong, gunakan 19 data statis bawaan
+        return List<GastropediaItem>.from(GastropediaData.items);
+      }
+      return list;
+    });
+  }
+
+  Future<int> seedGastropediaData() async {
+    int inserted = 0;
+    for (final item in GastropediaData.items) {
+      final docRef = _firestore.collection('encyclopedia').doc(item.id);
+      try {
+        final snap = await docRef.get();
+        if (snap.exists) continue; // Jangan menimpa dokumen yang sudah ada
+        final data = item.toFirestore();
+        data['createdBy'] = 'System';
+        data['createdById'] = 'seed_script';
+        data['createdByType'] = 'admin';
+        data['createdAt'] = FieldValue.serverTimestamp();
+        await docRef.set(data);
+        inserted++;
+      } catch (e) {
+        debugPrint('[EnsiklopediaService] Seed item ${item.id} error: $e');
+      }
+    }
+    return inserted;
+  }
+
   String _generateDocId(String istilahLower) {
     // Ganti spasi, karakter non-alphanumeric selain underscore/hyphen agar aman jadi ID
     return istilahLower.replaceAll(RegExp(r'[^a-z0-9\-_]+'), '_').replaceAll(RegExp(r'_+'), '_');
   }
 
   Future<void> createEntry(EnsiklopediaEntry entry, String adminName, String adminId) async {
-    final docId = _generateDocId(entry.istilahLower);
+    final docId = entry.id.isNotEmpty ? entry.id : _generateDocId(entry.istilahLower);
     final docRef = _firestore.collection('encyclopedia').doc(docId);
     final logRef = _firestore.collection('activity_log').doc();
     
     await _firestore.runTransaction((transaction) async {
       final docSnapshot = await transaction.get(docRef);
       if (docSnapshot.exists) {
-        throw AppException("Istilah medis ini sudah terdaftar.");
+        throw AppException("Istilah medis atau makanan ini sudah terdaftar.");
       }
 
       final entryToSave = EnsiklopediaEntry(
@@ -57,6 +100,15 @@ class EnsiklopediaService {
         createdById: entry.createdById,
         createdByType: entry.createdByType,
         createdAt: entry.createdAt,
+        status: entry.status,
+        imageAsset: entry.imageAsset,
+        manfaat: entry.manfaat,
+        kandungan: entry.kandungan,
+        isRecommended: entry.isRecommended,
+        calories: entry.calories,
+        protein: entry.protein,
+        carbs: entry.carbs,
+        fat: entry.fat,
       );
       transaction.set(docRef, entryToSave.toFirestore());
 
@@ -89,7 +141,7 @@ class EnsiklopediaService {
       if (oldId != newDocId) {
         final newSnapshot = await transaction.get(newDocRef);
         if (newSnapshot.exists) {
-          throw AppException("Istilah medis ini sudah terdaftar pada entri lain.");
+          throw AppException("Istilah medis atau makanan ini sudah terdaftar pada entri lain.");
         }
       }
 
@@ -110,6 +162,15 @@ class EnsiklopediaService {
         updatedBy: adminName,
         updatedById: adminId,
         updatedAt: DateTime.now(),
+        status: updatedEntry.status,
+        imageAsset: updatedEntry.imageAsset ?? oldData['imageAsset']?.toString() ?? oldData['imageUrl']?.toString(),
+        manfaat: updatedEntry.manfaat.isNotEmpty ? updatedEntry.manfaat : (oldData['manfaat'] is Iterable ? List<String>.from(oldData['manfaat']) : []),
+        kandungan: updatedEntry.kandungan.isNotEmpty ? updatedEntry.kandungan : (oldData['kandungan'] is Iterable ? List<String>.from(oldData['kandungan']) : []),
+        isRecommended: updatedEntry.isRecommended,
+        calories: updatedEntry.calories,
+        protein: updatedEntry.protein,
+        carbs: updatedEntry.carbs,
+        fat: updatedEntry.fat,
       );
 
       if (oldId != newDocId) {

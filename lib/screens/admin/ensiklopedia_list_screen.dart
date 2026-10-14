@@ -145,24 +145,88 @@ class _EnsiklopediaListScreenState extends State<EnsiklopediaListScreen> {
         margin: const EdgeInsets.all(16),
       );
 
+  Future<void> _seedInitialData() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Sinkron Data Gastropedia', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
+        content: Text(
+          'Akan menambahkan 19 data bawaan (makanan, buah, sayuran) ke database jika belum ada. Dokumen yang sudah diedit atau ditambahkan admin tidak akan ditimpa atau diduplikasi.',
+          style: GoogleFonts.poppins(fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Batal', style: GoogleFonts.poppins(color: AppColors.neutralGray)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.adminBlue,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Sinkronkan', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    try {
+      final count = await _service.seedGastropediaData();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            count > 0
+                ? 'Berhasil menyinkronkan $count data baru ke database.'
+                : 'Seluruh data bawaan sudah tersinkron sebelumnya.',
+            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: AppColors.successGreen,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        _errorSnackbar('Gagal menyinkronkan data: $e'),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AdminScaffold(
       header: AdminAppBar(
         title: 'Kelola Gastropedia',
-        trailing: IconButton(
-          icon: const Icon(Icons.add_rounded, size: 26),
-          color: AppColors.adminBlue,
-          tooltip: 'Tambah Gastropedia',
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => EnsiklopediaFormScreen(
-                adminName: _adminName ?? 'Admin',
-                adminId: _adminId ?? '',
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.cloud_download_outlined, size: 22),
+              color: AppColors.adminBlue,
+              tooltip: 'Sinkron 19 Data Bawaan',
+              onPressed: _seedInitialData,
+            ),
+            IconButton(
+              icon: const Icon(Icons.add_rounded, size: 26),
+              color: AppColors.adminBlue,
+              tooltip: 'Tambah Gastropedia',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => EnsiklopediaFormScreen(
+                    adminName: _adminName ?? 'Admin',
+                    adminId: _adminId ?? '',
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
       body: StreamBuilder<List<EnsiklopediaEntry>>(
@@ -280,6 +344,19 @@ class _EnsiklopediaListScreenState extends State<EnsiklopediaListScreen> {
                 style: GoogleFonts.poppins(fontSize: 13, color: AppColors.neutralGray),
                 textAlign: TextAlign.center,
               ),
+            ] else ...[
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _seedInitialData,
+                icon: const Icon(Icons.cloud_download_outlined, size: 18),
+                label: Text('Muat 19 Data Bawaan', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.adminBlue,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                ),
+              ),
             ],
           ],
         ),
@@ -331,48 +408,123 @@ class _EntryCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Kotak huruf awal
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
+              // Thumbnail gambar atau kotak huruf awal
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  width: 44,
+                  height: 44,
                   color: AppColors.adminBlueDark,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    firstLetter,
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: entry.imageAsset != null && entry.imageAsset!.isNotEmpty
+                      ? (entry.imageAsset!.startsWith('http')
+                          ? Image.network(
+                              entry.imageAsset!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Center(
+                                child: Text(
+                                  firstLetter,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Image.asset(
+                              entry.imageAsset!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Center(
+                                child: Text(
+                                  firstLetter,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ))
+                      : Center(
+                          child: Text(
+                            firstLetter,
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(width: 12),
-              // Istilah + definisi singkat
+              // Istilah + kategori/draft badge + definisi singkat
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      entry.istilah,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primaryText,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            entry.istilah,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primaryText,
+                            ),
+                          ),
+                        ),
+                        if (entry.status == 'draft')
+                          Container(
+                            margin: const EdgeInsets.only(left: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade100,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'Draft',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.orange.shade900,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      entry.definisiSingkat,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: AppColors.neutralGray,
-                      ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: AppColors.adminBlue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            entry.kategori,
+                            style: GoogleFonts.poppins(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.adminBlue,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            entry.definisiSingkat,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              fontSize: 11.5,
+                              color: AppColors.neutralGray,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

@@ -208,24 +208,84 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
             ),
           ],
 
+          if (entry.imageAsset != null && entry.imageAsset!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: entry.imageAsset!.startsWith('http')
+                  ? Image.network(
+                      entry.imageAsset!,
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                    )
+                  : Image.asset(
+                      entry.imageAsset!,
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                    ),
+            ),
+          ],
+
           const SizedBox(height: 12),
 
-          // Chip kategori
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-            decoration: BoxDecoration(
-              color: AppColors.adminBlueLight,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.adminBlue.withValues(alpha: 0.3), width: 1),
-            ),
-            child: Text(
-              entry.kategori,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.adminBlue,
+          // Chip kategori & status
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.adminBlueLight,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.adminBlue.withValues(alpha: 0.3), width: 1),
+                ),
+                child: Text(
+                  entry.kategori,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.adminBlue,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: entry.status == 'terbit' ? AppColors.successGreen.withValues(alpha: 0.15) : Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  entry.status == 'terbit' ? 'Terbit' : 'Draft',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: entry.status == 'terbit' ? AppColors.successGreen : Colors.orange.shade900,
+                  ),
+                ),
+              ),
+              if (entry.isRecommended) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade100,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '★ Rekomendasi',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.green.shade900,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
 
           const SizedBox(height: 16),
@@ -251,7 +311,82 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
               height: 1.65,
             ),
           ),
+
+          if (entry.manfaat.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            _sectionLabel('Manfaat'),
+            const SizedBox(height: 4),
+            ...entry.manfaat.map(
+              (m) => Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Expanded(
+                      child: Text(
+                        m,
+                        style: GoogleFonts.poppins(fontSize: 13, color: AppColors.primaryText),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
+          if (entry.kandungan.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            _sectionLabel('Kandungan Gizi / Senyawa'),
+            const SizedBox(height: 4),
+            ...entry.kandungan.map(
+              (k) => Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Expanded(
+                      child: Text(
+                        k,
+                        style: GoogleFonts.poppins(fontSize: 13, color: AppColors.primaryText),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
+          // Informasi Nutrisi
+          const SizedBox(height: 14),
+          _sectionLabel('Informasi Nutrisi'),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              _nutrientChip('Kalori', '${entry.calories} kkal'),
+              _nutrientChip('Protein', '${entry.protein}g'),
+              _nutrientChip('Karbo', '${entry.carbs}g'),
+              _nutrientChip('Lemak', '${entry.fat}g'),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _nutrientChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.adminBlueLight,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        '$label: $value',
+        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.adminBlue),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/gastropedia_item_model.dart';
+import '../../services/ensiklopedia_service.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/gastropedia/gastropedia_header.dart';
 import '../../routes/app_routes.dart';
@@ -40,22 +41,26 @@ class GastropediaCategoryScreen extends StatelessWidget {
       }
     }
 
-    final List<GastropediaItem> items;
-    if (isRecommendationMode) {
-      items = GastropediaData.items.where((i) => i.isRecommended).toList();
-    } else if (category != null) {
-      items = GastropediaData.getByCategory(category!);
-    } else {
-      items = GastropediaData.items;
-    }
-
     return AppScaffold(
-      body: Column(
-        children: [
-          const SizedBox(height: 6),
+      body: StreamBuilder<List<GastropediaItem>>(
+        stream: EnsiklopediaService().streamPublishedGastropedia(),
+        builder: (context, snapshot) {
+          final allItems = snapshot.data ?? GastropediaData.items;
+          final List<GastropediaItem> items;
+          if (isRecommendationMode) {
+            items = allItems.where((i) => i.isRecommended).toList();
+          } else if (category != null) {
+            items = allItems.where((i) => i.category == category).toList();
+          } else {
+            items = allItems;
+          }
 
-          // 1. Header Top Bar
-          GastropediaHeader(title: title),
+          return Column(
+            children: [
+              const SizedBox(height: 6),
+
+              // 1. Header Top Bar
+              GastropediaHeader(title: title),
 
           // 2. Subjudul kecil di bawah header
           Padding(
@@ -126,19 +131,33 @@ class GastropediaCategoryScreen extends StatelessWidget {
                         children: [
                           // Foto Makanan Mengisi Bagian Atas
                           Expanded(
-                            child: Image.asset(
-                              item.imageAsset,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              errorBuilder: (_, _, _) => Container(
-                                color: const Color(0xFFEBF3F8),
-                                child: const Icon(
-                                  Icons.restaurant_rounded,
-                                  color: Color(0xFF639BC6),
-                                  size: 36,
-                                ),
-                              ),
-                            ),
+                            child: item.imageAsset.startsWith('http')
+                                ? Image.network(
+                                    item.imageAsset,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    errorBuilder: (_, _, _) => Container(
+                                      color: const Color(0xFFEBF3F8),
+                                      child: const Icon(
+                                        Icons.restaurant_rounded,
+                                        color: Color(0xFF639BC6),
+                                        size: 36,
+                                      ),
+                                    ),
+                                  )
+                                : Image.asset(
+                                    item.imageAsset,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    errorBuilder: (_, _, _) => Container(
+                                      color: const Color(0xFFEBF3F8),
+                                      child: const Icon(
+                                        Icons.restaurant_rounded,
+                                        color: Color(0xFF639BC6),
+                                        size: 36,
+                                      ),
+                                    ),
+                                  ),
                           ),
 
                           // Bar Bawah: Judul Makanan + Tombol Chevron Bulat Berlatar Kuning
@@ -202,7 +221,9 @@ class GastropediaCategoryScreen extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
+      );
+    },
+  ),
+);
   }
 }
