@@ -104,20 +104,10 @@ class BeritaContentBlockWidget extends StatelessWidget {
       final b = block as BeritaBlockTips;
       return Padding(
         padding: const EdgeInsets.only(bottom: 16, top: 8),
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFFF5F9FC),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: IntrinsicHeight(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            color: Colors.white,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -134,6 +124,7 @@ class BeritaContentBlockWidget extends StatelessWidget {
                           fontSize: 14,
                           height: 1.5,
                           color: Color(0xFF1D4E7A),
+                          fontFamily: 'Poppins', // Opsional, mengikuti tema
                         ),
                         children: [
                           const TextSpan(

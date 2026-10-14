@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/berita_article_model.dart';
@@ -21,24 +20,25 @@ class _BeritaListScreenState extends State<BeritaListScreen> {
   List<BeritaArticle>? _articles;
   bool _loading = true;
 
-StreamSubscription<List<BeritaArticle>>? _sub;
+  @override
+  void initState() {
+    super.initState();
+    _loadArticles();
+  }
 
-@override
-void initState() {
-  super.initState();
-  _sub = BeritaRepository.streamPublished().listen((articles) {
-    if (!mounted) return;
-    setState(() {
-      _articles = articles;
-      _loading = false;
-    });
-  });
-}
+  Future<void> _loadArticles() async {
+    final articles = await BeritaRepository.getAll();
+    if (mounted) {
+      setState(() {
+        _articles = articles;
+        _loading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
     _pageController.dispose();
-    _sub?.cancel();
     super.dispose();
   }
 
@@ -117,11 +117,7 @@ void initState() {
       return b.tanggal!.compareTo(a.tanggal!);
     });
 
-    // Ambil 3 artikel unggulan terbaru untuk Carousel slider atas
-    final int carouselCount = sortedArticles.length >= 5 ? 3 : (sortedArticles.length > 2 ? 2 : 1);
-    final carouselArticles = sortedArticles.take(carouselCount).toList();
-    // Sisanya masuk ke daftar "Berita Terbaru" di bawah agar tidak ada artikel yang dobel
-    final remainingArticles = sortedArticles.skip(carouselCount).toList();
+    final carouselArticles = sortedArticles.take(5).toList();
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 40),
@@ -159,36 +155,34 @@ void initState() {
             ),
           ),
         ),
-        if (remainingArticles.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              'Berita Terbaru',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1D4E7A),
-              ),
+        const SizedBox(height: 24),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            'Berita Terbaru',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1D4E7A),
             ),
           ),
-          const SizedBox(height: 12),
-          ...remainingArticles.map((article) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: BeritaCardSmall(
-                article: article,
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/berita/detail',
-                    arguments: article.id,
-                  );
-                },
-              ),
-            );
-          }),
-        ],
+        ),
+        const SizedBox(height: 12),
+        ...sortedArticles.map((article) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: BeritaCardSmall(
+              article: article,
+              onTap: () {
+                Navigator.pushNamed(
+                  context,
+                  '/berita/detail',
+                  arguments: article.id,
+                );
+              },
+            ),
+          );
+        }),
       ],
     );
   }
