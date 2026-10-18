@@ -5,12 +5,19 @@ import 'firebase_options.dart';
 import 'constants/app_colors.dart';
 import 'providers/app_state.dart';
 import 'routes/app_routes.dart';
+import 'pengingat_jam_makan/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  try {
+    await NotificationService.instance.initialize();
+  } catch (e) {
+    debugPrint('Gagal inisialisasi notifikasi saat startup: $e');
+  }
+
   // Aktifkan edge-to-edge agar latar bisa menembus status bar & navigation bar
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(

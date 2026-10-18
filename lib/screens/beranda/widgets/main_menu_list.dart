@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lamon/pengingat_jam_makan/screens/pilih_kondisi_screen.dart';
 
 /// Ubah nilai ini untuk memperbesar/memperkecil semua kartu Menu Utama sekaligus.
 const double kMenuCardScale = 1.15;
@@ -136,7 +137,21 @@ class MainMenuList extends StatelessWidget {
                 cardH: cardH,
                 s: s,
                 W: W,
-                onTap: () => onMenuTap(items[index]),
+                onTap: () async {
+                  if (items[index].id == 'pengingat-jam-makan') {
+                    final result = await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PilihKondisiScreen(),
+                      ),
+                    );
+                    if (result == true && context.mounted) {
+                      Navigator.pushReplacementNamed(context, '/beranda');
+                    }
+                    return;
+                  }
+                  onMenuTap(items[index]);
+                },
               );
             },
           ),
