@@ -1,0 +1,18 @@
+﻿rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Rules untuk lampiran konsultasi dokter
+    // Path: consultations/{userId}/{consultationId}/{fileName}
+    match /consultations/{userId}/{consultationId}/{fileName} {
+      // User hanya boleh membaca dan mengunggah ke direktori konsultasi milik mereka sendiri
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      allow write: if request.auth != null 
+                   && request.auth.uid == userId
+                   && request.resource.size < 5 * 1024 * 1024
+                   && (request.resource.contentType.matches('image/.*') 
+                       || request.resource.contentType == 'application/pdf');
+    }
+  }
+}

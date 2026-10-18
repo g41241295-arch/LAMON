@@ -5,18 +5,18 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_assets.dart';
 
-/// SplashScreen — Animasi pembuka LAMON 8 Frame berurutan (Total ±13 detik).
+/// SplashScreen — Animasi pembuka LAMON 8 Frame berurutan (Total 8.0 detik).
 ///
 /// Urutan Frame:
-///   Frame 1 (0.0s – 1.1s)  : Halaman kosong background gradient kuning lembut.
-///   Frame 2 (1.1s – 3.8s)  : Logo meluncur turun dari atas ke tengah + halo bulat (tanpa kotak).
-///   Frame 3 (3.8s – 4.5s)  : Logo zoom dramatis CEPAT (300–500ms) + crossfade oranye solid bersih.
-///   Frame 4 (4.5s – 5.8s)  : Teks "NOMAL" muncul font Bebas Neue warna oranye tua.
-///   Frame 5 (5.8s – 6.8s)  : Flip 3D per-huruf cepat "NOMAL" -> "OMALN" (stagger antar huruf).
-///   Frame 6 (6.8s – 7.8s)  : Flip 3D per-huruf cepat "OMALN" -> "LAMON".
-///   Frame 7 (7.8s – 10.0s) : Subtitle "LAMBUNG AWARENESS & MONITORING" fade-in di bawah "LAMON".
-///   Frame 8 (10.0s – 12.5s): Crossfade ke teks "WELCOME" (hitam, bold, Bebas Neue, tanpa underline).
-///   Transisi ke /login     : Fade halus 450ms. Tap kapan saja untuk skip.
+///   Frame 1 (0.0s – 0.4s)  : Halaman kosong background gradient kuning lembut.
+///   Frame 2 (0.4s – 1.6s)  : Logo meluncur turun dari atas ke tengah + halo bulat (tanpa kotak).
+///   Frame 3 (1.6s – 2.1s)  : Logo zoom dramatis CEPAT + crossfade oranye solid bersih.
+///   Frame 4 (2.1s – 2.7s)  : Teks "NOMAL" muncul font Bebas Neue warna oranye tua.
+///   Frame 5 (2.7s – 3.4s)  : Flip 3D per-huruf cepat "NOMAL" -> "OMALN" (stagger antar huruf).
+///   Frame 6 (3.4s – 4.1s)  : Flip 3D per-huruf cepat "OMALN" -> "LAMON".
+///   Frame 7 (4.1s – 5.0s)  : Subtitle "LAMBUNG AWARENESS & MONITORING" fade-in di bawah "LAMON".
+///   Frame 8 (5.0s – 8.0s)  : Crossfade ke teks "WELCOME" (tampil tepat 3 detik sebelum masuk login).
+///   Transisi ke /login     : Masuk ke halaman login setelah Welcome selesai. Tap kapan saja untuk skip.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -29,32 +29,32 @@ class _SplashScreenState extends State<SplashScreen>
   late final AnimationController _masterCtrl;
 
   // ── Interval Animations ─────────────────────────────────────────────────────
-  // Seluruh timeline di-pack dalam satu 12500ms controller untuk smooth sync
+  // Timeline diatur dalam controller 8000ms (5000ms Opening + 3000ms Welcome Screen)
 
-  // Frame 2: Logo slide from top + halo glow (1100ms – 3500ms  : 0.088..0.280)
+  // Frame 2: Logo slide from top + halo glow (400ms – 1600ms : 0.050..0.200)
   late final Animation<Offset> _logoSlide;
   late final Animation<double> _logoSlideOpacity;
   late final Animation<double> _haloOpacity;
 
-  // Frame 3: Zoom + Orange (3500ms – 4200ms : 0.280..0.336) — CEPAT, BERSIH
+  // Frame 3: Zoom + Orange (1600ms – 2100ms : 0.200..0.263)
   late final Animation<double> _logoDramaticScale;
   late final Animation<double> _logoExitOpacity;
-  late final Animation<double> _orangeBgOpacity; // Crossfade ke oranye solid
+  late final Animation<double> _orangeBgOpacity;
 
-  // Frame 4: Teks "NOMAL" muncul (4200ms – 5000ms : 0.336..0.400)
+  // Frame 4: Teks "NOMAL" muncul (2100ms – 2600ms : 0.263..0.325)
   late final Animation<double> _nomalOpacity;
 
-  // Frame 5: Flip "NOMAL" -> "OMALN" (5000ms – 5850ms : 0.400..0.468)
+  // Frame 5: Flip "NOMAL" -> "OMALN" (2700ms – 3400ms : 0.338..0.425)
   late final Animation<double> _flipToOmaln;
 
-  // Frame 6: Flip "OMALN" -> "LAMON" (5850ms – 6700ms : 0.468..0.536)
+  // Frame 6: Flip "OMALN" -> "LAMON" (3400ms – 4100ms : 0.425..0.513)
   late final Animation<double> _flipToLamon;
 
-  // Frame 7: Subtitle muncul (6700ms – 7700ms : 0.536..0.616)
+  // Frame 7: Subtitle muncul (4100ms – 5000ms : 0.513..0.625)
   late final Animation<double> _subtitleOpacity;
   late final Animation<Offset> _subtitleSlide;
 
-  // Frame 8: WELCOME crossfade (10000ms – 11000ms : 0.800..0.880)
+  // Frame 8: WELCOME crossfade (5000ms – 8000ms : 0.625..1.000 -> 3 detik penuh)
   late final Animation<double> _lamonGroupOutOpacity;
   late final Animation<double> _welcomeInOpacity;
 
@@ -64,64 +64,58 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // Total duration: 12500ms ≈ 12.5 detik
+    // Total duration: 8000ms (5.0s opening + 3.0s welcome screen)
     _masterCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 12500),
+      duration: const Duration(milliseconds: 8000),
     );
 
-    // ── FRAME 2: Logo slide + halo (0.088 – 0.280) ──────────────────────────
+    // ── FRAME 2: Logo slide + halo (0.050 – 0.200) ──────────────────────────
     _logoSlide = Tween<Offset>(
       begin: const Offset(0.0, -2.6),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _masterCtrl,
-      curve: const Interval(0.088, 0.280, curve: Curves.easeOutCubic),
+      curve: const Interval(0.050, 0.200, curve: Curves.easeOutCubic),
     ));
 
     _logoSlideOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _masterCtrl,
-        curve: const Interval(0.088, 0.160, curve: Curves.easeOut),
+        curve: const Interval(0.050, 0.113, curve: Curves.easeOut),
       ),
     );
 
     _haloOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _masterCtrl,
-        curve: const Interval(0.140, 0.280, curve: Curves.easeIn),
+        curve: const Interval(0.088, 0.200, curve: Curves.easeIn),
       ),
     );
 
-    // ── FRAME 3: Logo dramatic zoom CEPAT + oranye bersih (0.280 – 0.336) ───
-    // Zoom dari skala 1.0 → 4.5 dalam waktu singkat agar memenuhi layar bersih
+    // ── FRAME 3: Logo dramatic zoom CEPAT + oranye bersih (0.200 – 0.263) ───
     _logoDramaticScale = Tween<double>(begin: 1.0, end: 4.5).animate(
       CurvedAnimation(
         parent: _masterCtrl,
-        curve: const Interval(0.280, 0.340, curve: Curves.easeInCubic),
+        curve: const Interval(0.200, 0.263, curve: Curves.easeInCubic),
       ),
     );
 
-    // Logo memudar keluar segera bersamaan dengan mulainya zoom — BUKAN setelah zoom
-    // Ini yang menghilangkan "kotak oranye" — logo hilang lebih awal sebelum oranye masuk
     _logoExitOpacity = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(
         parent: _masterCtrl,
-        curve: const Interval(0.280, 0.316, curve: Curves.easeIn),
+        curve: const Interval(0.200, 0.231, curve: Curves.easeIn),
       ),
     );
 
-    // Background oranye crossfade: masuk bersamaan zoom, keluar sesudah teks muncul
+    // Background oranye crossfade
     _orangeBgOpacity = TweenSequence<double>([
-      // Masuk cepat bersamaan zoom logo (layer ini menutupi logo yg sedang zoom)
       TweenSequenceItem(
         tween: Tween<double>(begin: 0.0, end: 1.0)
             .chain(CurveTween(curve: Curves.easeIn)),
         weight: 35,
       ),
-      // Tahan full orange sejenak
       TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 25),
-      // Keluar halus ke background kuning LAMON (supaya teks kontras)
       TweenSequenceItem(
         tween: Tween<double>(begin: 1.0, end: 0.0)
             .chain(CurveTween(curve: Curves.easeOut)),
@@ -129,39 +123,38 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     ]).animate(CurvedAnimation(
       parent: _masterCtrl,
-      // Interval: 0.280–0.420 (covering frames 3 & early 4)
-      curve: const Interval(0.280, 0.420),
+      curve: const Interval(0.200, 0.300),
     ));
 
-    // ── FRAME 4: "NOMAL" muncul (0.336 – 0.400) ─────────────────────────────
+    // ── FRAME 4: "NOMAL" muncul (0.263 – 0.325) ─────────────────────────────
     _nomalOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _masterCtrl,
-        curve: const Interval(0.336, 0.390, curve: Curves.easeOut),
+        curve: const Interval(0.263, 0.325, curve: Curves.easeOut),
       ),
     );
 
-    // ── FRAME 5: Flip NOMAL -> OMALN (0.400 – 0.468) ────────────────────────
+    // ── FRAME 5: Flip NOMAL -> OMALN (0.338 – 0.425) ────────────────────────
     _flipToOmaln = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _masterCtrl,
-        curve: const Interval(0.400, 0.468, curve: Curves.easeInOut),
+        curve: const Interval(0.338, 0.425, curve: Curves.easeInOut),
       ),
     );
 
-    // ── FRAME 6: Flip OMALN -> LAMON (0.468 – 0.536) ────────────────────────
+    // ── FRAME 6: Flip OMALN -> LAMON (0.425 – 0.513) ────────────────────────
     _flipToLamon = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _masterCtrl,
-        curve: const Interval(0.468, 0.536, curve: Curves.easeInOut),
+        curve: const Interval(0.425, 0.513, curve: Curves.easeInOut),
       ),
     );
 
-    // ── FRAME 7: Subtitle muncul (0.536 – 0.616) ─────────────────────────────
+    // ── FRAME 7: Subtitle muncul (0.513 – 0.625) ─────────────────────────────
     _subtitleOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _masterCtrl,
-        curve: const Interval(0.536, 0.616, curve: Curves.easeOut),
+        curve: const Interval(0.513, 0.600, curve: Curves.easeOut),
       ),
     );
 
@@ -170,21 +163,21 @@ class _SplashScreenState extends State<SplashScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _masterCtrl,
-      curve: const Interval(0.536, 0.616, curve: Curves.easeOutCubic),
+      curve: const Interval(0.513, 0.600, curve: Curves.easeOutCubic),
     ));
 
-    // ── FRAME 8: WELCOME crossfade (0.800 – 0.880) ───────────────────────────
+    // ── FRAME 8: WELCOME crossfade (0.625 – 1.000 : tepat 3 detik) ───────────
     _lamonGroupOutOpacity = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(
         parent: _masterCtrl,
-        curve: const Interval(0.800, 0.848, curve: Curves.easeIn),
+        curve: const Interval(0.625, 0.669, curve: Curves.easeIn),
       ),
     );
 
     _welcomeInOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _masterCtrl,
-        curve: const Interval(0.824, 0.880, curve: Curves.easeOut),
+        curve: const Interval(0.650, 0.700, curve: Curves.easeOut),
       ),
     );
 
@@ -272,12 +265,12 @@ class _SplashScreenState extends State<SplashScreen>
         final p = _masterCtrl.value;
 
         // Fase visibilitas
-        final showLogo = p < 0.340;
-        final showWordPhase = p >= 0.336 && p < 0.848;
-        final showWelcome = p >= 0.800;
+        final showLogo = p < 0.263;
+        final showWordPhase = p >= 0.263 && p < 0.669;
+        final showWelcome = p >= 0.625;
 
         // Opacity logo: saat zoom, gunakan exit opacity
-        final logoOpacity = (p >= 0.280
+        final logoOpacity = (p >= 0.200
                 ? _logoExitOpacity.value
                 : _logoSlideOpacity.value)
             .clamp(0.0, 1.0);
@@ -319,7 +312,7 @@ class _SplashScreenState extends State<SplashScreen>
                     opacity: logoOpacity,
                     child: Transform.scale(
                       // BUG 2 FIX: Scale langsung ke 4.5 dalam ~700ms (cepat, bersih)
-                      scale: p >= 0.280 ? _logoDramaticScale.value : 1.0,
+                      scale: p >= 0.200 ? _logoDramaticScale.value : 1.0,
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
@@ -364,7 +357,7 @@ class _SplashScreenState extends State<SplashScreen>
             if (showWordPhase)
               Center(
                 child: Opacity(
-                  opacity: (p >= 0.800
+                  opacity: (p >= 0.625
                           ? _lamonGroupOutOpacity.value
                           : _nomalOpacity.value)
                       .clamp(0.0, 1.0),
@@ -376,7 +369,7 @@ class _SplashScreenState extends State<SplashScreen>
                       const SizedBox(height: 16),
 
                       // Frame 7: Subtitle
-                      if (p >= 0.536)
+                      if (p >= 0.513)
                         SlideTransition(
                           position: _subtitleSlide,
                           child: Opacity(

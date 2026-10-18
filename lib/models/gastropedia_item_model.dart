@@ -24,6 +24,14 @@ enum GastropediaCategory {
     required this.badgeText,
     required this.thumbnailAsset,
   });
+
+  static GastropediaCategory fromString(String? val) {
+    if (val == null) return GastropediaCategory.makanan;
+    final lower = val.trim().toLowerCase();
+    if (lower.contains('buah')) return GastropediaCategory.buah;
+    if (lower.contains('sayur')) return GastropediaCategory.sayuran;
+    return GastropediaCategory.makanan;
+  }
 }
 
 class GastropediaItem {
@@ -35,6 +43,11 @@ class GastropediaItem {
   final List<String> manfaat;
   final List<String> kandungan;
   final bool isRecommended;
+  final int calories;
+  final int protein;
+  final int carbs;
+  final int fat;
+  final String status;
 
   const GastropediaItem({
     required this.id,
@@ -45,7 +58,84 @@ class GastropediaItem {
     required this.manfaat,
     required this.kandungan,
     this.isRecommended = false,
+    this.calories = 150,
+    this.protein = 6,
+    this.carbs = 18,
+    this.fat = 6,
+    this.status = 'terbit',
   });
+
+  factory GastropediaItem.fromFirestore(dynamic doc) {
+    final raw = doc.data();
+    final Map<String, dynamic> data = (raw is Map<String, dynamic>)
+        ? raw
+        : (raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{});
+
+    List<String> parseList(dynamic val) {
+      if (val is Iterable) {
+        return val.where((e) => e != null).map((e) => e.toString()).toList();
+      }
+      return [];
+    }
+
+    final cat = GastropediaCategory.fromString(
+      data['kategori']?.toString() ?? data['category']?.toString(),
+    );
+
+    String img = data['imageAsset']?.toString() ?? data['imageUrl']?.toString() ?? '';
+    if (img.isEmpty) {
+      // Fallback ke gambar lokal jika ID cocok dengan data statis
+      final stat = GastropediaData.getById(doc.id);
+      if (stat != null) {
+        img = stat.imageAsset;
+      } else {
+        img = cat.thumbnailAsset;
+      }
+    }
+
+    final desc = data['definisiSingkat']?.toString() ??
+        data['deskripsi']?.toString() ??
+        data['penjelasanLengkap']?.toString() ??
+        '';
+
+    return GastropediaItem(
+      id: doc.id,
+      name: data['istilah']?.toString() ?? data['name']?.toString() ?? '',
+      category: cat,
+      imageAsset: img,
+      deskripsi: desc,
+      manfaat: parseList(data['manfaat']),
+      kandungan: parseList(data['kandungan']),
+      isRecommended: data['isRecommended'] == true,
+      calories: (data['calories'] is num) ? (data['calories'] as num).toInt() : 150,
+      protein: (data['protein'] is num) ? (data['protein'] as num).toInt() : 6,
+      carbs: (data['carbs'] is num) ? (data['carbs'] as num).toInt() : 18,
+      fat: (data['fat'] is num) ? (data['fat'] as num).toInt() : 6,
+      status: data['status']?.toString() ?? 'terbit',
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'istilah': name,
+      'istilahLower': name.toLowerCase(),
+      'name': name,
+      'kategori': category.label,
+      'category': category.name,
+      'imageAsset': imageAsset,
+      'definisiSingkat': deskripsi,
+      'deskripsi': deskripsi,
+      'penjelasanLengkap': deskripsi,
+      'manfaat': manfaat,
+      'kandungan': kandungan,
+      'isRecommended': isRecommended,
+      'calories': calories,
+      'protein': protein,
+      'carbs': carbs,
+      'fat': fat,
+      'status': status,
+    };
+  }
 }
 
 class GastropediaData {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/app_assets.dart';
+import '../../widgets/app_header_pill.dart';
 
 class DiseasePredictionIntroScreen extends StatelessWidget {
   const DiseasePredictionIntroScreen({super.key});
@@ -67,7 +68,42 @@ class DiseasePredictionIntroScreen extends StatelessWidget {
             // =========================================================
             // 1. HEADER (BACK, BADGE TITLE, RIWAYAT BUTTON)
             // =========================================================
-            _buildHeader(context),
+            AppHeaderPill(
+              title: 'Prediksi Penyakit',
+              rightAction: Semantics(
+                label: 'Riwayat Pemeriksaan',
+                button: true,
+                child: InkWell(
+                  onTap: () => Navigator.pushNamed(
+                      context, '/prediksi-penyakit/riwayat'),
+                  borderRadius: BorderRadius.circular(24),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFD6E2E8),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.history_rounded,
+                      color: AppColors.primary,
+                      size: 22,
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
             // =========================================================
             // 2. KONTEN INTRO (SCROLLABLE)
@@ -144,109 +180,6 @@ class DiseasePredictionIntroScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Tombol Back Lingkaran
-          InkWell(
-            onTap: () => Navigator.of(context).pop(),
-            borderRadius: BorderRadius.circular(24),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0xFFD6E2E8),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.arrow_back_rounded,
-                color: AppColors.primary,
-                size: 22,
-              ),
-            ),
-          ),
-
-          // Badge Pill Judul "Prediksi Penyakit"
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF7D6),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: const Color(0xFFE8DCAB),
-                width: 1.2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: const Text(
-              'Prediksi Penyakit',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primaryText,
-                letterSpacing: 0.2,
-              ),
-            ),
-          ),
-
-          // Tombol Riwayat Pemeriksaan
-          Semantics(
-            label: 'Riwayat Pemeriksaan',
-            button: true,
-            child: InkWell(
-              onTap: () =>
-                  Navigator.pushNamed(context, '/prediksi-penyakit/riwayat'),
-              borderRadius: BorderRadius.circular(24),
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFFD6E2E8),
-                    width: 1.2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.history_rounded,
-                  color: AppColors.primary,
-                  size: 22,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildMainIntroCard() {
     return Container(

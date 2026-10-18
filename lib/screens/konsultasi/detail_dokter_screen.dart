@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/doctor_model.dart';
+import '../../services/consultation_service.dart';
 import '../../services/doctor_service.dart';
+import '../../utils/currency_formatter.dart';
 import '../../widgets/app_scaffold.dart';
-import 'widgets/doctor_card.dart';
+import 'widgets/doctor_avatar.dart';
 
 /// Layar Detail Dokter — menampilkan profil lengkap satu dokter.
 class DetailDokterScreen extends StatefulWidget {
@@ -22,6 +24,7 @@ class DetailDokterScreen extends StatefulWidget {
 
 class _DetailDokterScreenState extends State<DetailDokterScreen> {
   final DoctorService _doctorService = DoctorService();
+  final ConsultationService _consultationService = ConsultationService();
   DoctorModel? _doctor;
   bool _isLoading = true;
   String? _error;
@@ -55,6 +58,34 @@ class _DetailDokterScreenState extends State<DetailDokterScreen> {
         });
       }
     }
+  }
+
+  Future<void> _handleChatTap(DoctorModel doctor) async {
+    try {
+      final existing =
+          await _consultationService.getActiveOrWaitingConsultation(doctor.id);
+      if (!mounted) return;
+      if (existing != null) {
+        Navigator.pushNamed(
+          context,
+          '/konsultasi/chat/${existing.id}',
+          arguments: {
+            'initialConsultation': existing,
+            'patientUid': existing.patientUid,
+          },
+        );
+        return;
+      }
+    } catch (e) {
+      debugPrint('[DetailDokterScreen] Error checking active consultation: $e');
+    }
+
+    if (!mounted) return;
+    Navigator.pushNamed(
+      context,
+      '/konsultasi/pembayaran/${doctor.id}',
+      arguments: doctor,
+    );
   }
 
   @override
@@ -92,7 +123,13 @@ class _DetailDokterScreenState extends State<DetailDokterScreen> {
       child: Column(
         children: [
           // ── Foto besar ──
-          DoctorAvatar(photoUrl: doctor.photoUrl, size: 100),
+          DoctorAvatar(
+            photoUrl: doctor.effectivePhotoUrl,
+            doctorId: doctor.id,
+            doctorName: doctor.name,
+            size: 100,
+            borderRadius: 20,
+          ),
           const SizedBox(height: 14),
 
           // ── Nama ──
@@ -187,7 +224,7 @@ class _DetailDokterScreenState extends State<DetailDokterScreen> {
                   ),
                 ),
                 Text(
-                  _formatRupiah(doctor.price),
+                  formatRupiah(doctor.price),
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
@@ -231,13 +268,7 @@ class _DetailDokterScreenState extends State<DetailDokterScreen> {
               width: double.infinity,
               height: 52,
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/konsultasi/pembayaran/${doctor.id}',
-                    arguments: doctor,
-                  );
-                },
+                onPressed: () => _handleChatTap(doctor),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -291,18 +322,6 @@ class _DetailDokterScreenState extends State<DetailDokterScreen> {
             .toList(),
       ),
     );
-  }
-
-  String _formatRupiah(int amount) {
-    final s = amount.toString();
-    final buf = StringBuffer('Rp');
-    var count = 0;
-    for (var i = s.length - 1; i >= 0; i--) {
-      if (count > 0 && count % 3 == 0) buf.write('.');
-      buf.write(s[i]);
-      count++;
-    }
-    return String.fromCharCodes(buf.toString().codeUnits.reversed);
   }
 }
 

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../screens/splash_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/register_screen.dart';
@@ -25,11 +27,20 @@ import '../screens/konsultasi/ringkasan_pembayaran_screen.dart';
 import '../screens/konsultasi/virtual_account_screen.dart';
 import '../screens/konsultasi/payment_success_screen.dart';
 import '../screens/konsultasi/chat_dokter_screen.dart';
+import '../screens/berita/berita_list_screen.dart';
+import '../screens/berita/berita_detail_screen.dart';
 import '../models/reflux_prediction_model.dart';
 import '../models/gastropedia_item_model.dart';
 import '../models/doctor_model.dart';
+import '../models/consultation_model.dart';
 import '../screens/dashboard_dokter_screen.dart';
 import '../screens/dashboard_admin_screen.dart';
+import '../screens/admin/ensiklopedia_list_screen.dart';
+import '../screens/admin/ensiklopedia_form_screen.dart';
+import '../screens/admin/ensiklopedia_detail_screen.dart';
+import '../screens/admin/berita_list_admin_screen.dart';
+import '../screens/admin/berita_form_screen.dart';
+import '../models/berita_article_model.dart';
 
 class AppRoutes {
   static const String initial = '/splash';
@@ -38,6 +49,7 @@ class AppRoutes {
   static const String register = '/register';
   static const String googleAuth = '/google-auth';
   static const String beranda = '/beranda';
+  static const String dokter = '/dokter';
   static const String doctorDashboard = '/doctor-dashboard';
   static const String adminDashboard = '/admin-dashboard';
   static const String placeholder = '/placeholder';
@@ -73,6 +85,25 @@ class AppRoutes {
   // /konsultasi/virtual-account/:consultationId
   // /konsultasi/payment-success/:consultationId
   // /konsultasi/chat/:consultationId
+
+  // Berita Routes
+  static const String berita = '/berita';
+  static const String beritaDetail = '/berita/detail';
+
+  // Admin Ensiklopedia Routes
+  static const String adminEnsiklopedia = '/admin/ensiklopedia';
+  static const String adminEnsiklopediaForm = '/admin/ensiklopedia/form';
+  static const String adminEnsiklopediaDetail = '/admin/ensiklopedia/detail';
+
+  // Admin Berita Routes
+  static const String adminBerita = '/admin/berita';
+  static const String adminBeritaForm = '/admin/berita/form';
+
+  /// Widget wrapper guard untuk rute admin.
+  /// Jika bukan admin, tampilkan layar yang redirect ke login.
+  static Widget _adminGuard(Widget child) {
+    return _AdminRouteGuard(child: child);
+  }
 
   /// Helper untuk membuat transisi halaman yang halus (fade + subtle slide 450ms)
   static PageRouteBuilder<T> _createSmoothRoute<T>(
@@ -175,8 +206,24 @@ class AppRoutes {
         uri.pathSegments[0] == 'konsultasi' &&
         uri.pathSegments[1] == 'chat') {
       final consultationId = uri.pathSegments[2];
+      bool isDoctor = false;
+      String? patientUid;
+      ConsultationModel? initialConsultation;
+
+      if (settings.arguments is Map<String, dynamic>) {
+        final args = settings.arguments as Map<String, dynamic>;
+        isDoctor = args['isDoctor'] as bool? ?? false;
+        patientUid = args['patientUid'] as String?;
+        initialConsultation = args['initialConsultation'] as ConsultationModel?;
+      }
+
       return _createSmoothRoute(
-        ChatDokterScreen(consultationId: consultationId),
+        ChatDokterScreen(
+          consultationId: consultationId,
+          isDoctor: isDoctor,
+          patientUid: patientUid,
+          initialConsultation: initialConsultation,
+        ),
         settings: settings,
       );
     }
@@ -264,6 +311,7 @@ class AppRoutes {
           settings: settings,
           isFadeOnly: true,
         );
+      case dokter:
       case doctorDashboard:
         return _createSmoothRoute(
           const DoctorDashboardScreen(),
@@ -338,11 +386,15 @@ class AppRoutes {
           settings: settings,
         );
       case gastropediaCategory:
+        final isRec = settings.arguments == 'rekomendasi';
         final category = settings.arguments is GastropediaCategory
             ? settings.arguments as GastropediaCategory
-            : GastropediaCategory.makanan;
+            : (isRec ? null : GastropediaCategory.makanan);
         return _createSmoothRoute(
-          GastropediaCategoryScreen(category: category),
+          GastropediaCategoryScreen(
+            category: category,
+            isRecommendationMode: isRec,
+          ),
           settings: settings,
         );
       case gastropediaDetail:
@@ -360,6 +412,79 @@ class AppRoutes {
           const DaftarDokterScreen(),
           settings: settings,
         );
+      case berita:
+        return _createSmoothRoute(
+          const BeritaListScreen(),
+          settings: settings,
+        );
+      case beritaDetail:
+        final beritaId = settings.arguments is String
+            ? settings.arguments as String
+            : '';
+        return _createSmoothRoute(
+          BeritaDetailScreen(articleId: beritaId),
+          settings: settings,
+        );
+
+      // ── Admin Ensiklopedia Routes (dengan guard role) ──────────────────────
+      case adminEnsiklopedia:
+        return _createSmoothRoute(
+          _adminGuard(const EnsiklopediaListScreen()),
+          settings: settings,
+        );
+      case adminEnsiklopediaForm:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final adminName = args['adminName'] as String? ?? 'Admin';
+        final adminId = args['adminId'] as String? ?? '';
+        final initialEntry = args['initialEntry'];
+        return _createSmoothRoute(
+          _adminGuard(EnsiklopediaFormScreen(
+            adminName: adminName,
+            adminId: adminId,
+            initialEntry: initialEntry,
+          )),
+          settings: settings,
+        );
+      case adminEnsiklopediaDetail:
+        final detailArgs = settings.arguments as Map<String, dynamic>? ?? {};
+        final entryId = detailArgs['entryId'] as String? ?? '';
+        final adminName = detailArgs['adminName'] as String? ?? 'Admin';
+        final adminId = detailArgs['adminId'] as String? ?? '';
+        return _createSmoothRoute(
+          _adminGuard(EnsiklopediaDetailScreen(
+            entryId: entryId,
+            adminName: adminName,
+            adminId: adminId,
+          )),
+          settings: settings,
+        );
+
+      // ── Admin Berita Routes (dengan guard role) ────────────────────────────
+      case adminBerita:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final adminName = args['adminName'] as String? ?? 'Admin';
+        final adminId = args['adminId'] as String? ?? '';
+        return _createSmoothRoute(
+          _adminGuard(BeritaListAdminScreen(
+            adminName: adminName,
+            adminId: adminId,
+          )),
+          settings: settings,
+        );
+      case adminBeritaForm:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final adminName = args['adminName'] as String? ?? 'Admin';
+        final adminId = args['adminId'] as String? ?? '';
+        final initialArtikel = args['initialArtikel'] as BeritaArticle?;
+        return _createSmoothRoute(
+          _adminGuard(BeritaFormScreen(
+            adminName: adminName,
+            adminId: adminId,
+            initialArtikel: initialArtikel,
+          )),
+          settings: settings,
+        );
+
       default:
         return _createSmoothRoute(
           const LoginScreen(),
@@ -369,3 +494,77 @@ class AppRoutes {
   }
 }
 
+/// Widget guard: hanya tampil jika user login sebagai admin.
+/// Dokter / user biasa akan di-redirect ke halaman sesuai role-nya.
+class _AdminRouteGuard extends StatefulWidget {
+  final Widget child;
+  const _AdminRouteGuard({required this.child});
+
+  @override
+  State<_AdminRouteGuard> createState() => _AdminRouteGuardState();
+}
+
+class _AdminRouteGuardState extends State<_AdminRouteGuard> {
+  late Future<String?> _roleFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _roleFuture = _fetchRole();
+  }
+
+  Future<String?> _fetchRole() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      return doc.data()?['role'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String?>(
+      future: _roleFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: Color(0xFFFAF4C8),
+            body: Center(
+              child: CircularProgressIndicator(color: Color(0xFF337AA3)),
+            ),
+          );
+        }
+
+        final role = snapshot.data;
+        if (role == 'admin') {
+          return widget.child;
+        }
+
+        // Redirect otomatis setelah frame pertama selesai
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          if (role == 'doctor' || role == 'dokter') {
+            Navigator.pushNamedAndRemoveUntil(
+                context, AppRoutes.doctorDashboard, (r) => false);
+          } else {
+            Navigator.pushNamedAndRemoveUntil(
+                context, AppRoutes.login, (r) => false);
+          }
+        });
+
+        return const Scaffold(
+          backgroundColor: Color(0xFFFAF4C8),
+          body: Center(
+            child: CircularProgressIndicator(color: Color(0xFF337AA3)),
+          ),
+        );
+      },
+    );
+  }
+}

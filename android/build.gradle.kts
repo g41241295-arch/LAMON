@@ -11,6 +11,18 @@ val newBuildDir: Directory =
         .get()
 rootProject.layout.buildDirectory.value(newBuildDir)
 
+// Paksa semua plugin (library) compile ke SDK 36.
+// Harus SEBELUM evaluationDependsOn(":app").
+subprojects {
+    afterEvaluate {
+        if (plugins.hasPlugin("com.android.library")) {
+            extensions.configure<com.android.build.gradle.LibraryExtension> {
+                compileSdk = 36
+            }
+        }
+    }
+}
+
 subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)

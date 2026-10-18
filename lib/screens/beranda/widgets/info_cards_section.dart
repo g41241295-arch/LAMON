@@ -22,7 +22,7 @@ class InfoCardsSection extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.6), // glass effect
+              color: Colors.white.withValues(alpha: 0.6), // glass effect
               borderRadius: BorderRadius.circular(20),
               boxShadow: const [
                 BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
@@ -107,7 +107,7 @@ class _InfoCard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 4),
             )

@@ -74,6 +74,13 @@ class _GoogleAuthScreenState extends State<GoogleAuthScreen> {
           if (userDoc.exists) {
             final data = userDoc.data();
             if (data != null) {
+              final rawRole = data['role'] as String?;
+              if (rawRole == 'doctor' || rawRole == 'dokter') {
+                if (!mounted) return;
+                setState(() => _isLoading = false);
+                Navigator.pushNamedAndRemoveUntil(context, '/dokter', (route) => false);
+                return;
+              }
               hasCompletedScreening = data['hasCompletedScreening'] == true;
               userName = data['nama'] ?? userName;
             }

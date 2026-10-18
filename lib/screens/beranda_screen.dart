@@ -40,19 +40,11 @@ class BerandaScreenState extends State<BerandaScreen> with WidgetsBindingObserve
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _initializeData();
 
     _tickerTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       _onTick();
     });
-  }
-  
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _onTick(); // Sinkron ulang saat kembali ke foreground
-    }
   }
 
   @override
@@ -156,10 +148,14 @@ class BerandaScreenState extends State<BerandaScreen> with WidgetsBindingObserve
         break;
       case 'pengingat-jam-makan':
       default:
-        _navigateToPlaceholder(menu.title.replaceAll('\n', ' '), menu.description);
+        _navigateToPlaceholder(
+          'Pengingat Jam Makan',
+          menu.description,
+        );
         break;
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -188,15 +184,15 @@ class BerandaScreenState extends State<BerandaScreen> with WidgetsBindingObserve
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     // Gambar dirender 1.25x lebar layar, gadis tetap utuh di sisi kanan
     final bgWidth = screenWidth * 1.25;
-    // girlZone = tinggi gambar yang dirender (rasio gambar 780:1800) + margin bawah
-    final girlZone = bgWidth * 270 / 780 + 12 + bottomInset;
     const topYellow = Color(0xFFFDE88A);
 
     return Scaffold(
       backgroundColor: topYellow,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          return SingleChildScrollView(
+          final isLargeScreen = constraints.maxWidth > 520;
+
+          final content = SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: constraints.maxHeight),
@@ -274,24 +270,64 @@ class BerandaScreenState extends State<BerandaScreen> with WidgetsBindingObserve
                         MainMenuList(onMenuTap: _onMainMenuTap),
                         const SizedBox(height: 32),
 
-                        // Seputar Informasi
-                        InfoCardsSection(
-                          onGastropediaTap: () =>
-                              Navigator.pushNamed(context, '/gastropedia'),
-                          onBeritaTap: () =>
-                              _navigateToPlaceholder('Berita Kesehatan', 'Segera hadir'),
-                        ),
+                    // =========================================================
+                    // 5. SECTION "SEPUTAR INFORMASI" (GASTROPEDIA & BERITA)
+                    // =========================================================
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: InfoCardsSection(
+                        onGastropediaTap: () {
+                          Navigator.pushNamed(context, '/gastropedia');
+                        },
+                        onBeritaTap: () {
+                          Navigator.pushNamed(context, '/berita');
+                        },
+                      ),
+                    ),
 
-                        // Ruang gadis di bawah agar tidak tertimpa kartu
-                        // girlZone sudah termasuk bottomInset
-                        SizedBox(height: girlZone),
-                      ],
+                    // Padding bawah cukup ±24 dp + inset sistem (Revisi Poin 2)
+                    SizedBox(height: 24 + bottomInset),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+          // Jika dibuka pada browser desktop atau layar lebar, tampilkan bingkai mobile
+          if (isLargeScreen) {
+            final maxH = constraints.maxHeight.isFinite
+                ? constraints.maxHeight.clamp(0.0, 920.0)
+                : 880.0;
+            return Scaffold(
+              backgroundColor: const Color(0xFFECE7BE),
+              body: Center(
+                child: Container(
+                  width: 410,
+                  height: maxH,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(36),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.18),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                    border: Border.all(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      width: 3,
                     ),
                   ),
-                ],
+                  child: content,
+                ),
               ),
-            ),
-          );
+            );
+          }
+
+          return content;
         },
       ),
     );

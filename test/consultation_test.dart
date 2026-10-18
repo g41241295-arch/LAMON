@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lamon/constants/consultation_constants.dart';
+import 'package:lamon/constants/practice_slot_constants.dart';
 import 'package:lamon/models/consultation_model.dart';
 import 'package:lamon/models/doctor_model.dart';
+import 'package:lamon/utils/app_date_formatter.dart';
 
 void main() {
   group('Consultation Models & Constants Tests', () {
@@ -39,17 +41,36 @@ void main() {
         practiceLocation: 'RS Sehat Sentosa',
         strNumber: 'STR-1234567890',
         isRecommended: true,
+        gender: 'Laki-laki',
       );
 
       expect(doctor.id, 'doc_1');
       expect(doctor.name, 'dr. Andi Pratama, Sp.PD');
       expect(doctor.specialtyDisplay, 'Spesialis Penyakit Dalam • 8 tahun');
       expect(doctor.primaryHour?.display, '07.00 - 11.00');
+      expect(doctor.formattedNameWithDoctorTitle, 'dr. Andi Pratama, Sp.PD');
+
+      // Test dokter tanpa prefiks "dr."
+      const doctorNoPrefix = DoctorModel(
+        id: 'doc_2',
+        name: 'Budi Santoso',
+        specialty: 'Dokter Umum',
+        experienceYears: 5,
+        photoUrl: '',
+        price: 35000,
+        operatingHours: [],
+        alumni: 'Universitas Airlangga',
+        practiceLocation: 'Klinik Sehat',
+        strNumber: 'STR-999',
+        isRecommended: false,
+      );
+      expect(doctorNoPrefix.formattedNameWithDoctorTitle, 'dr. Budi Santoso');
 
       final firestoreMap = doctor.toFirestore();
       expect(firestoreMap['name'], doctor.name);
       expect(firestoreMap['price'], 50000);
       expect(firestoreMap['isRecommended'], true);
+      expect(firestoreMap['gender'], 'Laki-laki');
       expect(
         (firestoreMap['operatingHours'] as List).first['start'],
         '07.00',
@@ -80,13 +101,26 @@ void main() {
         paymentStatus: PaymentStatus.pending,
         paymentDeadline: deadline,
         createdAt: now,
+        patientUid: 'user_123',
+        patientName: 'Ahmad Dahlan',
+        patientGender: 'Laki-laki',
+        patientAge: 28,
+        status: 'waiting',
       );
+
+      expect(consultation.isWaiting, true);
+      expect(consultation.isActive, false);
+      expect(consultation.displayPatientName, 'Ahmad Dahlan');
+      expect(consultation.patientInitials, 'AD');
 
       final firestoreMap = consultation.toFirestore();
       expect(firestoreMap['doctorId'], 'doc_1');
       expect(firestoreMap['totalFee'], 60000);
       expect(firestoreMap['paymentStatus'], 'pending');
       expect(firestoreMap['paymentMethod'], 'bca');
+      expect(firestoreMap['patientUid'], 'user_123');
+      expect(firestoreMap['patientName'], 'Ahmad Dahlan');
+      expect(firestoreMap['status'], 'waiting');
     });
 
     test('ChatMessage properties', () {
@@ -117,6 +151,34 @@ void main() {
         firestoreMap['text'],
         'Halo dok, saya sering sakit perut setelah makan.',
       );
+    });
+
+    test('PracticeSlotConstants definitions', () {
+      expect(PracticeSlotConstants.allSlots.length, 3);
+      expect(PracticeSlotConstants.pagi.id, 'pagi');
+      expect(PracticeSlotConstants.siang.id, 'siang');
+      expect(PracticeSlotConstants.malam.id, 'malam');
+      expect(PracticeSlotConstants.findById('pagi')?.label, 'Pagi');
+      expect(PracticeSlotConstants.findById('siang')?.label, 'Siang');
+      expect(PracticeSlotConstants.findById('malam')?.label, 'Malam');
+      expect(PracticeSlotConstants.findById('invalid'), null);
+    });
+
+    test('AppDateFormatter Indonesian formats and greeting', () {
+      final date = DateTime(2026, 9, 28);
+      expect(AppDateFormatter.formatDateKey(date), '2026-09-28');
+      expect(AppDateFormatter.formatMonthYear(date), 'September 2026');
+      expect(AppDateFormatter.formatLongDate(date).contains('September 2026'), true);
+
+      final morning = DateTime(2026, 9, 28, 8, 0);
+      final afternoon = DateTime(2026, 9, 28, 13, 0);
+      final evening = DateTime(2026, 9, 28, 16, 0);
+      final night = DateTime(2026, 9, 28, 20, 0);
+
+      expect(AppDateFormatter.getGreetingWord(morning), 'Selamat pagi,');
+      expect(AppDateFormatter.getGreetingWord(afternoon), 'Selamat siang,');
+      expect(AppDateFormatter.getGreetingWord(evening), 'Selamat sore,');
+      expect(AppDateFormatter.getGreetingWord(night), 'Selamat malam,');
     });
   });
 }
