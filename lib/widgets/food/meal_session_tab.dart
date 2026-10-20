@@ -74,8 +74,16 @@ class MealSessionTab extends StatelessWidget {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
                 decoration: BoxDecoration(
-                  color: isActive ? Colors.white : Colors.transparent,
+                  color: isActive
+                      ? Colors.white.withValues(alpha: 0.85)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(50),
+                  border: isActive
+                      ? Border.all(
+                          color: Colors.white.withValues(alpha: 0.6),
+                          width: 1,
+                        )
+                      : null,
                   boxShadow: isActive
                       ? [
                           BoxShadow(

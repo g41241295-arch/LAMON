@@ -57,10 +57,14 @@ class ChipSelector extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.white,
+          color: isSelected
+              ? AppColors.primary
+              : Colors.white.withValues(alpha: 0.65),
           borderRadius: BorderRadius.circular(50),
           border: Border.all(
-            color: isSelected ? AppColors.primary : const Color(0xFFD0DCE4),
+            color: isSelected
+                ? AppColors.primary
+                : Colors.white.withValues(alpha: 0.6),
             width: 1.4,
           ),
           boxShadow: isSelected
