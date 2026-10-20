@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../models/consultation_model.dart';
 import '../../models/doctor_model.dart';
@@ -15,7 +16,7 @@ class DoctorHomeTab extends StatelessWidget {
   final Map<String, List<String>> scheduleMap;
   final int totalUnreadMessages;
   final VoidCallback onTapProfile;
-  final VoidCallback onTapSearch;
+  final VoidCallback? onTapSearch;
   final VoidCallback onTapWaitingResponse;
   final void Function({bool initialBelumDibalas, bool focusSearch}) onTapMessages;
 
@@ -26,7 +27,7 @@ class DoctorHomeTab extends StatelessWidget {
     required this.scheduleMap,
     this.totalUnreadMessages = 0,
     required this.onTapProfile,
-    required this.onTapSearch,
+    this.onTapSearch,
     required this.onTapWaitingResponse,
     required this.onTapMessages,
   });
@@ -62,76 +63,75 @@ class DoctorHomeTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── 1. Baris Atas (Avatar Kecil + Shortcut Cari Pasien) ──
-          Row(
-            children: [
-              GestureDetector(
-                onTap: onTapProfile,
-                child: DoctorAvatar(
-                  photoUrl: doctor.effectivePhotoUrl,
-                  doctorId: doctor.id,
-                  doctorName: doctor.name,
-                  size: 44,
-                  borderRadius: 12,
-                ),
+          // ── 1. Baris Atas (Chip Profil Dokter Berdiri Sendiri) ──
+          GestureDetector(
+            onTap: onTapProfile,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.65), // Soft glass selaras pasien
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: GestureDetector(
-                  onTap: onTapSearch,
-                  child: Container(
-                    height: 44,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                        color: AppColors.inputBorder,
-                        width: 1,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DoctorAvatar(
+                    photoUrl: doctor.effectivePhotoUrl,
+                    doctorId: doctor.id,
+                    doctorName: doctor.name,
+                    size: 28,
+                    borderRadius: 14,
+                  ),
+                  const SizedBox(width: 8),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 220),
+                    child: Text(
+                      doctorName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: const Color(0xFF53311C),
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.search_rounded,
-                            color: AppColors.neutralGray, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Cari pasien...',
-                          style: TextStyle(
-                            color: AppColors.neutralGray,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
                     ),
                   ),
-                ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.keyboard_arrow_down,
+                    color: Color(0xFF53311C),
+                    size: 20,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
 
-          // ── 2. Kartu Sapaan Biru Rounded ──
+          // ── 2. Kartu Sapaan Gradasi Lembut (Senada dengan Beranda Pasien) ──
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF276F8F), Color(0xFF1E5A74)],
+                colors: [Color(0xFFE8F4F8), Color(0xFFD2EBF5)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: const Color(0xFFC0E2F0).withValues(alpha: 0.8),
+                width: 1,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.25),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -141,12 +141,25 @@ class DoctorHomeTab extends StatelessWidget {
               children: [
                 GestureDetector(
                   onTap: onTapProfile,
-                  child: DoctorAvatar(
-                    photoUrl: doctor.effectivePhotoUrl,
-                    doctorId: doctor.id,
-                    doctorName: doctor.name,
-                    size: 52,
-                    borderRadius: 14,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: DoctorAvatar(
+                      photoUrl: doctor.effectivePhotoUrl,
+                      doctorId: doctor.id,
+                      doctorName: doctor.name,
+                      size: 54,
+                      borderRadius: 27,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -156,19 +169,19 @@ class DoctorHomeTab extends StatelessWidget {
                     children: [
                       Text(
                         greeting,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.white70,
-                          fontWeight: FontWeight.w500,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: const Color(0xFF276F8F),
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         doctorName,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                        style: GoogleFonts.poppins(
+                          fontSize: 16.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF134563),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -178,23 +191,34 @@ class DoctorHomeTab extends StatelessWidget {
                         doctor.specialty.isNotEmpty
                             ? doctor.specialty
                             : 'Dokter Umum',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF568095),
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.white.withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF276F8F).withValues(alpha: 0.08),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: const Icon(
                     Icons.medical_services_rounded,
-                    color: Colors.white,
+                    color: Color(0xFF276F8F),
                     size: 24,
                   ),
                 ),

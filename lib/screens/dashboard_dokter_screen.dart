@@ -420,7 +420,6 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
           totalUnreadMessages: totalUnread,
           onTapProfile: _openProfileScreen,
           onTapMessages: _openMessagesScreen,
-          onTapSearch: () => _openMessagesScreen(focusSearch: true),
           onTapWaitingResponse: () =>
               _openMessagesScreen(initialBelumDibalas: true),
         ),
