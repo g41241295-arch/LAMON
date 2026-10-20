@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 import '../../models/gastropedia_item_model.dart';
 
 /// Widget item kategori bergaya kartu kotak rounded.
@@ -67,10 +68,10 @@ class _CategoryItemState extends State<CategoryItem>
               Transform.scale(scale: _scaleAnim.value, child: child),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.gastropediaCardBg,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: const Color(0xFFE2ECF2),
+                color: AppColors.gastropediaCardBorder,
                 width: 1.2,
               ),
               boxShadow: [

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 
 /// Card bubble untuk section Deskripsi, Manfaat, dan Kandungan Gizi di Detail Makanan.
-/// Ditampilkan permanen terbuka tanpa ikon chevron dan tanpa interaksi collapse.
+/// Ditampilkan dengan latar krem lembut yang senada dan nyaman di mata.
 class GastropediaAccordion extends StatelessWidget {
   final String title;
   final Widget content;
@@ -18,21 +19,21 @@ class GastropediaAccordion extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.gastropediaCardBg,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFFE4EEF5),
-          width: 1,
+          color: AppColors.gastropediaCardBorder,
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             spreadRadius: 0,
             offset: const Offset(0, 3),
           ),
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 3,
             spreadRadius: 0,
             offset: const Offset(0, 1),
@@ -43,16 +44,16 @@ class GastropediaAccordion extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header Card (Judul Bold tanpa ikon chevron, latar gradasi krem)
+          // Header Card (Judul Bold dengan latar gradasi krem lembut)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color(0xFFFFFDE8),
-                  Color(0xFFF6E8B6),
+                  AppColors.gastropediaAccordionHeaderStart,
+                  AppColors.gastropediaAccordionHeaderEnd,
                 ],
               ),
             ),
@@ -67,12 +68,13 @@ class GastropediaAccordion extends StatelessWidget {
             ),
           ),
 
-          // Badan Konten (permanen terbuka dengan border pemisah krem dan padding rapi)
+          // Badan Konten (latar krem lembut dengan border pemisah krem)
           Container(
             decoration: const BoxDecoration(
+              color: AppColors.gastropediaCardBg,
               border: Border(
                 top: BorderSide(
-                  color: Color(0xFFDEC99B),
+                  color: AppColors.gastropediaAccordionBorder,
                   width: 1,
                 ),
               ),
