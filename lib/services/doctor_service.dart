@@ -39,14 +39,26 @@ class DoctorService {
         );
   }
 
-  /// Mengambil satu dokter berdasarkan ID.
+  /// Mengambil satu dokter berdasarkan ID secara tepat (strictly by document ID).
   Future<DoctorModel?> fetchById(String doctorId) async {
+    final cleanId = doctorId.trim();
+    if (cleanId.isEmpty) {
+      debugPrint('[DoctorService] fetchById dibatalkan: doctorId kosong.');
+      return null;
+    }
+
     try {
-      final doc = await _doctorsRef.doc(doctorId).get();
-      if (!doc.exists || doc.data() == null) return null;
-      return DoctorModel.fromFirestore(doc);
+      debugPrint('[DoctorService] fetchById querying document: "$cleanId"');
+      final doc = await _doctorsRef.doc(cleanId).get();
+      if (!doc.exists || doc.data() == null) {
+        debugPrint('[DoctorService] fetchById: Dokumen "$cleanId" tidak ditemukan di Firestore.');
+        return null;
+      }
+      final doctor = DoctorModel.fromFirestore(doc);
+      debugPrint('[DoctorService] fetchById: Sukses memuat "${doctor.name}" (id: ${doctor.id})');
+      return doctor;
     } catch (e) {
-      debugPrint('[DoctorService] fetchById error: $e');
+      debugPrint('[DoctorService] fetchById error untuk "$cleanId": $e');
       return null;
     }
   }
@@ -54,30 +66,25 @@ class DoctorService {
   /// Mengambil data dokter berdasarkan doctorId (alias untuk fetchById).
   Future<DoctorModel?> getDoctorById(String doctorId) => fetchById(doctorId);
 
-  /// Mengambil data dokter untuk user login saat ini:
-  /// 1. Cek field `doctorId` di `users/{uid}`
-  /// 2. Jika tidak ada, coba query `doctors` where `uid == uid`
-  ///
-  /// CATATAN: Method ini dipertahankan untuk kompatibilitas. Untuk dashboard
-  /// dokter gunakan fetchById(doctorId) + getDoctorByUid(uid) secara terpisah
-  /// agar error bisa dibedakan dengan jelas.
+  /// Mengambil data dokter untuk user login saat ini strictly berdasarkan
+  /// field `doctorId` (atau `doctor_id`) di dokumen `users/{uid}`.
+  /// Jika tidak ditemukan, mengembalikan null tanpa fallback diam-diam ke dokter lain.
   Future<DoctorModel?> getDoctorForUser(String uid) async {
     try {
       final userDoc = await _db.collection('users').doc(uid).get();
       if (userDoc.exists) {
-        final doctorId = userDoc.data()?['doctorId'] as String?;
+        final rawId = userDoc.data()?['doctorId'] ?? userDoc.data()?['doctor_id'];
+        final doctorId = rawId?.toString().trim();
         if (doctorId != null && doctorId.isNotEmpty) {
           final doc = await fetchById(doctorId);
           if (doc != null) return doc;
-          // doctorId ada tapi dokumen tidak ditemukan — return null
-          // agar pemanggil bisa menampilkan error yang sesuai.
-          debugPrint('[DoctorService] doctorId "$doctorId" tidak ditemukan di doctors.');
+          debugPrint('[DoctorService] doctorId "$doctorId" tidak ditemukan di koleksi doctors.');
           return null;
         }
       }
 
-      // Fallback: cari di koleksi doctors where uid == uid
-      return await getDoctorByUid(uid);
+      debugPrint('[DoctorService] users/$uid tidak memiliki field doctorId yang valid.');
+      return null;
     } catch (e) {
       debugPrint('[DoctorService] getDoctorForUser error: $e');
       return null;

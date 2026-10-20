@@ -135,33 +135,43 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
       }
 
       // ─── Ambil doctorId dari users/{uid} ─────────────────────────────────────
-      // Ini SATU-SATUNYA sumber kebenaran untuk "dokter yang sedang login".
-      // Tidak boleh menggunakan variabel global/cache yang bisa basi.
-      final doctorId = userDoc.data()?['doctorId'] as String?;
+      // Sumber kebenaran tunggal: field `doctorId` (atau `doctor_id`) di users/{uid}.
+      // Di-trim untuk mencegah kegagalan pencarian akibat spasi tak terlihat.
+      final rawDoctorId = userDoc.data()?['doctorId'] ?? userDoc.data()?['doctor_id'];
+      final doctorId = rawDoctorId?.toString().trim();
+
+      debugPrint('[DoctorAuth] --------------------------------------------------');
+      debugPrint('[DoctorAuth] UID dokter login: "$loadingUid"');
+      debugPrint('[DoctorAuth] Email dokter login: "${currentUser.email}"');
+      debugPrint('[DoctorAuth] Raw doctorId dari users/{uid}: "$rawDoctorId" (${rawDoctorId.runtimeType})');
+      debugPrint('[DoctorAuth] Clean doctorId: "$doctorId" (length: ${doctorId?.length ?? 0})');
+      debugPrint('[DoctorAuth] --------------------------------------------------');
 
       DoctorModel? doc;
       String? fetchError;
 
       if (doctorId != null && doctorId.isNotEmpty) {
-        // Ambil langsung dari doctors/{doctorId} — pakai doctorId yang benar
+        // Ambil LANGSUNG dari doctors/{doctorId} secara strictly by-ID.
+        debugPrint('[DoctorAuth] Querying doctors collection by ID: "$doctorId"');
         doc = await _doctorService.fetchById(doctorId);
 
         if (doc == null) {
-          // doctorId ada di Firestore users tapi dokumen doctors tidak ditemukan.
-          // Tampilkan pesan error ramah alih-alih diam-diam menampilkan dokter lain.
+          debugPrint('[DoctorAuth] GAGAL: Dokumen "$doctorId" tidak ditemukan di koleksi doctors.');
           fetchError =
-              'Akun dokter belum terhubung ke data dokter yang benar.\n'
+              'Data dokter tidak ditemukan untuk akun ini.\n'
               '(doctorId: "$doctorId" tidak ditemukan di koleksi doctors)\n'
               'Silakan hubungi administrator.';
+        } else {
+          debugPrint('[DoctorAuth] SUKSES: Memuat dokter "${doc.name}" (id: ${doc.id}, spesialisasi: ${doc.specialty})');
         }
       } else {
-        // Tidak ada doctorId → coba fallback: query doctors where uid == uid
-        doc = await _doctorService.getDoctorByUid(loadingUid);
-        if (doc == null) {
-          fetchError =
-              'Akun dokter belum terhubung ke data dokter.\n'
-              'Silakan hubungi administrator.';
-        }
+        // Field doctorId tidak ada / kosong:
+        // JANGAN fallback diam-diam ke dokter lain atau sembarang dokumen.
+        debugPrint('[DoctorAuth] GAGAL: Field doctorId tidak ditemukan atau kosong di users/$loadingUid.');
+        fetchError =
+            'Data dokter tidak ditemukan untuk akun ini.\n'
+            '(Field doctorId belum diatur pada akun ini)\n'
+            'Silakan hubungi administrator.';
       }
 
       // Cek sekali lagi: uid tidak berubah selama proses fetch dokter
