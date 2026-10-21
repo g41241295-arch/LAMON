@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/consultation_model.dart';
+import '../../services/doctor_service.dart';
 import '../../utils/app_date_formatter.dart';
 import '../konsultasi/chat_dokter_screen.dart';
 
 /// Tab 2: Daftar Pesan Pasien untuk Dokter
 class DoctorMessagesTab extends StatefulWidget {
   final List<ConsultationModel> consultations;
+  final String? doctorId;
   final bool initialBelumDibalas;
   final bool focusSearch;
 
   const DoctorMessagesTab({
     super.key,
     required this.consultations,
+    this.doctorId,
     this.initialBelumDibalas = false,
     this.focusSearch = false,
   });
@@ -22,6 +25,7 @@ class DoctorMessagesTab extends StatefulWidget {
 }
 
 class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
+  final DoctorService _doctorService = DoctorService();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   int _selectedTabIndex = 0; // 0: Sudah Dibalas, 1: Belum Dibalas
@@ -51,10 +55,25 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
 
   @override
   Widget build(BuildContext context) {
+    final docId = widget.doctorId;
+    if (docId != null && docId.isNotEmpty) {
+      return StreamBuilder<List<ConsultationModel>>(
+        stream: _doctorService.watchDoctorConsultations(docId),
+        initialData: widget.consultations,
+        builder: (context, snapshot) {
+          final liveList = snapshot.data ?? widget.consultations;
+          return _buildContent(liveList);
+        },
+      );
+    }
+    return _buildContent(widget.consultations);
+  }
+
+  Widget _buildContent(List<ConsultationModel> consultations) {
     final query = _searchController.text.trim().toLowerCase();
 
     // Hanya konsultasi paid
-    final paidConsultations = widget.consultations
+    final paidConsultations = consultations
         .where((c) => c.paymentStatus == PaymentStatus.paid)
         .toList();
 
@@ -78,22 +97,13 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
 
     return Column(
       children: [
-        // ── Header & Search Bar ──
+        // ── Search Bar (Judul "Pesan" di atas search bar telah dihapus karena sudah diwakili oleh header pill) ──
         Container(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
           color: Colors.transparent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Pesan',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primaryText,
-                ),
-              ),
-              const SizedBox(height: 12),
 
               // Kolom Cari Pasien
               Container(

@@ -740,28 +740,40 @@ class DoctorHomeTab extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: () async {
                           Navigator.pop(ctx);
-                          final doctorService = DoctorService();
-                          await doctorService.confirmConsultation(
-                            patientUid: item.patientUid,
-                            consultationId: item.id,
-                          );
+                          try {
+                            final doctorService = DoctorService();
+                            await doctorService.confirmConsultation(
+                              patientUid: item.patientUid,
+                              consultationId: item.id,
+                            );
 
-                          if (context.mounted) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ChatDokterScreen(
-                                  consultationId: item.id,
-                                  isDoctor: true,
-                                  patientUid: item.patientUid,
-                                  initialConsultation: item.copyWith(
-                                    status: 'active',
-                                    doctorConfirmedAt: DateTime.now(),
-                                    unreadForDoctor: 0,
+                            if (context.mounted) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ChatDokterScreen(
+                                    consultationId: item.id,
+                                    isDoctor: true,
+                                    patientUid: item.patientUid,
+                                    initialConsultation: item.copyWith(
+                                      status: 'active',
+                                      doctorConfirmedAt: DateTime.now(),
+                                      unreadForDoctor: 0,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            );
+                              );
+                            }
+                          } catch (e) {
+                            debugPrint('[DoctorHomeTab] Error confirming consultation: $e');
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Gagal mengonfirmasi konsultasi: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
                           }
                         },
                         style: ElevatedButton.styleFrom(

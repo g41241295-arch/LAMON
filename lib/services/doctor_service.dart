@@ -149,9 +149,29 @@ class DoctorService {
     required String consultationId,
   }) async {
     try {
+      String pUid = patientUid.trim();
+      if (pUid.isEmpty) {
+        final groupSnap = await _db
+            .collectionGroup('consultations')
+            .where(FieldPath.documentId, isEqualTo: consultationId)
+            .limit(1)
+            .get();
+        if (groupSnap.docs.isNotEmpty) {
+          final pathSegments = groupSnap.docs.first.reference.path.split('/');
+          final usersIdx = pathSegments.indexOf('users');
+          if (usersIdx != -1 && usersIdx + 1 < pathSegments.length) {
+            pUid = pathSegments[usersIdx + 1];
+          }
+        }
+      }
+
+      if (pUid.isEmpty) {
+        throw Exception('patientUid tidak ditemukan untuk konsultasi $consultationId');
+      }
+
       await _db
           .collection('users')
-          .doc(patientUid)
+          .doc(pUid)
           .collection('consultations')
           .doc(consultationId)
           .update({

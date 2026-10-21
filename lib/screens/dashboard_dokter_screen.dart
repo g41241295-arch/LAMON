@@ -222,6 +222,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
           _consultations = list;
         });
       }
+    }, onError: (e) {
+      debugPrint('[DoctorDashboardScreen] watchDoctorConsultations error: $e');
     });
   }
 
@@ -289,6 +291,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                 Expanded(
                   child: DoctorMessagesTab(
                     key: ValueKey('msg_${initialBelumDibalas}_$focusSearch'),
+                    doctorId: _doctor?.id,
                     consultations: _consultations,
                     initialBelumDibalas: initialBelumDibalas,
                     focusSearch: focusSearch,
