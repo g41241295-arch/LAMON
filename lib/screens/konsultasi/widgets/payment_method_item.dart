@@ -38,7 +38,7 @@ class PaymentMethodItem extends StatelessWidget {
           decoration: BoxDecoration(
             color: isSelected
                 ? AppColors.primary.withValues(alpha: 0.06)
-                : Colors.white,
+                : AppColors.cardBackground,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: isSelected ? AppColors.primary : const Color(0xFFE2ECF2),

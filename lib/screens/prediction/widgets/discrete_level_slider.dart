@@ -35,7 +35,7 @@ class DiscreteLevelSlider extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: const Color(0xFFE2E8F0),

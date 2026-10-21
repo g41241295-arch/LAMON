@@ -256,7 +256,7 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: hasUnread ? const Color(0xFFFFCDD2) : const Color(0xFFE8EFF5),

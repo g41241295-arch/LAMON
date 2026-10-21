@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 import '../../models/gastropedia_item_model.dart';
 import '../../services/ensiklopedia_service.dart';
 import '../../widgets/app_scaffold.dart';
@@ -106,7 +107,7 @@ class GastropediaCategoryScreen extends StatelessWidget {
                     },
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.cardBackground,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: const Color(0xFFE2ECF2),

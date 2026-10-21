@@ -305,7 +305,7 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: isSelected ? AppColors.primary : Colors.transparent,

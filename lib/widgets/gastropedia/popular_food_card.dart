@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 
 class PopularFoodItem {
   final String name;
@@ -41,7 +42,7 @@ class PopularFoodCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: const Color(0xFFE2ECF2),

@@ -50,6 +50,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/chat/
     - assets/images/gastropedia/
     - assets/images/berita/
     - assets/images/doctors/

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 import '../../models/gastropedia_item_model.dart';
 
 /// Kartu rekomendasi makanan dengan gambar mengisi bagian atas
@@ -66,7 +67,7 @@ class _RecommendationCardState extends State<RecommendationCard>
               Transform.scale(scale: _scaleAnim.value, child: child),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.cardBackground,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: const Color(0xFFE2ECF2),

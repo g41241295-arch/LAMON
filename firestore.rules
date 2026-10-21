@@ -156,7 +156,7 @@ service cloud.firestore {
       allow update: if isDoctor() 
                     && myDoctorId() == doctorId 
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                         'name', 'strNumber', 'gender', 'updatedAt'
+                         'name', 'strNumber', 'gender', 'updatedAt', 'photoUrl'
                        ]);
 
       allow create, delete: if false;

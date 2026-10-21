@@ -21,6 +21,10 @@ class AppColors {
   static const Color inputIcon = Color(0xFF8EAAB9);
 
   // Card Colors
+  /// Latar kartu informasi semi-transparan (85% opacity / 0xD9FFFFFF)
+  /// agar menyatu lembut dengan latar gradasi kuning-krem tanpa mengorbankan keterbacaan teks.
+  static const Color cardBackground = Color(0xD9FFFFFF);
+
   static const Color lunchCardGradientStart = Color(0xFF639BC6);
   static const Color lunchCardGradientEnd = Color(0xFF80B6DC);
   static const Color lunchCardBorder = Color(0xFF76A8D0);

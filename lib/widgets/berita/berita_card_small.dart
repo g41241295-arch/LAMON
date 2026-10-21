@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 import '../../models/berita_article_model.dart';
 import 'berita_image.dart';
 
@@ -26,13 +27,13 @@ class BeritaCardSmall extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 16),
       child: Material(
         // Material sebagai pembungkus terluar agar InkWell mendapat hit-test yang benar
-        color: Colors.white,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(20),
         elevation: 0,
         shadowColor: Colors.transparent,
         child: Ink(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.cardBackground,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(

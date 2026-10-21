@@ -370,7 +370,7 @@ class _DiseasePredictionResultScreenState
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: const Color(0xFFE2E8F0),
@@ -564,7 +564,7 @@ class _DiseasePredictionResultScreenState
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.cardBackground,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: const Color(0xFFE2E8F0),

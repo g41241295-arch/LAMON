@@ -305,7 +305,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -369,7 +369,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -446,7 +446,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -544,7 +544,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(

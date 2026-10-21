@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 
 /// Card bubble untuk section Deskripsi, Manfaat, dan Kandungan Gizi di Detail Makanan.
 /// Ditampilkan permanen terbuka tanpa ikon chevron dan tanpa interaksi collapse.
@@ -18,7 +19,7 @@ class GastropediaAccordion extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: const Color(0xFFE4EEF5),

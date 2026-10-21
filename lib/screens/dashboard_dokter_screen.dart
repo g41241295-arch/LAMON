@@ -6,6 +6,7 @@ import '../constants/app_colors.dart';
 import '../models/consultation_model.dart';
 import '../models/doctor_model.dart';
 import '../services/doctor_service.dart';
+import '../widgets/app_header_pill.dart';
 import 'dokter/doctor_home_tab.dart';
 import 'dokter/doctor_messages_tab.dart';
 import 'dokter/doctor_profile_tab.dart';
@@ -75,6 +76,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     _scheduleSub = null;
 
     if (mounted) {
+      debugPrint('[HIPOTESIS-3-D] State reset: _doctor set to null, previous _currentUid="$_currentUid"');
       setState(() {
         _doctor = null;
         _consultations = [];
@@ -105,6 +107,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
 
     // Catat uid yang sedang dimuat — sumber kebenaran tunggal untuk sesi ini.
     final String loadingUid = currentUser.uid;
+    debugPrint('[HIPOTESIS-3-A] Resolved currentUser: uid="$loadingUid", email="${currentUser.email}"');
 
     if (mounted) {
       setState(() {
@@ -140,6 +143,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
       final rawDoctorId = userDoc.data()?['doctorId'] ?? userDoc.data()?['doctor_id'];
       final doctorId = rawDoctorId?.toString().trim();
 
+      debugPrint('[HIPOTESIS-3-B] Read users/{uid}.doctorId: doctorId="$doctorId" for uid="$loadingUid" (raw="$rawDoctorId")');
       debugPrint('[DoctorAuth] --------------------------------------------------');
       debugPrint('[DoctorAuth] UID dokter login: "$loadingUid"');
       debugPrint('[DoctorAuth] Email dokter login: "${currentUser.email}"');
@@ -162,6 +166,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
               '(doctorId: "$doctorId" tidak ditemukan di koleksi doctors)\n'
               'Silakan hubungi administrator.';
         } else {
+          debugPrint('[HIPOTESIS-3-C] Fetched from doctors collection: document.id="${doc.id}", name="${doc.name}"');
           debugPrint('[DoctorAuth] SUKSES: Memuat dokter "${doc.name}" (id: ${doc.id}, spesialisasi: ${doc.specialty})');
         }
       } else {
@@ -188,6 +193,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
         return;
       }
 
+      debugPrint('[HIPOTESIS-3-D] State update: _doctor set to "${doc.name}" (id: ${doc.id}) for uid="$loadingUid"');
       setState(() {
         _doctor = doc;
         _isLoadingDoctor = false;
@@ -233,7 +239,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     });
   }
 
-  /// Buka layar Profil sebagai halaman terpisah dengan tombol kembali di header.
+  /// Buka layar Profil sebagai halaman terpisah dengan header pill krem.
   void _openProfileScreen() {
     if (_doctor == null) return;
     Navigator.push(
@@ -241,35 +247,29 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
       MaterialPageRoute(
         builder: (_) => Scaffold(
           backgroundColor: AppColors.bgGradientMiddle,
-          appBar: AppBar(
-            backgroundColor: Colors.white,
-            elevation: 0.5,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: AppColors.primaryText),
-              onPressed: () => Navigator.pop(context),
-              tooltip: 'Kembali',
+          body: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                AppHeaderPill(
+                  title: 'Profil Dokter',
+                  onBack: () => Navigator.pop(context),
+                ),
+                Expanded(
+                  child: DoctorProfileTab(
+                    doctor: _doctor!,
+                    onProfileUpdated: () => _loadDoctorData(),
+                  ),
+                ),
+              ],
             ),
-            title: const Text(
-              'Profil Dokter',
-              style: TextStyle(
-                color: AppColors.primaryText,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-            centerTitle: true,
-          ),
-          body: DoctorProfileTab(
-            doctor: _doctor!,
-            onProfileUpdated: _loadDoctorData,
           ),
         ),
       ),
     );
   }
 
-  /// Buka layar Pesan sebagai halaman terpisah dengan tombol kembali di header.
+  /// Buka layar Pesan sebagai halaman terpisah dengan header pill krem.
   void _openMessagesScreen({
     bool initialBelumDibalas = false,
     bool focusSearch = false,
@@ -279,30 +279,24 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
       MaterialPageRoute(
         builder: (_) => Scaffold(
           backgroundColor: AppColors.bgGradientMiddle,
-          appBar: AppBar(
-            backgroundColor: Colors.white,
-            elevation: 0.5,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: AppColors.primaryText),
-              onPressed: () => Navigator.pop(context),
-              tooltip: 'Kembali',
+          body: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                AppHeaderPill(
+                  title: 'Pesan',
+                  onBack: () => Navigator.pop(context),
+                ),
+                Expanded(
+                  child: DoctorMessagesTab(
+                    key: ValueKey('msg_${initialBelumDibalas}_$focusSearch'),
+                    consultations: _consultations,
+                    initialBelumDibalas: initialBelumDibalas,
+                    focusSearch: focusSearch,
+                  ),
+                ),
+              ],
             ),
-            title: const Text(
-              'Pesan',
-              style: TextStyle(
-                color: AppColors.primaryText,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-            centerTitle: true,
-          ),
-          body: DoctorMessagesTab(
-            key: ValueKey('msg_${initialBelumDibalas}_$focusSearch'),
-            consultations: _consultations,
-            initialBelumDibalas: initialBelumDibalas,
-            focusSearch: focusSearch,
           ),
         ),
       ),

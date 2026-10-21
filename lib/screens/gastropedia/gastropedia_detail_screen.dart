@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 import '../../models/gastropedia_item_model.dart';
 import '../../widgets/app_scaffold.dart';
 
@@ -64,7 +65,7 @@ class GastropediaDetailScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.cardBackground,
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
@@ -135,7 +136,7 @@ class GastropediaDetailScreen extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.cardBackground,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
