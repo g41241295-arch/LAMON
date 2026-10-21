@@ -298,7 +298,7 @@ class _DetailDokterScreenState extends State<DetailDokterScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2ECF2), width: 1.2),
         boxShadow: [

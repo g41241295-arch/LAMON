@@ -510,7 +510,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: const Color(0xFFE2E8F0),
@@ -606,7 +606,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
         padding: const EdgeInsets.symmetric(vertical: 12),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFDCEDF7) : Colors.white,
+          color: isSelected ? const Color(0xFFDCEDF7) : AppColors.cardBackground,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),

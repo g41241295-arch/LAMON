@@ -39,7 +39,7 @@ class DietSelectionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: const Color(0xFFE2E8F0),
@@ -102,7 +102,7 @@ class DietSelectionCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: isSelected
                             ? const Color(0xFFDCEDF7)
-                            : Colors.white,
+                            : AppColors.cardBackground,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isSelected

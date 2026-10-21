@@ -440,7 +440,7 @@ class _DiseasePredictionHistoryDetailScreenState
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.cardBackground,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: bannerBorder,
@@ -517,7 +517,7 @@ class _DiseasePredictionHistoryDetailScreenState
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: const Color(0xFFE2E8F0),
@@ -628,7 +628,7 @@ class _DiseasePredictionHistoryDetailScreenState
         Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.cardBackground,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: const Color(0xFFE2E8F0),
@@ -880,7 +880,7 @@ class _DiseasePredictionHistoryDetailScreenState
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.cardBackground,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: const Color(0xFFE2E8F0),
