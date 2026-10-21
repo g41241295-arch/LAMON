@@ -55,14 +55,8 @@ service cloud.firestore {
       allow delete: if isSignedIn() && request.auth.uid == userId;
       
       // Pencatatan makanan
-      match /food_entries/{entryId} {
-        allow read, update, delete: if isSignedIn() 
-                                 && request.auth.uid == userId 
-                                 && resource.data.user_id == request.auth.uid;
-                                 
-        allow create: if isSignedIn() 
-                   && request.auth.uid == userId 
-                   && request.resource.data.user_id == request.auth.uid;
+      match /food_entries/{entryId=**} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
 
       // Riwayat prediksi refluks (DOKTER TIDAK BOLEH MEMBACA)

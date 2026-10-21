@@ -104,7 +104,7 @@ class ChipSelector extends StatelessWidget {
             color: hasError ? Colors.red.shade700 : AppColors.primaryText,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,

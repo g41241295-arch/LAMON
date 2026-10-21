@@ -497,38 +497,42 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
               ),
             ),
           ],
-          // ── Pilihan Kategori ─────────────────────────────────────────────
+          // ── Pilihan Kategori: Jenis Makanan ──────────────────────────────
           SectionCard(
+            padding: const EdgeInsets.all(18),
+            child: ChipSelector(
+              label: 'Makanan Anda termasuk yang mana?',
+              options: const ['Junk Food', 'Homemade'],
+              selected: s.jenisMakanan,
+              hasError: s.errJenis,
+              onChanged: isReadOnly
+                  ? null
+                  : (v) => setState(() => s.jenisMakanan = v),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // ── Pilihan Kategori: Sumber Karbohidrat ─────────────────────────
+          SectionCard(
+            padding: const EdgeInsets.all(18),
+            child: ChipSelector(
+              label: 'Sumber karbohidrat mana yang Anda makan?',
+              options: const ['Nasi putih', 'Roti'],
+              selected: s.sumberKarbohidrat,
+              hasError: s.errKarbo,
+              onChanged: isReadOnly
+                  ? null
+                  : (v) => setState(() => s.sumberKarbohidrat = v),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // ── Pilihan Kategori: Protein ─────────────────────────────────────
+          SectionCard(
+            padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Jenis Makanan
-                ChipSelector(
-                  label: 'Makanan Anda termasuk yang mana?',
-                  options: const ['Junk Food', 'Homemade'],
-                  selected: s.jenisMakanan,
-                  hasError: s.errJenis,
-                  onChanged: isReadOnly ? null : (v) =>
-                      setState(() => s.jenisMakanan = v),
-                ),
-                const SizedBox(height: 16),
-                const Divider(height: 1, color: AppColors.lightGray),
-                const SizedBox(height: 16),
-
-                // Sumber Karbohidrat
-                ChipSelector(
-                  label: 'Sumber karbohidrat mana yang Anda makan?',
-                  options: const ['Nasi putih', 'Roti'],
-                  selected: s.sumberKarbohidrat,
-                  hasError: s.errKarbo,
-                  onChanged: isReadOnly ? null : (v) =>
-                      setState(() => s.sumberKarbohidrat = v),
-                ),
-                const SizedBox(height: 16),
-                const Divider(height: 1, color: AppColors.lightGray),
-                const SizedBox(height: 16),
-
-                // Protein
                 ChipSelector(
                   label: 'Protein apa yg Anda makan?',
                   options: const [
@@ -541,8 +545,9 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   selected: s.protein,
                   hasError: s.errProtein,
                   useGrid: true,
-                  onChanged: isReadOnly ? null : (v) =>
-                      setState(() => s.protein = v),
+                  onChanged: isReadOnly
+                      ? null
+                      : (v) => setState(() => s.protein = v),
                 ),
                 if (s.protein.contains('Lainnya'))
                   OtherTextField(
@@ -551,11 +556,17 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                     hasError: s.errProteinLainnya,
                     enabled: !isReadOnly,
                   ),
-                const SizedBox(height: 16),
-                const Divider(height: 1, color: AppColors.lightGray),
-                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
 
-                // Sayuran
+          // ── Pilihan Kategori: Sayuran ─────────────────────────────────────
+          SectionCard(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 ChipSelector(
                   label: 'Sayuran apa yg Anda makan?',
                   options: const [
@@ -567,8 +578,9 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   selected: s.sayuran,
                   hasError: s.errSayuran,
                   useGrid: true,
-                  onChanged: isReadOnly ? null : (v) =>
-                      setState(() => s.sayuran = v),
+                  onChanged: isReadOnly
+                      ? null
+                      : (v) => setState(() => s.sayuran = v),
                 ),
                 if (s.sayuran.contains('Lainnya'))
                   OtherTextField(
