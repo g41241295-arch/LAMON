@@ -41,7 +41,7 @@ class PopularFoodCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: '${item.name}, rating ${item.rating}, ${item.ratingCount} ulasan',
+      label: '${item.name}, rating ${item.rating}',
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
@@ -133,7 +133,7 @@ class PopularFoodCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              "${item.rating} (${item.ratingCount})",
+                              "${item.rating}",
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF7C8E97),
