@@ -29,7 +29,7 @@ class DoctorCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: AppColors.cardBackground,
+          color: AppColors.glassCardBackground,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: const Color(0xFFE2ECF2),

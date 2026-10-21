@@ -477,18 +477,22 @@ class _DoctorProfileTabState extends State<DoctorProfileTab> {
 
   Widget _buildGenderChip(String gender) {
     final isSelected = _selectedGender == gender;
+    final isFemale = gender == 'Perempuan';
+    // Perempuan terpilih = pink, Laki-laki terpilih = biru
+    final selectedColor = isFemale ? const Color(0xFFD63384) : AppColors.primary;
+    final selectedBgColor = isFemale
+        ? const Color(0xFFFCE4EF)
+        : AppColors.primary.withValues(alpha: 0.12);
     return GestureDetector(
       onTap: () => setState(() => _selectedGender = gender),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.12)
-              : const Color(0xFFF8FAFC),
+          color: isSelected ? selectedBgColor : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-              color: isSelected ? AppColors.primary : AppColors.inputBorder,
+              color: isSelected ? selectedColor : AppColors.inputBorder,
               width: isSelected ? 1.8 : 1),
         ),
         child: Row(
@@ -500,7 +504,7 @@ class _DoctorProfileTabState extends State<DoctorProfileTab> {
                     : Icons.female_rounded,
                 size: 18,
                 color:
-                    isSelected ? AppColors.primary : AppColors.neutralGray),
+                    isSelected ? selectedColor : AppColors.neutralGray),
             const SizedBox(width: 6),
             Text(gender,
                 style: TextStyle(
@@ -508,7 +512,7 @@ class _DoctorProfileTabState extends State<DoctorProfileTab> {
                     fontWeight:
                         isSelected ? FontWeight.bold : FontWeight.w500,
                     color: isSelected
-                        ? AppColors.primary
+                        ? selectedColor
                         : AppColors.primaryText)),
           ],
         ),

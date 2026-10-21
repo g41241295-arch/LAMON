@@ -445,7 +445,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
         // ── Background Pola Khusus Chat Konsultasi Dokter (Full Cover) ──
         Positioned.fill(
           child: Image.asset(
-            'assets/images/chat/bg_chat_konsultasi.png',
+            'assets/images/Background Chat Konsultasi Dokter.png',
             fit: BoxFit.cover,
           ),
         ),
@@ -634,7 +634,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 24, vertical: 20),
                                             decoration: BoxDecoration(
-                                              color: AppColors.cardBackground,
+                                              color: Colors.white,
                                               borderRadius:
                                                   BorderRadius.circular(20),
                                               border: Border.all(
