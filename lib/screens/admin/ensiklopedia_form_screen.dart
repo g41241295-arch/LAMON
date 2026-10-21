@@ -1,10 +1,16 @@
+import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../constants/app_colors.dart';
 import '../../models/ensiklopedia_entry_model.dart';
 import '../../services/ensiklopedia_service.dart';
 import '../../utils/app_exception.dart';
+import '../../widgets/admin/admin_markdown_editor.dart';
 import '../../widgets/admin/admin_widgets.dart';
+import '../../widgets/gastropedia/gastropedia_header.dart';
 
 class EnsiklopediaFormScreen extends StatefulWidget {
   final EnsiklopediaEntry? initialEntry; // null = mode tambah
@@ -26,115 +32,221 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
   final _service = EnsiklopediaService();
   final _formKey = GlobalKey<FormState>();
 
-  late final TextEditingController _istilahCtrl;
-  late final TextEditingController _namaLainCtrl;
-  late final TextEditingController _definisiCtrl;
-  late final TextEditingController _penjelasanCtrl;
-  late final TextEditingController _referensiCtrl;
-  late final TextEditingController _imageAssetCtrl;
-  late final TextEditingController _manfaatCtrl;
-  late final TextEditingController _kandunganCtrl;
+  late final TextEditingController _namaMakananCtrl;
   late final TextEditingController _caloriesCtrl;
   late final TextEditingController _proteinCtrl;
   late final TextEditingController _carbsCtrl;
   late final TextEditingController _fatCtrl;
+  late final TextEditingController _deskripsiCtrl;
+  late final TextEditingController _manfaatCtrl;
+  late final TextEditingController _kandunganCtrl;
 
   String _kategori = 'Makanan';
-  final List<String> _kategoriOptions = [
-    'Makanan',
-    'Buah',
-    'Sayuran',
-    'Pencernaan',
-    'Gizi',
-    'Gaya Hidup',
-  ];
+  final List<String> _kategoriOptions = ['Makanan', 'Buah', 'Sayuran'];
 
-  String _status = 'terbit';
-  final List<String> _statusOptions = ['terbit', 'draft'];
   bool _isRecommended = false;
 
-  String? _istilahError;
-  String? _definisiError;
-  String? _penjelasanError;
-  String? _referensiError;
+  File? _imageFile;
+  String? _existingImageUrl;
+
+  String? _namaMakananError;
+  String? _kategoriError;
+  String? _imageError;
+  String? _deskripsiError;
+  String? _caloriesError;
+  String? _proteinError;
+  String? _carbsError;
+  String? _fatError;
 
   bool _isSaving = false;
+  bool _isUploadingImage = false;
   bool get _isEditMode => widget.initialEntry != null;
 
   @override
   void initState() {
     super.initState();
     final e = widget.initialEntry;
-    _istilahCtrl = TextEditingController(text: e?.istilah ?? '');
-    _namaLainCtrl = TextEditingController(text: e?.namaLain ?? '');
-    _definisiCtrl = TextEditingController(text: e?.definisiSingkat ?? '');
-    _penjelasanCtrl = TextEditingController(text: e?.penjelasanLengkap ?? '');
-    _referensiCtrl = TextEditingController(text: e?.referensi ?? '');
-    _imageAssetCtrl = TextEditingController(text: e?.imageAsset ?? '');
+
+    _namaMakananCtrl = TextEditingController(text: e?.istilah ?? '');
+
+    // Kategori: jika ada data lama yang bukan Makanan/Buah/Sayuran, kosongkan chip agar admin pilih ulang
+    if (e != null) {
+      if (_kategoriOptions.contains(e.kategori)) {
+        _kategori = e.kategori;
+      } else {
+        _kategori = '';
+      }
+    } else {
+      _kategori = 'Makanan';
+    }
+
+    _existingImageUrl = (e?.imageAsset != null && e!.imageAsset!.isNotEmpty) ? e.imageAsset : null;
+    _isRecommended = e?.isRecommended ?? false;
+
+    _caloriesCtrl = TextEditingController(text: (e?.calories != null && e!.calories > 0) ? '${e.calories}' : '');
+    _proteinCtrl = TextEditingController(text: (e?.protein != null && e!.protein > 0) ? '${e.protein}' : '');
+    _carbsCtrl = TextEditingController(text: (e?.carbs != null && e!.carbs > 0) ? '${e.carbs}' : '');
+    _fatCtrl = TextEditingController(text: (e?.fat != null && e!.fat > 0) ? '${e.fat}' : '');
+
+    final initialDesc = (e?.definisiSingkat != null && e!.definisiSingkat.isNotEmpty)
+        ? e.definisiSingkat
+        : (e?.penjelasanLengkap ?? '');
+    _deskripsiCtrl = TextEditingController(text: initialDesc);
+
     _manfaatCtrl = TextEditingController(text: e?.manfaat.join('\n') ?? '');
     _kandunganCtrl = TextEditingController(text: e?.kandungan.join('\n') ?? '');
-    _caloriesCtrl = TextEditingController(text: e?.calories != null ? '${e!.calories}' : '');
-    _proteinCtrl = TextEditingController(text: e?.protein != null ? '${e!.protein}' : '');
-    _carbsCtrl = TextEditingController(text: e?.carbs != null ? '${e!.carbs}' : '');
-    _fatCtrl = TextEditingController(text: e?.fat != null ? '${e!.fat}' : '');
-
-    _kategori = e?.kategori ?? 'Makanan';
-    _status = e?.status ?? 'terbit';
-    _isRecommended = e?.isRecommended ?? false;
   }
 
   @override
   void dispose() {
-    _istilahCtrl.dispose();
-    _namaLainCtrl.dispose();
-    _definisiCtrl.dispose();
-    _penjelasanCtrl.dispose();
-    _referensiCtrl.dispose();
-    _imageAssetCtrl.dispose();
-    _manfaatCtrl.dispose();
-    _kandunganCtrl.dispose();
+    _namaMakananCtrl.dispose();
     _caloriesCtrl.dispose();
     _proteinCtrl.dispose();
     _carbsCtrl.dispose();
     _fatCtrl.dispose();
+    _deskripsiCtrl.dispose();
+    _manfaatCtrl.dispose();
+    _kandunganCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 85,
+      );
+      if (picked == null || !mounted) return;
+
+      final ext = picked.path.split('.').last.toLowerCase();
+      if (ext != 'jpg' && ext != 'jpeg' && ext != 'png') {
+        _showError('Format gambar harus JPG atau PNG.');
+        return;
+      }
+
+      final file = File(picked.path);
+      final sizeBytes = await file.length();
+      if (sizeBytes > 2 * 1024 * 1024) {
+        _showError('Ukuran gambar melebihi 2MB. Silakan pilih gambar yang lebih kecil.');
+        return;
+      }
+
+      setState(() {
+        _imageFile = file;
+        _imageError = null;
+      });
+    } catch (e) {
+      _showError('Gagal memilih gambar: $e');
+    }
+  }
+
+  Future<String> _uploadImageToStorage(File file, String docId) async {
+    try {
+      final ext = file.path.split('.').last.toLowerCase();
+      final filename = '${DateTime.now().millisecondsSinceEpoch}_$docId.$ext';
+      final ref = FirebaseStorage.instance.ref().child('gastropedia_images/$filename');
+      final uploadTask = await ref.putFile(
+        file,
+        SettableMetadata(contentType: 'image/$ext'),
+      );
+      return await uploadTask.ref.getDownloadURL();
+    } on FirebaseException catch (e) {
+      debugPrint('[EnsiklopediaForm] Firebase Storage error: ${e.code} - ${e.message}');
+      throw AppException(
+        'Gagal mengunggah gambar ke Firebase Storage (${e.code}): ${e.message ?? 'Layanan belum aktif'}.\n\n'
+        'Langkah perbaikan di Firebase Console:\n'
+        '1. Buka Firebase Console > Build > Storage > klik "Get Started".\n'
+        '2. Pada tab "Rules", pastikan aturan mengizinkan admin untuk menulis, contoh:\n'
+        'rules_version = \'2\';\n'
+        'service firebase.storage {\n'
+        '  match /b/{bucket}/o {\n'
+        '    match /{allPaths=**} {\n'
+        '      allow read: if request.auth != null;\n'
+        '      allow write: if request.auth != null;\n'
+        '    }\n'
+        '  }\n'
+        '}'
+      );
+    } catch (e) {
+      debugPrint('[EnsiklopediaForm] Upload image error: $e');
+      throw AppException('Gagal mengunggah gambar: $e');
+    }
   }
 
   bool _validate() {
     bool ok = true;
     setState(() {
-      _istilahError = null;
-      _definisiError = null;
-      _penjelasanError = null;
-      _referensiError = null;
+      _namaMakananError = null;
+      _kategoriError = null;
+      _imageError = null;
+      _deskripsiError = null;
+      _caloriesError = null;
+      _proteinError = null;
+      _carbsError = null;
+      _fatError = null;
     });
 
-    final istilah = _istilahCtrl.text.trim();
-    final definisi = _definisiCtrl.text.trim();
-    final penjelasan = _penjelasanCtrl.text.trim();
-    final referensi = _referensiCtrl.text.trim();
+    final nama = _namaMakananCtrl.text.trim();
+    if (nama.isEmpty) {
+      _namaMakananError = 'Nama makanan wajib diisi.';
+      ok = false;
+    }
 
-    if (istilah.isEmpty) {
-      _istilahError = 'Istilah medis tidak boleh kosong.';
+    if (_kategori.isEmpty) {
+      _kategoriError = 'Kategori wajib dipilih.';
       ok = false;
     }
-    if (definisi.isEmpty) {
-      _definisiError = 'Definisi singkat tidak boleh kosong.';
+
+    final hasImage = _imageFile != null || (_existingImageUrl != null && _existingImageUrl!.isNotEmpty);
+    if (!hasImage) {
+      _imageError = 'Gambar wajib diunggah.';
       ok = false;
     }
-    if (penjelasan.isEmpty) {
-      _penjelasanError = 'Penjelasan lengkap tidak boleh kosong.';
+
+    final deskripsi = _deskripsiCtrl.text.trim();
+    if (deskripsi.isEmpty) {
+      _deskripsiError = 'Deskripsi wajib diisi.';
       ok = false;
     }
-    if (referensi.isNotEmpty) {
-      final uri = Uri.tryParse(referensi);
-      if (uri == null || !uri.hasScheme || (!uri.scheme.startsWith('http'))) {
-        _referensiError = 'Referensi harus berupa URL valid (contoh: https://...).';
+
+    final calText = _caloriesCtrl.text.trim();
+    if (calText.isNotEmpty) {
+      final val = num.tryParse(calText);
+      if (val == null || val < 0) {
+        _caloriesError = 'Kalori harus berupa angka tidak negatif.';
         ok = false;
       }
     }
 
-    setState(() {});
+    final protText = _proteinCtrl.text.trim();
+    if (protText.isNotEmpty) {
+      final val = num.tryParse(protText);
+      if (val == null || val < 0) {
+        _proteinError = 'Protein harus berupa angka tidak negatif.';
+        ok = false;
+      }
+    }
+
+    final carbsText = _carbsCtrl.text.trim();
+    if (carbsText.isNotEmpty) {
+      final val = num.tryParse(carbsText);
+      if (val == null || val < 0) {
+        _carbsError = 'Karbohidrat harus berupa angka tidak negatif.';
+        ok = false;
+      }
+    }
+
+    final fatText = _fatCtrl.text.trim();
+    if (fatText.isNotEmpty) {
+      final val = num.tryParse(fatText);
+      if (val == null || val < 0) {
+        _fatError = 'Lemak harus berupa angka tidak negatif.';
+        ok = false;
+      }
+    }
+
     return ok;
   }
 
@@ -147,57 +259,89 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
 
     setState(() => _isSaving = true);
 
-    final istilah = _istilahCtrl.text.trim();
+    final istilah = _namaMakananCtrl.text.trim();
+    final istilahLower = istilah.toLowerCase();
     final now = DateTime.now();
-    final imageAsset = _imageAssetCtrl.text.trim().isNotEmpty ? _imageAssetCtrl.text.trim() : null;
-    final manfaatList = _manfaatCtrl.text.trim().isNotEmpty
-        ? _manfaatCtrl.text.split('\n').map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
-        : <String>[];
-    final kandunganList = _kandunganCtrl.text.trim().isNotEmpty
-        ? _kandunganCtrl.text.split('\n').map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
-        : <String>[];
-    final cal = int.tryParse(_caloriesCtrl.text.trim()) ?? 150;
-    final prot = int.tryParse(_proteinCtrl.text.trim()) ?? 6;
-    final car = int.tryParse(_carbsCtrl.text.trim()) ?? 18;
-    final f = int.tryParse(_fatCtrl.text.trim()) ?? 6;
+
+    String docId = widget.initialEntry?.id ?? '';
+    if (docId.isEmpty) {
+      docId = istilahLower
+          .replaceAll(RegExp(r'[^a-z0-9\-_]+'), '_')
+          .replaceAll(RegExp(r'_+'), '_');
+    }
 
     try {
+      String imageUrl = _existingImageUrl ?? '';
+      if (_imageFile != null) {
+        setState(() => _isUploadingImage = true);
+        try {
+          imageUrl = await _uploadImageToStorage(_imageFile!, docId);
+        } finally {
+          if (mounted) setState(() => _isUploadingImage = false);
+        }
+      }
+
+      final manfaatList = _manfaatCtrl.text
+          .split('\n')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+
+      final kandunganList = _kandunganCtrl.text
+          .split('\n')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+
+      final calVal = num.tryParse(_caloriesCtrl.text.trim())?.round() ?? (widget.initialEntry?.calories ?? 150);
+      final protVal = num.tryParse(_proteinCtrl.text.trim())?.round() ?? (widget.initialEntry?.protein ?? 6);
+      final carbsVal = num.tryParse(_carbsCtrl.text.trim())?.round() ?? (widget.initialEntry?.carbs ?? 18);
+      final fatVal = num.tryParse(_fatCtrl.text.trim())?.round() ?? (widget.initialEntry?.fat ?? 6);
+
+      final deskripsiText = _deskripsiCtrl.text.trim();
+
       if (_isEditMode) {
         final updated = EnsiklopediaEntry(
-          id: '', // akan di-generate oleh service
+          id: widget.initialEntry!.id,
           istilah: istilah,
-          istilahLower: istilah.toLowerCase(),
-          namaLain: _namaLainCtrl.text.trim().isNotEmpty ? _namaLainCtrl.text.trim() : null,
-          definisiSingkat: _definisiCtrl.text.trim(),
-          penjelasanLengkap: _penjelasanCtrl.text.trim(),
+          istilahLower: istilahLower,
+          namaLain: widget.initialEntry?.namaLain,
+          definisiSingkat: deskripsiText,
+          penjelasanLengkap: deskripsiText,
           kategori: _kategori,
-          referensi: _referensiCtrl.text.trim().isNotEmpty ? _referensiCtrl.text.trim() : null,
-          status: _status,
-          imageAsset: imageAsset,
-          manfaat: manfaatList,
-          kandungan: kandunganList,
-          isRecommended: _isRecommended,
-          calories: cal,
-          protein: prot,
-          carbs: car,
-          fat: f,
-          // Data dibawah akan diisi oleh service dari oldData:
-          createdBy: '',
-          createdById: '',
-          createdByType: '',
-          createdAt: now,
+          referensi: widget.initialEntry?.referensi,
+          createdBy: widget.initialEntry?.createdBy ?? '',
+          createdById: widget.initialEntry?.createdById ?? '',
+          createdByType: widget.initialEntry?.createdByType ?? 'admin',
+          createdAt: widget.initialEntry?.createdAt ?? now,
           updatedBy: widget.adminName,
           updatedById: widget.adminId,
           updatedAt: now,
+          status: widget.initialEntry?.status ?? 'terbit',
+          imageAsset: imageUrl,
+          manfaat: manfaatList,
+          kandungan: kandunganList,
+          isRecommended: _isRecommended,
+          calories: calVal,
+          protein: protVal,
+          carbs: carbsVal,
+          fat: fatVal,
         );
 
-        // updateEntry mengembalikan newId (bisa berubah jika istilah diganti)
-        await _service.updateEntry(
+        final newId = await _service.updateEntry(
           widget.initialEntry!.id,
           updated,
           widget.adminName,
           widget.adminId,
         );
+
+        // Pastikan field deskripsi & imageAsset tersimpan dengan aman
+        await FirebaseFirestore.instance.collection('encyclopedia').doc(newId).set({
+          'deskripsi': deskripsiText,
+          'definisiSingkat': deskripsiText,
+          'penjelasanLengkap': deskripsiText,
+          'imageAsset': imageUrl,
+        }, SetOptions(merge: true));
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(_successSnackbar('Data gastropedia berhasil diperbarui.'));
@@ -205,30 +349,38 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
         }
       } else {
         final entry = EnsiklopediaEntry(
-          id: '',
+          id: docId,
           istilah: istilah,
-          istilahLower: istilah.toLowerCase(),
-          namaLain: _namaLainCtrl.text.trim().isNotEmpty ? _namaLainCtrl.text.trim() : null,
-          definisiSingkat: _definisiCtrl.text.trim(),
-          penjelasanLengkap: _penjelasanCtrl.text.trim(),
+          istilahLower: istilahLower,
+          namaLain: null,
+          definisiSingkat: deskripsiText,
+          penjelasanLengkap: deskripsiText,
           kategori: _kategori,
-          referensi: _referensiCtrl.text.trim().isNotEmpty ? _referensiCtrl.text.trim() : null,
-          status: _status,
-          imageAsset: imageAsset,
-          manfaat: manfaatList,
-          kandungan: kandunganList,
-          isRecommended: _isRecommended,
-          calories: cal,
-          protein: prot,
-          carbs: car,
-          fat: f,
+          referensi: null,
           createdBy: widget.adminName,
           createdById: widget.adminId,
           createdByType: 'admin',
           createdAt: now,
+          status: 'terbit', // Entri baru otomatis berstatus terbit
+          imageAsset: imageUrl,
+          manfaat: manfaatList,
+          kandungan: kandunganList,
+          isRecommended: _isRecommended,
+          calories: calVal,
+          protein: protVal,
+          carbs: carbsVal,
+          fat: fatVal,
         );
 
         await _service.createEntry(entry, widget.adminName, widget.adminId);
+
+        // Pastikan field deskripsi & imageAsset tersimpan dengan aman
+        await FirebaseFirestore.instance.collection('encyclopedia').doc(docId).set({
+          'deskripsi': deskripsiText,
+          'definisiSingkat': deskripsiText,
+          'penjelasanLengkap': deskripsiText,
+          'imageAsset': imageUrl,
+        }, SetOptions(merge: true));
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(_successSnackbar('Data gastropedia berhasil ditambahkan.'));
@@ -238,9 +390,14 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
     } on AppException catch (e) {
       if (mounted) _showError(e.message);
     } catch (e) {
-      if (mounted) _showError('Terjadi kesalahan. Silakan coba lagi.');
+      if (mounted) _showError('Terjadi kesalahan: $e');
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+          _isUploadingImage = false;
+        });
+      }
     }
   }
 
@@ -248,11 +405,15 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(msg, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+              child: Text(
+                msg,
+                style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w500),
+              ),
             ),
           ],
         ),
@@ -260,7 +421,7 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 4),
+        duration: const Duration(seconds: 6),
       ),
     );
   }
@@ -280,79 +441,178 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
         duration: const Duration(seconds: 3),
       );
 
+  Widget _buildImagePicker() {
+    final hasImage = _imageFile != null || (_existingImageUrl != null && _existingImageUrl!.isNotEmpty);
+
+    return GestureDetector(
+      onTap: (_isSaving || _isUploadingImage) ? null : _pickImage,
+      child: Container(
+        height: 140,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: _imageError != null ? AppColors.adminRed : AppColors.inputBorder,
+            width: _imageError != null ? 1.6 : 1.4,
+          ),
+        ),
+        child: _isUploadingImage
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(color: AppColors.adminBlue, strokeWidth: 2.5),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Mengunggah gambar...',
+                      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.adminBlue),
+                    ),
+                  ],
+                ),
+              )
+            : hasImage
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(15),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (_imageFile != null)
+                          Image.file(_imageFile!, fit: BoxFit.cover)
+                        else if (_existingImageUrl!.startsWith('http'))
+                          Image.network(
+                            _existingImageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => _buildUploadPlaceholder(),
+                          )
+                        else
+                          Image.asset(
+                            _existingImageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => _buildUploadPlaceholder(),
+                          ),
+                        // Tombol hapus di pojok kanan atas
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: GestureDetector(
+                            onTap: (_isSaving || _isUploadingImage)
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _imageFile = null;
+                                      _existingImageUrl = null;
+                                    });
+                                  },
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                            ),
+                          ),
+                        ),
+                        // Tombol ganti gambar di bar bawah
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            color: Colors.black54,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.edit_rounded, color: Colors.white, size: 14),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Ganti Gambar',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : _buildUploadPlaceholder(),
+      ),
+    );
+  }
+
+  Widget _buildUploadPlaceholder() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.add_photo_alternate_outlined,
+            size: 36,
+            color: AppColors.adminBlue.withValues(alpha: 0.6),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Unggah Gambar',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.adminBlue,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Format JPG/PNG, maks. 2MB',
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              color: AppColors.neutralGray,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AdminScaffold(
-      header: AdminAppBar(
+      header: GastropediaHeader(
         title: _isEditMode ? 'Edit Gastropedia' : 'Tambah Gastropedia',
+        onBack: () => Navigator.of(context).pop(),
       ),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            40 + MediaQuery.of(context).padding.bottom,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Status Publikasi
-              Text(
-                'Status Publikasi',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primaryText,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: _statusOptions.map((s) {
-                  final active = _status == s;
-                  final label = s == 'terbit' ? 'Terbitkan' : 'Draft';
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: AdminFilterChip(
-                      label: label,
-                      isActive: active,
-                      onTap: () => setState(() => _status = s),
-                    ),
-                  );
-                }).toList(),
+              // 1. Nama Makanan
+              AdminInputField(
+                label: 'Nama Makanan',
+                hint: 'Contoh : Oatmeal',
+                controller: _namaMakananCtrl,
+                errorText: _namaMakananError,
+                onChanged: (_) => setState(() => _namaMakananError = null),
               ),
               const SizedBox(height: 16),
 
-              AdminInputField(
-                label: 'Nama Makanan / Istilah',
-                hint: 'Contoh : Oatmeal / Pisang',
-                controller: _istilahCtrl,
-                errorText: _istilahError,
-                onChanged: (_) => setState(() => _istilahError = null),
-              ),
-              const SizedBox(height: 16),
-              AdminInputField(
-                label: 'Nama Lain / Singkatan (opsional)',
-                hint: 'Contoh : Havermut',
-                controller: _namaLainCtrl,
-              ),
-              const SizedBox(height: 16),
-              AdminInputField(
-                label: 'Deskripsi Singkat',
-                hint: '1-2 kalimat untuk ringkasan kartu...',
-                controller: _definisiCtrl,
-                maxLines: 3,
-                errorText: _definisiError,
-                onChanged: (_) => setState(() => _definisiError = null),
-              ),
-              const SizedBox(height: 16),
-              AdminInputField(
-                label: 'Penjelasan Lengkap',
-                hint: 'Penjelasan lengkap untuk halaman detail...',
-                controller: _penjelasanCtrl,
-                maxLines: 5,
-                errorText: _penjelasanError,
-                onChanged: (_) => setState(() => _penjelasanError = null),
-              ),
-              const SizedBox(height: 16),
-
-              // Kategori single-select chips
+              // 2. Kategori (Wrap chips)
               Text(
                 'Kategori',
                 style: GoogleFonts.poppins(
@@ -362,32 +622,57 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: _kategoriOptions.map((k) {
-                    final active = _kategori == k;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: AdminFilterChip(
-                        label: k,
-                        isActive: active,
-                        onTap: () => setState(() => _kategori = k),
-                      ),
-                    );
-                  }).toList(),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _kategoriOptions.map((k) {
+                  final active = _kategori == k;
+                  return AdminFilterChip(
+                    label: k,
+                    isActive: active,
+                    onTap: () => setState(() {
+                      _kategori = k;
+                      _kategoriError = null;
+                    }),
+                  );
+                }).toList(),
+              ),
+              if (_kategoriError != null) ...[
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Text(
+                    _kategoriError!,
+                    style: GoogleFonts.poppins(fontSize: 12, color: AppColors.adminRed),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+
+              // 3. Gambar
+              Text(
+                'Gambar',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryText,
                 ),
               ),
+              const SizedBox(height: 6),
+              _buildImagePicker(),
+              if (_imageError != null) ...[
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Text(
+                    _imageError!,
+                    style: GoogleFonts.poppins(fontSize: 12, color: AppColors.adminRed),
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
 
-              AdminInputField(
-                label: 'Gambar (Asset Path / URL Web)',
-                hint: 'Contoh : assets/images/gastropedia/oatmeal.jpg atau https://...',
-                controller: _imageAssetCtrl,
-              ),
-              const SizedBox(height: 16),
-
-              // Switch Ramah Lambung (Rekomendasi)
+              // 4. Rekomendasi Makanan (Switch)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
@@ -403,7 +688,7 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Rekomendasi Ramah Lambung',
+                            'Rekomendasi Makanan',
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -411,7 +696,7 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                             ),
                           ),
                           Text(
-                            'Tampilkan di bagian Rekomendasi Teratas untuk penderita maag/GERD',
+                            'Tampilkan di bagian rekomendasi pada halaman Gastropedia pengguna',
                             style: GoogleFonts.poppins(
                               fontSize: 12,
                               color: AppColors.neutralGray,
@@ -423,32 +708,18 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                     Switch(
                       value: _isRecommended,
                       activeThumbColor: AppColors.adminBlue,
-                      onChanged: (val) => setState(() => _isRecommended = val),
+                      onChanged: (_isSaving || _isUploadingImage)
+                          ? null
+                          : (val) => setState(() => _isRecommended = val),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
 
-              AdminInputField(
-                label: 'Manfaat (1 baris per poin)',
-                hint: 'Meredakan iritasi lambung\nMembantu menetralkan asam lambung',
-                controller: _manfaatCtrl,
-                maxLines: 4,
-              ),
-              const SizedBox(height: 16),
-
-              AdminInputField(
-                label: 'Kandungan Gizi / Senyawa (1 baris per poin)',
-                hint: 'Serat Beta-Glukan\nKalium dan Vitamin B',
-                controller: _kandunganCtrl,
-                maxLines: 4,
-              ),
-              const SizedBox(height: 16),
-
-              // Baris Info Nutrisi Opsional
+              // 5. Informasi Nutrisi (2 Kolom)
               Text(
-                'Informasi Nutrisi Opsional (per porsi)',
+                'Informasi Nutrisi',
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -460,19 +731,25 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                 children: [
                   Expanded(
                     child: AdminInputField(
-                      label: 'Kalori (kkal)',
+                      label: 'Kalori',
                       hint: '150',
+                      suffixText: 'kkal',
                       controller: _caloriesCtrl,
                       keyboardType: TextInputType.number,
+                      errorText: _caloriesError,
+                      onChanged: (_) => setState(() => _caloriesError = null),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: AdminInputField(
-                      label: 'Protein (g)',
+                      label: 'Protein',
                       hint: '5.0',
+                      suffixText: 'g',
                       controller: _proteinCtrl,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      errorText: _proteinError,
+                      onChanged: (_) => setState(() => _proteinError = null),
                     ),
                   ),
                 ],
@@ -482,40 +759,68 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                 children: [
                   Expanded(
                     child: AdminInputField(
-                      label: 'Karbo (g)',
+                      label: 'Karbohidrat',
                       hint: '27.0',
+                      suffixText: 'g',
                       controller: _carbsCtrl,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      errorText: _carbsError,
+                      onChanged: (_) => setState(() => _carbsError = null),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: AdminInputField(
-                      label: 'Lemak (g)',
+                      label: 'Lemak',
                       hint: '2.5',
+                      suffixText: 'g',
                       controller: _fatCtrl,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      errorText: _fatError,
+                      onChanged: (_) => setState(() => _fatError = null),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
 
-              AdminInputField(
-                label: 'Referensi / Sumber (opsional)',
-                hint: 'Link jurnal medis / https://...',
-                controller: _referensiCtrl,
-                keyboardType: TextInputType.url,
-                errorText: _referensiError,
-                onChanged: (_) => setState(() => _referensiError = null),
+              // 6. Deskripsi (Toolbar B / I / list)
+              AdminMarkdownEditorField(
+                label: 'Deskripsi',
+                hint: 'Tulis deskripsi makanan',
+                controller: _deskripsiCtrl,
+                errorText: _deskripsiError,
+                minLines: 4,
+                maxLines: 6,
+                onChanged: (_) => setState(() => _deskripsiError = null),
+              ),
+              const SizedBox(height: 16),
+
+              // 7. Manfaat (Toolbar B / I / list)
+              AdminMarkdownEditorField(
+                label: 'Manfaat',
+                hint: 'Tulis satu manfaat per baris',
+                controller: _manfaatCtrl,
+                minLines: 4,
+                maxLines: 6,
+              ),
+              const SizedBox(height: 16),
+
+              // 8. Kandungan (Toolbar B / I / list)
+              AdminMarkdownEditorField(
+                label: 'Kandungan',
+                hint: 'Tulis satu kandungan per baris',
+                controller: _kandunganCtrl,
+                minLines: 4,
+                maxLines: 6,
               ),
               const SizedBox(height: 32),
 
-              // Tombol Simpan
+              // 9. Tombol Simpan
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isSaving ? null : _save,
+                  onPressed: (_isSaving || _isUploadingImage) ? null : _save,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.adminBlue,
                     foregroundColor: Colors.white,
@@ -524,14 +829,14 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     elevation: 0,
                   ),
-                  child: _isSaving
+                  child: (_isSaving || _isUploadingImage)
                       ? const SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                         )
                       : Text(
-                          'Simpan',
+                          _isEditMode ? 'Simpan Perubahan' : 'Simpan',
                           style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
