@@ -6,6 +6,7 @@ import '../../constants/app_colors.dart';
 import '../../models/ensiklopedia_entry_model.dart';
 import '../../services/ensiklopedia_service.dart';
 import '../../widgets/admin/admin_widgets.dart';
+import '../../widgets/gastropedia/gastropedia_header.dart';
 import 'ensiklopedia_form_screen.dart';
 import 'ensiklopedia_detail_screen.dart';
 
@@ -57,23 +58,19 @@ class _EnsiklopediaListScreenState extends State<EnsiklopediaListScreen> {
   List<EnsiklopediaEntry> _applyFilters(List<EnsiklopediaEntry> all) {
     List<EnsiklopediaEntry> result = all;
 
-    // Filter huruf awal
+    // Filter berdasarkan kategori
     if (_activeFilter != 'Semua') {
       result = result.where((e) {
-        final first = e.istilah.isNotEmpty ? e.istilah[0].toUpperCase() : '';
-        if (_activeFilter == 'A-D') return first.compareTo('A') >= 0 && first.compareTo('E') < 0;
-        if (_activeFilter == 'E-M') return first.compareTo('E') >= 0 && first.compareTo('N') < 0;
-        if (_activeFilter == 'N-Z') return first.compareTo('N') >= 0;
-        return true;
+        return e.kategori.toLowerCase() == _activeFilter.toLowerCase();
       }).toList();
     }
 
-    // Search cocokkan istilah DAN namaLain
+    // Search cocokkan istilah dan definisi singkat
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
       result = result.where((e) {
         return e.istilah.toLowerCase().contains(q) ||
-            (e.namaLain?.toLowerCase().contains(q) ?? false);
+            e.definisiSingkat.toLowerCase().contains(q);
       }).toList();
     }
 
@@ -201,32 +198,15 @@ class _EnsiklopediaListScreenState extends State<EnsiklopediaListScreen> {
   @override
   Widget build(BuildContext context) {
     return AdminScaffold(
-      header: AdminAppBar(
+      header: GastropediaHeader(
         title: 'Kelola Gastropedia',
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.cloud_download_outlined, size: 22),
-              color: AppColors.adminBlue,
-              tooltip: 'Sinkron 19 Data Bawaan',
-              onPressed: _seedInitialData,
-            ),
-            IconButton(
-              icon: const Icon(Icons.add_rounded, size: 26),
-              color: AppColors.adminBlue,
-              tooltip: 'Tambah Gastropedia',
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => EnsiklopediaFormScreen(
-                    adminName: _adminName ?? 'Admin',
-                    adminId: _adminId ?? '',
-                  ),
-                ),
-              ),
-            ),
-          ],
+        onBack: () => Navigator.of(context).pop(),
+        trailing: IconButton(
+          icon: const Icon(Icons.cloud_download_outlined, size: 20),
+          color: const Color(0xFF1E5D7D),
+          tooltip: 'Sinkron 19 Data Bawaan',
+          padding: EdgeInsets.zero,
+          onPressed: _seedInitialData,
         ),
       ),
       body: StreamBuilder<List<EnsiklopediaEntry>>(
@@ -238,7 +218,18 @@ class _EnsiklopediaListScreenState extends State<EnsiklopediaListScreen> {
 
             final all = snapshot.data ?? [];
             final filtered = _applyFilters(all);
-            final filters = ['Semua', 'A-D', 'E-M', 'N-Z'];
+
+            // Hitung jumlah per kategori (case-insensitive)
+            int countMakanan = all.where((e) => e.kategori.toLowerCase() == 'makanan').length;
+            int countBuah    = all.where((e) => e.kategori.toLowerCase() == 'buah').length;
+            int countSayuran = all.where((e) => e.kategori.toLowerCase() == 'sayuran').length;
+
+            final filters = [
+              ('Semua',   'Semua (${all.length})'),
+              ('Makanan', 'Makanan ($countMakanan)'),
+              ('Buah',    'Buah ($countBuah)'),
+              ('Sayuran', 'Sayuran ($countSayuran)'),
+            ];
 
             return Column(
               children: [
@@ -248,7 +239,7 @@ class _EnsiklopediaListScreenState extends State<EnsiklopediaListScreen> {
                   child: Column(
                     children: [
                       AdminSearchBar(
-                        hint: 'Cari istilah medis',
+                        hint: 'Cari makanan, buah, atau sayuran...',
                         controller: _searchCtrl,
                         onChanged: (v) => setState(() => _searchQuery = v.trim()),
                       ),
@@ -257,13 +248,12 @@ class _EnsiklopediaListScreenState extends State<EnsiklopediaListScreen> {
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           children: filters.map((f) {
-                            final label = f == 'Semua' ? 'Semua (${all.length})' : f;
                             return Padding(
                               padding: const EdgeInsets.only(right: 8),
                               child: AdminFilterChip(
-                                label: label,
-                                isActive: _activeFilter == f,
-                                onTap: () => setState(() => _activeFilter = f),
+                                label: f.$2,
+                                isActive: _activeFilter == f.$1,
+                                onTap: () => setState(() => _activeFilter = f.$1),
                               ),
                             );
                           }).toList(),

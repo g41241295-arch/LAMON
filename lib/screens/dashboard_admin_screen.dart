@@ -586,7 +586,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         const SizedBox(height: 12),
         _buildContentStreamCard(
           title: 'Gastropedia',
-          stream: FirebaseFirestore.instance.collection('ensiklopedia').snapshots(),
+          stream: FirebaseFirestore.instance.collection('encyclopedia').snapshots(),
           imagePath: 'assets/images/admin-pisang.png',
           onTap: () => Navigator.pushNamed(context, AppRoutes.adminEnsiklopedia),
           isBerita: false,
