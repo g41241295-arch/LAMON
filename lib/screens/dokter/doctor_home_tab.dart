@@ -255,9 +255,20 @@ class DoctorHomeTab extends StatelessWidget {
             doctorId: doctor.id,
             scheduleMap: scheduleMap,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
-          // ── 5. Kartu Akses Cepat "Pesan" ──
+          // ── 5. Section Pesan Pasien (pill label) ──
+          Row(
+            children: [
+              _buildSectionPill(
+                icon: Icons.chat_bubble_rounded,
+                label: 'Pesan Pasien',
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // ── Kartu Akses Cepat "Pesan" ──
           GestureDetector(
             onTap: () => onTapMessages(),
             child: Container(
