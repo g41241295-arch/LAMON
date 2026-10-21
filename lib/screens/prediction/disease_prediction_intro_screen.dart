@@ -186,7 +186,7 @@ class DiseasePredictionIntroScreen extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 26),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: AppColors.glassCardBackground,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: const Color(0xFFE2E8F0),
@@ -263,7 +263,7 @@ class DiseasePredictionIntroScreen extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: AppColors.glassCardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: const Color(0xFFCBE2EE),

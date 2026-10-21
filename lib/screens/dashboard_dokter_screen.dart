@@ -406,7 +406,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     return Scaffold(
       backgroundColor: AppColors.bgGradientMiddle,
       body: SafeArea(
-        bottom: false,
+        bottom: true,
         child: DoctorHomeTab(
           doctor: _doctor!,
           consultations: _consultations,

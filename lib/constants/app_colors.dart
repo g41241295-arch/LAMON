@@ -21,9 +21,14 @@ class AppColors {
   static const Color inputIcon = Color(0xFF8EAAB9);
 
   // Card Colors
-  /// Latar kartu informasi semi-transparan (85% opacity / 0xD9FFFFFF)
-  /// agar menyatu lembut dengan latar gradasi kuning-krem tanpa mengorbankan keterbacaan teks.
-  static const Color cardBackground = Color(0xD9FFFFFF);
+  /// Latar kartu putih solid (0xFFFFFFFF) — standar untuk seluruh kartu informasi.
+  /// Kartu Prediksi Penyakit dan DoctorCard memakai SectionCard/glass effect tersendiri.
+  static const Color cardBackground = Color(0xFFFFFFFF);
+
+  /// Latar kartu glass transparan (alpha ~55% / 0x8CFFFFFF)
+  /// Dipakai HANYA di: alur Prediksi Penyakit dan DoctorCard sisi pasien.
+  /// Nilai ini sama persis dengan Colors.white.withValues(alpha: 0.55) pada SectionCard Catat Makananmu.
+  static const Color glassCardBackground = Color(0x8CFFFFFF);
 
   static const Color lunchCardGradientStart = Color(0xFF639BC6);
   static const Color lunchCardGradientEnd = Color(0xFF80B6DC);

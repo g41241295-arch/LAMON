@@ -28,7 +28,7 @@ class RiskTrendCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.cardBackground,
+          color: AppColors.glassCardBackground,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: const Color(0xFFE2E8F0),
@@ -132,7 +132,7 @@ class RiskTrendCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: AppColors.glassCardBackground,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
           color: const Color(0xFFE2E8F0),

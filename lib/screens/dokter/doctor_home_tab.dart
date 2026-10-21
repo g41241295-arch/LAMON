@@ -5,6 +5,7 @@ import '../../models/consultation_model.dart';
 import '../../models/doctor_model.dart';
 import '../../services/doctor_service.dart';
 import '../../utils/app_date_formatter.dart';
+import '../beranda/widgets/header_section.dart';
 import '../konsultasi/chat_dokter_screen.dart';
 import '../konsultasi/widgets/doctor_avatar.dart';
 import 'widgets/doctor_calendar_card.dart';
@@ -35,10 +36,16 @@ class DoctorHomeTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final greeting = AppDateFormatter.getGreetingWord(now);
     final doctorName = doctor.formattedNameWithDoctorTitle;
 
     // Hitung statistik:
+    final todayConsultations = consultations.where((c) {
+      if (c.paymentStatus != PaymentStatus.paid) return false;
+      return c.createdAt.year == now.year &&
+          c.createdAt.month == now.month &&
+          c.createdAt.day == now.day;
+    }).toList();
+
     final waitingResponseList = consultations.where((c) {
       return c.paymentStatus == PaymentStatus.paid &&
           c.lastMessageSenderType == 'patient';
@@ -48,27 +55,13 @@ class DoctorHomeTab extends StatelessWidget {
       return c.paymentStatus == PaymentStatus.paid && c.isWaiting;
     }).toList();
 
-    // ── D2: Kalimat pengingat dinamis untuk kartu biru ──
-    // Logika prioritas:
-    // 1. Ada menunggu konfirmasi → tampilkan jumlah pasien menunggu
-    // 2. Ada jadwal praktik hari ini → tampilkan jadwal
-    // 3. Tidak ada keduanya → kalimat default ramah
+    // ── Jadwal praktik dokter hari ini ──
     final todayKey =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     final todaySlots = scheduleMap[todayKey] ?? [];
-    String reminderText;
-    if (waitingConfirmationList.isNotEmpty) {
-      final n = waitingConfirmationList.length;
-      reminderText = 'Ada $n pasien menunggu konfirmasimu hari ini.';
-    } else if (todaySlots.isNotEmpty) {
-      final slotLabel = todaySlots.first;
-      reminderText = 'Jadwal praktikmu hari ini: $slotLabel. Jangan lupa bersiap!';
-    } else {
-      reminderText = 'Semoga harimu menyenangkan, Dokter!';
-    }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -124,12 +117,15 @@ class DoctorHomeTab extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // ── D1: Kartu Sambutan Baru (di atas kartu biru) ──
+          // ── Bagian C: Kartu Sambutan Dokter (Identik SapaanCard Pasien) ──
           _buildWelcomeCard(doctorName),
           const SizedBox(height: 14),
 
-          // ── 2. Kartu Sapaan Biru (tetap ada, + D2 pengingat dinamis) ──
-          _buildGreetingCard(greeting, doctorName, reminderText),
+          // ── Bagian D: Widget Pengingat Jadwal Dokter ──
+          _buildScheduleReminderCard(
+            todaySlots: todaySlots,
+            waitingConfirmationCount: waitingConfirmationList.length,
+          ),
           const SizedBox(height: 18),
 
           // ── 3. Dua Kartu Statistik Sejajar ──
@@ -139,7 +135,7 @@ class DoctorHomeTab extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: const Color(0xFFE2F0F9), width: 1.2),
                     boxShadow: [
@@ -160,10 +156,12 @@ class DoctorHomeTab extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                           color: AppColors.summaryCardSubtext,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '\${todayConsultations.length}',
+                        '${todayConsultations.length}',
                         style: const TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.w900,
@@ -181,7 +179,7 @@ class DoctorHomeTab extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.cardBackground,
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
                         color: waitingResponseList.isNotEmpty
@@ -207,10 +205,12 @@ class DoctorHomeTab extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                             color: AppColors.summaryCardSubtext,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          '\${waitingResponseList.length}',
+                          '${waitingResponseList.length}',
                           style: TextStyle(
                             fontSize: 26,
                             fontWeight: FontWeight.w900,
@@ -236,11 +236,16 @@ class DoctorHomeTab extends StatelessWidget {
                 icon: Icons.calendar_month_rounded,
                 label: 'Jadwal Praktik',
               ),
-              const Text(
-                'Tap tanggal untuk edit',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.summaryCardSubtext,
+              const Flexible(
+                child: Text(
+                  'Tap tanggal untuk edit',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.summaryCardSubtext,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
                 ),
               ),
             ],
@@ -258,7 +263,7 @@ class DoctorHomeTab extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
               decoration: BoxDecoration(
-                color: AppColors.cardBackground,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
                   color: totalUnreadMessages > 0
@@ -317,7 +322,7 @@ class DoctorHomeTab extends StatelessWidget {
                             child: Text(
                               totalUnreadMessages > 99
                                   ? '99+'
-                                  : '\$totalUnreadMessages',
+                                  : '$totalUnreadMessages',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 11,
@@ -357,7 +362,7 @@ class DoctorHomeTab extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    '\${waitingConfirmationList.length}',
+                    '${waitingConfirmationList.length}',
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -374,7 +379,7 @@ class DoctorHomeTab extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
               decoration: BoxDecoration(
-                color: AppColors.cardBackground,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFFE8EFF5)),
               ),
@@ -405,79 +410,42 @@ class DoctorHomeTab extends StatelessWidget {
     );
   }
 
-  // ── D1: Kartu Sambutan Hero (logo LAMON + sambutan dokter) ──
+  // ── Bagian C: Kartu Sambutan Hero (Identik PERSIS dengan SapaanCard Pasien) ──
   Widget _buildWelcomeCard(String doctorName) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFF8DC), Color(0xFFFFF3B0)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE8DCAB), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Logo LAMON
-          Image.asset(
-            'assets/images/lamon-logo.png',
-            width: 52,
-            height: 52,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => Image.asset(
-              'assets/icon/lamon_icon_full.png',
-              width: 52,
-              height: 52,
-              fit: BoxFit.contain,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Selamat Datang, $doctorName!',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF53311C),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Kelola jadwal praktik dan konsultasi pasienmu di sini.',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: const Color(0xFF7A5133),
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return SapaanCard(
+      userName: doctorName,
+      customGreeting: 'Halo, Dokter!',
+      customTitle: 'Selamat Datang,\n$doctorName',
+      customSubtitle: 'Kelola jadwal praktik dan\nkonsultasi pasienmu di sini',
     );
   }
 
-  // ── 2 + D2: Kartu Sapaan Biru dengan pengingat dinamis ──
-  Widget _buildGreetingCard(String greeting, String doctorName, String reminderText) {
+  // ── Bagian D: Widget Pengingat Jadwal Dokter (Gaya Jam Makan Pasien) ──
+  Widget _buildScheduleReminderCard({
+    required List<String> todaySlots,
+    required int waitingConfirmationCount,
+  }) {
+    String title;
+    String? timeRange;
+    String subtitle;
+
+    if (todaySlots.isNotEmpty) {
+      title = 'Jadwal Praktik Hari Ini';
+      timeRange = todaySlots.join(', ');
+      subtitle = 'Jangan lupa bersiap sebelum sesi dimulai!';
+    } else if (waitingConfirmationCount > 0) {
+      title = 'Ada Pasien Menunggu';
+      timeRange = null;
+      subtitle = '$waitingConfirmationCount permintaan konsultasi menunggu konfirmasimu.';
+    } else {
+      title = 'Tidak Ada Jadwal Hari Ini';
+      timeRange = null;
+      subtitle = 'Semoga harimu menyenangkan, Dokter!';
+    }
+
     return Container(
-      padding: const EdgeInsets.all(18),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFFE8F4F8), Color(0xFFD2EBF5)],
@@ -498,99 +466,15 @@ class DoctorHomeTab extends StatelessWidget {
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Kotak ikon jam putih di kiri (konsisten dengan kartu jam makan pasien)
           Container(
+            width: 58,
+            height: 58,
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: DoctorAvatar(
-              photoUrl: doctor.effectivePhotoUrl,
-              doctorId: doctor.id,
-              doctorName: doctor.name,
-              size: 54,
-              borderRadius: 27,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  greeting,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: const Color(0xFF276F8F),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  doctorName,
-                  style: GoogleFonts.poppins(
-                    fontSize: 16.5,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF134563),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  doctor.specialty.isNotEmpty ? doctor.specialty : 'Dokter Umum',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF568095),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                // D2: Kalimat pengingat dinamis
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF276F8F).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline_rounded,
-                          size: 12, color: Color(0xFF276F8F)),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          reminderText,
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            color: const Color(0xFF276F8F),
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(14),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
                   color: const Color(0xFF276F8F).withValues(alpha: 0.08),
@@ -599,10 +483,64 @@ class DoctorHomeTab extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.medical_services_rounded,
-              color: Color(0xFF276F8F),
-              size: 24,
+            child: Center(
+              child: Image.asset(
+                'assets/images/clock-card1.png',
+                width: 42,
+                height: 42,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => const Icon(
+                  Icons.access_time_filled_rounded,
+                  color: Color(0xFF276F8F),
+                  size: 30,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+
+          // Blok teks di kanan
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF134563),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (timeRange != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    timeRange,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF134563),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF276F8F),
+                    height: 1.25,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ],
@@ -641,15 +579,15 @@ class DoctorHomeTab extends StatelessWidget {
 
   Widget _buildWaitingItemCard(BuildContext context, ConsultationModel item) {
     final scheduleDisplay = item.scheduledTime.isNotEmpty
-        ? 'Jadwal: \${item.scheduledTime}'
-        : 'Hari ini, \${AppDateFormatter.formatTime(item.createdAt)} WIB';
+        ? 'Jadwal: ${item.scheduledTime}'
+        : 'Hari ini, ${AppDateFormatter.formatTime(item.createdAt)} WIB';
 
     return GestureDetector(
       onTap: () => _showConfirmationBottomSheet(context, item),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.cardBackground,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFE2F0F9), width: 1),
           boxShadow: [
@@ -764,7 +702,7 @@ class DoctorHomeTab extends StatelessWidget {
                 if (item.patientGender != null && item.patientGender!.isNotEmpty)
                   _detailRow('Jenis Kelamin', item.patientGender!),
                 if (item.patientAge != null)
-                  _detailRow('Usia', '\${item.patientAge} tahun'),
+                  _detailRow('Usia', '${item.patientAge} tahun'),
                 _detailRow(
                   'Jadwal Konsultasi',
                   item.scheduledTime.isNotEmpty ? item.scheduledTime : 'Hari ini',
