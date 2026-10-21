@@ -112,18 +112,21 @@ class GastropediaDetailScreen extends StatelessWidget {
                               ),
                             ),
                     ),
-                    // Nama Item di bawah gambar
+                    // Nama Item di bawah gambar (rata tengah)
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         vertical: 16,
                         horizontal: 20,
                       ),
-                      child: Text(
-                        item.name,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E5D7D),
+                      child: Center(
+                        child: Text(
+                          item.name,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E5D7D),
+                          ),
                         ),
                       ),
                     ),
