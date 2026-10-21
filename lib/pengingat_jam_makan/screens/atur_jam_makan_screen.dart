@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/meal_reminder_plan.dart';
 import '../services/meal_reminder_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/meal_time_bottom_sheet.dart';
 
@@ -370,6 +372,13 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
                   Center(
                     child: _buildSelesaiButton(),
                   ),
+                  const SizedBox(height: 16),
+
+                  // ── DEBUG ONLY: Tombol Uji Alarm ──────────────────────
+                  if (kDebugMode)
+                    Center(
+                      child: _buildTestAlarmButton(),
+                    ),
                   const SizedBox(height: 32),
                 ],
               ),
@@ -683,5 +692,87 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
         ),
       ),
     );
+  }
+
+  // ── DEBUG ONLY ─────────────────────────────────────────────────────────────
+  /// Tombol uji alarm: menjadwalkan satu notifikasi 60 detik dari sekarang
+  /// dengan pengaturan SAMA seperti alarm asli. Hanya tampil di kDebugMode.
+  Widget _buildTestAlarmButton() {
+    return GlassContainer(
+      borderRadius: 24,
+      height: 48,
+      width: 260,
+      backgroundColor: const Color(0xFFFF6B35).withValues(alpha: 0.12),
+      border: Border.all(
+        color: const Color(0xFFFF6B35).withValues(alpha: 0.6),
+        width: 1.5,
+      ),
+      shadows: [
+        BoxShadow(
+          color: const Color(0xFFFF6B35).withValues(alpha: 0.10),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ],
+      onTap: _onTestAlarmPressed,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.alarm,
+            size: 18,
+            color: Color(0xFFB84A00),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '🧪 Uji alarm 1 menit',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFFB84A00),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _onTestAlarmPressed() async {
+    if (!kDebugMode) return;
+    try {
+      await NotificationService.instance.scheduleTestAlarm();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '🧪 Alarm uji dijadwalkan — akan berbunyi ~60 detik lagi',
+                    style: GoogleFonts.poppins(
+                        fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF276F8F),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menjadwalkan uji alarm: $e')),
+        );
+      }
+    }
   }
 }
