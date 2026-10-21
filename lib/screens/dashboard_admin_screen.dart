@@ -6,6 +6,8 @@ import '../constants/admin_theme.dart';
 import '../routes/app_routes.dart';
 import '../services/ensiklopedia_service.dart';
 import '../models/activity_log_model.dart';
+import '../models/berita_article_model.dart';
+import '../services/berita/berita_service.dart';
 import '../widgets/admin/activity_item.dart';
 import '../widgets/admin/admin_widgets.dart';
 import '../widgets/admin/content_menu_tile.dart';
@@ -22,6 +24,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String _adminId = '';
   bool _loadingAdmin = true;
   final _ensiklopediaService = EnsiklopediaService();
+  final _beritaService = BeritaService();
   bool _snackBarCleared = false;
 
   @override
@@ -113,7 +116,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             _buildDraftCard(),
             _buildStatCards(),
             const SizedBox(height: 24),
-            _buildSectionTitle('Aksi Cepat'),
+            _buildSectionTitle('Tambah Konten'),
             const SizedBox(height: 12),
             _buildQuickActions(),
             const SizedBox(height: 24),
@@ -307,13 +310,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildDraftCard() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('berita_articles').where('status', isEqualTo: 'draft').snapshots(),
+    return StreamBuilder<List<BeritaArticle>>(
+      stream: _beritaService.streamAll(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const SizedBox.shrink();
         }
-        int draftCount = snapshot.data!.docs.length;
+        final draftArticles = snapshot.data!.where((a) => a.status == 'draft').toList();
+        final draftCount = draftArticles.length;
+        if (draftCount == 0) {
+          return const SizedBox.shrink();
+        }
         
         return Container(
           margin: const EdgeInsets.only(bottom: 24),
@@ -369,10 +376,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Row(
       children: [
         Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('berita_articles').snapshots(),
+          child: StreamBuilder<List<BeritaArticle>>(
+            stream: _beritaService.streamAll(),
             builder: (context, snapshot) {
-              int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+              Widget countWidget;
+              if (snapshot.hasError) {
+                countWidget = Text(
+                  '-',
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AdminTheme.navyText,
+                  ),
+                );
+              } else if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
+                countWidget = const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AdminTheme.navyText),
+                );
+              } else {
+                final articles = snapshot.data ?? [];
+                final terbitCount = articles.where((a) => a.status == 'terbit').length;
+                countWidget = Text(
+                  terbitCount.toString(),
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AdminTheme.navyText,
+                  ),
+                );
+              }
+
               return GestureDetector(
                 onTap: _openKelolaBerita,
                 child: Container(
@@ -389,14 +424,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        count.toString(),
-                        style: GoogleFonts.poppins(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: AdminTheme.navyText,
-                        ),
-                      ),
+                      countWidget,
                       Text(
                         'Artikel berita',
                         style: GoogleFonts.poppins(
@@ -408,7 +436,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ),
               );
-            }
+            },
           ),
         ),
         const SizedBox(width: 16),
@@ -452,7 +480,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ),
               );
-            }
+            },
           ),
         ),
       ],
@@ -460,12 +488,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: GoogleFonts.poppins(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: AdminTheme.navyText,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        title,
+        style: GoogleFonts.poppins(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: AdminTheme.navyText,
+        ),
       ),
     );
   }
@@ -518,12 +560,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildManageContent() {
     return Column(
       children: [
-        _buildContentStreamCard(
-          title: 'Berita Kesehatan',
-          stream: FirebaseFirestore.instance.collection('berita_articles').snapshots(),
-          imagePath: 'assets/images/admin-berita.png',
-          onTap: _openKelolaBerita,
-          isBerita: true,
+        StreamBuilder<List<BeritaArticle>>(
+          stream: _beritaService.streamAll(),
+          builder: (context, snapshot) {
+            String subtitle;
+            if (snapshot.hasError) {
+              subtitle = 'Gagal memuat data';
+            } else if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
+              subtitle = 'Memuat data...';
+            } else {
+              final articles = snapshot.data ?? [];
+              final count = articles.length;
+              final draftCount = articles.where((a) => a.status == 'draft').length;
+              subtitle = '$count artikel · $draftCount draft';
+            }
+
+            return ContentMenuTile(
+              imagePath: 'assets/images/admin-berita.png',
+              title: 'Berita Kesehatan',
+              subtitle: subtitle,
+              onTap: _openKelolaBerita,
+            );
+          },
         ),
         const SizedBox(height: 12),
         _buildContentStreamCard(

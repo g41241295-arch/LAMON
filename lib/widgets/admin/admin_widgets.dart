@@ -33,11 +33,13 @@ class AdminGradientBackground extends StatelessWidget {
 class AdminScaffold extends StatelessWidget {
   final Widget? header;
   final Widget body;
+  final Widget? floatingActionButton;
 
   const AdminScaffold({
     super.key,
     this.header,
     required this.body,
+    this.floatingActionButton,
   });
 
   @override
@@ -56,6 +58,7 @@ class AdminScaffold extends StatelessWidget {
         extendBody: true,
         extendBodyBehindAppBar: true,
         resizeToAvoidBottomInset: true,
+        floatingActionButton: floatingActionButton,
         body: Stack(
           children: [
             Positioned.fill(

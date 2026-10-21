@@ -5,6 +5,7 @@ import '../../constants/app_colors.dart';
 import '../../models/berita_article_model.dart';
 import '../../services/berita/berita_service.dart';
 import '../../widgets/admin/admin_widgets.dart';
+import '../../widgets/app_header_pill.dart';
 import 'berita_form_screen.dart';
 
 class BeritaListAdminScreen extends StatefulWidget {
@@ -58,8 +59,8 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
       if (!mounted) return;
       if (!isSilent || res.inserted > 0) {
         final String successText = res.inserted > 0
-            ? '9 artikel berhasil dimuat'
-            : '9 artikel bawaan sudah ada di Firestore';
+            ? '${res.inserted} artikel berhasil disinkronkan'
+            : '9 artikel bawaan sudah mutakhir di Firestore';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
             successText,
@@ -193,53 +194,23 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
     );
   }
 
-  Future<void> _onTambah() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => BeritaFormScreen(
-          adminName: widget.adminName,
-          adminId: widget.adminId,
-        ),
-      ),
-    );
-  }
-
   // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return AdminScaffold(
-      header: AdminAppBar(
+      header: AppHeaderPill(
         title: 'Kelola Berita',
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Tombol seeding manual
-            IconButton(
-              icon: _isSeeding
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF134563)),
-                    )
-                  : const Icon(Icons.cloud_download_outlined, color: Color(0xFF134563), size: 22),
-              tooltip: 'Muat 9 Artikel Bawaan',
-              onPressed: _isSeeding ? null : () => _onSeedArticles(isSilent: false),
-            ),
-            // Tombol tambah artikel (+)
-            GestureDetector(
-              onTap: _onTambah,
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF134563),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.add, color: Colors.white, size: 20),
-              ),
-            ),
-          ],
+        rightAction: IconButton(
+          icon: _isSeeding
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF134563)),
+                )
+              : const Icon(Icons.cloud_download_outlined, color: Color(0xFF134563), size: 22),
+          tooltip: 'Muat 9 Artikel Bawaan',
+          onPressed: _isSeeding ? null : () => _onSeedArticles(isSilent: false),
         ),
       ),
       body: StreamBuilder<List<BeritaArticle>>(
@@ -612,28 +583,22 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
           const SizedBox(width: 4),
 
           // ── Action Buttons: Edit (Pensil) & Hapus (Tempat Sampah) ─────
-          Column(
+          Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              IconButton(
-                icon: const Icon(Icons.edit_outlined, size: 20, color: Color(0xFF134563)),
+              _ActionIconBerita(
+                icon: Icons.edit_outlined,
+                color: const Color(0xFF134563),
                 tooltip: 'Edit artikel',
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                padding: const EdgeInsets.all(8),
-                onPressed: () => _onEdit(artikel),
+                onTap: () => _onEdit(artikel),
               ),
-              IconButton(
-                icon: isDeleting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFDC2626)),
-                      )
-                    : const Icon(Icons.delete_outline_rounded, size: 20, color: Color(0xFFDC2626)),
+              const SizedBox(width: 4),
+              _ActionIconBerita(
+                icon: isDeleting ? null : Icons.delete_outline_rounded,
+                color: const Color(0xFFDC2626),
                 tooltip: 'Hapus artikel',
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                padding: const EdgeInsets.all(8),
-                onPressed: isDeleting ? null : () => _onDelete(artikel),
+                isLoading: isDeleting,
+                onTap: isDeleting ? null : () => _onDelete(artikel),
               ),
             ],
           ),
@@ -813,4 +778,47 @@ class _DashedBorderPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) =>
       oldDelegate.color != color || oldDelegate.strokeWidth != strokeWidth;
+}
+
+// ── Action Icon Berita (bergaya pill seperti Ensiklopedia) ───────────────────
+
+class _ActionIconBerita extends StatelessWidget {
+  final IconData? icon;
+  final Color color;
+  final String tooltip;
+  final VoidCallback? onTap;
+  final bool isLoading;
+
+  const _ActionIconBerita({
+    required this.icon,
+    required this.color,
+    required this.tooltip,
+    this.onTap,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: isLoading
+                ? SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: color),
+                  )
+                : Icon(icon, size: 18, color: color),
+          ),
+        ),
+      ),
+    );
+  }
 }
