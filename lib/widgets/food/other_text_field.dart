@@ -40,7 +40,9 @@ class OtherTextField extends StatelessWidget {
                 color: AppColors.inputPlaceholder,
               ),
               filled: true,
-              fillColor: enabled ? AppColors.inputBackground : AppColors.lightGray,
+              fillColor: enabled
+                  ? Colors.white.withValues(alpha: 0.65)
+                  : AppColors.lightGray.withValues(alpha: 0.5),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 14,
                 vertical: 10,
@@ -50,7 +52,7 @@ class OtherTextField extends StatelessWidget {
                 borderSide: BorderSide(
                   color: hasError
                       ? Colors.red.shade400
-                      : AppColors.inputBorder,
+                      : Colors.white.withValues(alpha: 0.6),
                   width: 1.2,
                 ),
               ),

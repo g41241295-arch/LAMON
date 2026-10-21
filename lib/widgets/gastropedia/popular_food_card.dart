@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
+import '../../models/gastropedia_item_model.dart';
 
 class PopularFoodItem {
   final String name;
   final String imageAsset;
   final double rating;
   final int ratingCount;
+  final GastropediaItem gastropediaItem;
 
   PopularFoodItem({
     required this.name,
     required this.imageAsset,
     required this.rating,
     required this.ratingCount,
+    required this.gastropediaItem,
   });
 }
 
@@ -42,10 +45,10 @@ class PopularFoodCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: AppColors.cardBackground,
+          color: AppColors.gastropediaCardBg,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: const Color(0xFFE2ECF2),
+            color: AppColors.gastropediaCardBorder,
             width: 1.2,
           ),
           boxShadow: [

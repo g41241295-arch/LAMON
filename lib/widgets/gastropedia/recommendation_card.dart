@@ -67,10 +67,10 @@ class _RecommendationCardState extends State<RecommendationCard>
               Transform.scale(scale: _scaleAnim.value, child: child),
           child: Container(
             decoration: BoxDecoration(
-              color: AppColors.cardBackground,
+              color: AppColors.gastropediaCardBg,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: const Color(0xFFE2ECF2),
+                color: AppColors.gastropediaCardBorder,
                 width: 1.2,
               ),
               boxShadow: [
@@ -124,12 +124,14 @@ class _RecommendationCardState extends State<RecommendationCard>
                 ),
 
                 // ─── Baris Bawah: Judul Makanan + Chevron Bulat Akses ───
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 10,
-                  ),
-                  child: Row(
+                SizedBox(
+                  height: 52,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    child: Row(
                     children: [
                       // Judul Makanan di sisi kiri
                       Expanded(
@@ -178,7 +180,8 @@ class _RecommendationCardState extends State<RecommendationCard>
                     ],
                   ),
                 ),
-              ],
+              ),
+            ],
             ),
           ),
         ),

@@ -35,6 +35,13 @@ class AppColors {
   static const Color summaryCardText = Color(0xFF1E5D7D);
   static const Color summaryCardSubtext = Color(0xFF527F97);
 
+  // Gastropedia Theme Colors (Krem lembut / warm off-white)
+  static const Color gastropediaCardBg = Color(0xFFFCF9EE);
+  static const Color gastropediaCardBorder = Color(0xFFEBE3D0);
+  static const Color gastropediaAccordionHeaderStart = Color(0xFFFFFDF5);
+  static const Color gastropediaAccordionHeaderEnd = Color(0xFFF5EEDB);
+  static const Color gastropediaAccordionBorder = Color(0xFFE5DDC7);
+
   // Accents & Status
   static const Color orangeAccent = Color(0xFFE5983A);
   static const Color brownAccent = Color(0xFF9E652B);
