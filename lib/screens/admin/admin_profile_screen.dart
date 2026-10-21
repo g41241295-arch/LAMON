@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/gastropedia/gastropedia_header.dart';
 
@@ -22,8 +24,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   String? _selectedGender;
   String _adminName = '';
   String _adminEmail = '';
+  String? _photoUrl; // URL foto dari Firebase Storage (null = pakai aset default)
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isUploadingPhoto = false;
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -73,6 +78,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         final gender = data['jenis_kelamin']?.toString();
         if (gender != null && (gender == 'Laki-laki' || gender == 'Perempuan')) {
           _selectedGender = gender;
+        }
+
+        // Baca URL foto profil yang sudah diunggah (jika ada)
+        final rawPhotoUrl = data['photo_url']?.toString().trim() ?? '';
+        if (rawPhotoUrl.isNotEmpty) {
+          _photoUrl = rawPhotoUrl;
         }
       } else {
         _adminName = user.displayName ?? 'Admin';
@@ -127,6 +138,22 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   }
 
   Widget _buildAvatarImage() {
+    // Prioritas: (1) foto yang diunggah admin (URL), (2) asset per nama, (3) ikon default
+    if (_photoUrl != null && _photoUrl!.isNotEmpty) {
+      return Image.network(
+        _photoUrl!,
+        width: 96,
+        height: 96,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          final assetPath = _resolvePhotoAsset();
+          if (assetPath != null) {
+            return Image.asset(assetPath, width: 96, height: 96, fit: BoxFit.cover);
+          }
+          return _buildDefaultAvatar();
+        },
+      );
+    }
     final assetPath = _resolvePhotoAsset();
     if (assetPath != null) {
       return Image.asset(
@@ -138,6 +165,163 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       );
     }
     return _buildDefaultAvatar();
+  }
+
+  // ── Bottom sheet pilihan sumber foto ──────────────────────────────────────
+  void _showPhotoSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Text('Ganti Foto Profil',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primaryText)),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                        color: const Color(0xFF276F8F).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.camera_alt_rounded,
+                        color: Color(0xFF276F8F)),
+                  ),
+                  title: const Text('Kamera',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Ambil foto langsung',
+                      style: TextStyle(fontSize: 12)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickAndUploadPhoto(ImageSource.camera);
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                        color: const Color(0xFF276F8F).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.photo_library_rounded,
+                        color: Color(0xFF276F8F)),
+                  ),
+                  title: const Text('Galeri',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Pilih dari galeri HP',
+                      style: TextStyle(fontSize: 12)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickAndUploadPhoto(ImageSource.gallery);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Pilih, kompres, upload, dan simpan URL foto profil admin ─────────────
+  Future<void> _pickAndUploadPhoto(ImageSource source) async {
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 70,
+      );
+      if (picked == null) return;
+
+      // Validasi format
+      final ext = picked.path.split('.').last.toLowerCase();
+      if (ext != 'jpg' && ext != 'jpeg' && ext != 'png') {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Format gambar harus JPG atau PNG.'),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      final Uint8List imageBytes = await picked.readAsBytes();
+      if (!mounted) return;
+      setState(() => _isUploadingPhoto = true);
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      String downloadUrl;
+      try {
+        // Upload ke Firebase Storage: profil_admin/{uid}.jpg
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('profil_admin/${user.uid}.jpg');
+        final metadata = SettableMetadata(
+          contentType: 'image/jpeg',
+          customMetadata: {'uid': user.uid},
+        );
+        final task = await storageRef.putData(imageBytes, metadata);
+        downloadUrl = await task.ref.getDownloadURL();
+      } catch (storageError) {
+        debugPrint('[AdminProfile] Firebase Storage gagal: $storageError');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal mengunggah foto: $storageError'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Simpan URL ke Firestore di koleksi 'users', field 'photo_url'
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'photo_url': downloadUrl});
+
+      if (mounted) {
+        setState(() => _photoUrl = downloadUrl);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Foto profil berhasil diperbarui.'),
+            backgroundColor: AppColors.successGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengganti foto: $e'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
   }
 
   Widget _buildGenderChip(String gender) {
@@ -301,19 +485,66 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                         padding: const EdgeInsets.fromLTRB(20, 10, 20, 32),
                         child: Column(
                           children: [
-                            // Avatar Besar Bulat Admin dengan Border Biru Tua
+                  // Avatar Besar Bulat Admin dengan tombol kamera
                   Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFF276F8F),
-                          width: 2.5,
-                        ),
-                      ),
-                      child: ClipOval(
-                        child: _buildAvatarImage(),
+                    child: GestureDetector(
+                      onTap: _isUploadingPhoto ? null : _showPhotoSourceSheet,
+                      child: Stack(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFF276F8F),
+                                width: 2.5,
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: _isUploadingPhoto
+                                  ? Container(
+                                      width: 96,
+                                      height: 96,
+                                      color: const Color(0xFF276F8F)
+                                          .withValues(alpha: 0.1),
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                          color: Color(0xFF276F8F),
+                                          strokeWidth: 2.5,
+                                        ),
+                                      ),
+                                    )
+                                  : _buildAvatarImage(),
+                            ),
+                          ),
+                          if (!_isUploadingPhoto)
+                            Positioned(
+                              bottom: 2,
+                              right: 2,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF276F8F),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: Colors.white, width: 2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black
+                                          .withValues(alpha: 0.15),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt_rounded,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
