@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 import '../../providers/app_state.dart';
 import 'screening_scaffold.dart';
 import 'widgets/screening_avatars.dart';
@@ -104,7 +105,7 @@ class _ScreeningHistoryScreenState extends State<ScreeningHistoryScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFDCEDF7) : Colors.white,
+          color: isSelected ? const Color(0xFFDCEDF7) : AppColors.cardBackground,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected ? const Color(0xFF5B95AF) : const Color(0xFFE2E8F0),

@@ -37,7 +37,7 @@ class ContentMenuTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppColors.cardBackground,
       borderRadius: BorderRadius.circular(ContentMenuDims.tileRadius),
       child: InkWell(
         onTap: onTap,

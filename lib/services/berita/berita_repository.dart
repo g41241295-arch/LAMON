@@ -288,7 +288,13 @@ class BeritaRepository {
         final List<BeritaArticle> list = [];
         for (final doc in snap.docs) {
           try {
-            list.add(BeritaArticle.fromFirestore(doc));
+            final art = BeritaArticle.fromFirestore(doc);
+            final stat = _staticArticles.where((a) => a.id == doc.id).firstOrNull;
+            if (stat != null && (art.kontenMarkdown == null || art.kontenMarkdown!.trim().isEmpty || art.konten.isEmpty)) {
+              list.add(stat);
+            } else {
+              list.add(art);
+            }
           } catch (docErr) {
             debugPrint('[BeritaRepository] Dokumen rusak ${doc.id} dilewati: $docErr');
           }
@@ -320,20 +326,20 @@ class BeritaRepository {
 
   /// Ambil artikel berdasarkan ID dari Firestore atau data lokal.
   static Future<BeritaArticle?> getById(String id) async {
+    final stat = _staticArticles.where((a) => a.id == id).firstOrNull;
     try {
       final doc = await _fs.collection(_col).doc(id).get();
       if (doc.exists) {
         final art = BeritaArticle.fromFirestore(doc);
-        if (art.kontenMarkdown == null || art.kontenMarkdown!.isEmpty) {
-          final stat = _staticArticles.where((a) => a.id == id).firstOrNull;
-          if (stat != null) return stat;
+        if (stat != null && (art.kontenMarkdown == null || art.kontenMarkdown!.trim().isEmpty || art.konten.isEmpty)) {
+          return stat;
         }
         return art;
       }
     } catch (e) {
       debugPrint('BeritaRepository.getById error: $e');
     }
-    return _staticArticles.where((a) => a.id == id).firstOrNull;
+    return stat;
   }
 
   /// Kembalikan data statis sinkron (untuk sisi pengguna yang masih sync).

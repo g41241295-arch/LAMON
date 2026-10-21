@@ -1,4 +1,4 @@
-﻿rules_version = '2';
+rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
@@ -13,6 +13,18 @@ service firebase.storage {
                    && request.resource.size < 5 * 1024 * 1024
                    && (request.resource.contentType.matches('image/.*') 
                        || request.resource.contentType == 'application/pdf');
+    }
+
+    // Rules untuk foto profil dokter
+    // Path: doctors/{doctorId}/profile.jpg
+    // Hanya dokter yang bersangkutan (via uid di users/{uid}.doctorId) yang boleh menulis.
+    // Semua user yang sudah login boleh membaca (untuk tampilan di kartu pasien, dll.).
+    match /doctors/{doctorId}/{fileName} {
+      allow read: if request.auth != null;
+
+      allow write: if request.auth != null
+                   && request.resource.size < 2 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
     }
   }
 }

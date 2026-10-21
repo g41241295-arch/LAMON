@@ -63,9 +63,18 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
       _hasLoadedConsultation = true;
     }
 
-    _loadInitialConsultation();
+    // Mulai listen dengan patientUid yang tersedia saat ini.
+    // Jika initialConsultation sudah ada, patientUid sudah tersedia.
     _listenConsultation();
-    _markRead();
+
+    // Muat data awal jika belum ada, lalu re-listen dengan patientUid yang benar.
+    _loadInitialConsultation();
+
+    // Reset unread segera setelah widget ter-build (via addPostFrameCallback)
+    // agar badge hilang begitu dokter membuka layar chat.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _markRead();
+    });
 
     _focusNode.addListener(() {
       if (_focusNode.hasFocus) {
@@ -94,6 +103,8 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
           _consultation = data;
           _hasLoadedConsultation = true;
         });
+        // Re-listen dengan patientUid yang kini sudah tersedia.
+        _listenConsultation();
         _markRead();
       }
     }
@@ -428,242 +439,315 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     final statusLabel = isWaiting ? 'Menunggu konfirmasi' : 'Aktif';
     final statusColor = isWaiting ? AppColors.warningYellow : AppColors.successGreen;
 
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        shadowColor: Colors.black.withValues(alpha: 0.1),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppColors.primaryText),
-          onPressed: () => Navigator.pop(context),
-          tooltip: 'Kembali',
+    final Widget chatContent = Stack(
+      fit: StackFit.expand,
+      children: [
+        // ── Background Pola Khusus Chat Konsultasi Dokter (Full Cover) ──
+        Positioned.fill(
+          child: Image.asset(
+            'assets/images/chat/bg_chat_konsultasi.png',
+            fit: BoxFit.cover,
+          ),
         ),
-        titleSpacing: 0,
-        title: Row(
-          children: [
-            if (widget.isDoctor)
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                child: Text(
-                  _consultation?.patientInitials ?? 'P',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
-                ),
-              )
-            else
-              DoctorAvatar(
-                photoUrl: _consultation?.doctorPhotoUrl ?? '',
-                doctorId: _consultation?.doctorId,
-                doctorName: _consultation?.doctorName,
-                size: 36,
-                borderRadius: 10,
-              ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    titleName,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primaryText,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Row(
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: statusColor,
-                          shape: BoxShape.circle,
-                        ),
+
+        // ── Layar Chat Transparan di atas Background ──
+        Scaffold(
+          resizeToAvoidBottomInset: true,
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            backgroundColor: Colors.white.withValues(alpha: 0.94),
+            elevation: 0.5,
+            surfaceTintColor: Colors.transparent,
+            shadowColor: Colors.black.withValues(alpha: 0.08),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: AppColors.primaryText),
+              onPressed: () => Navigator.pop(context),
+              tooltip: 'Kembali',
+            ),
+            titleSpacing: 0,
+            title: Row(
+              children: [
+                if (widget.isDoctor)
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                    child: Text(
+                      _consultation?.patientInitials ?? 'P',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
                       ),
-                      const SizedBox(width: 5),
+                    ),
+                  )
+                else
+                  DoctorAvatar(
+                    photoUrl: _consultation?.doctorPhotoUrl ?? '',
+                    doctorId: _consultation?.doctorId,
+                    doctorName: _consultation?.doctorName,
+                    size: 36,
+                    borderRadius: 10,
+                  ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       Text(
-                        statusLabel,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: statusColor,
-                          fontWeight: FontWeight.w600,
+                        titleName,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primaryText,
                         ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Row(
+                        children: [
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: statusColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            statusLabel,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: statusColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: Column(
-          children: [
-            // ── Banner Menunggu Konfirmasi Dokter (Sisi Pasien) ──
-            if (isWaiting)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFFBEA),
-                  border: Border(
-                    bottom: BorderSide(color: AppColors.warningYellow.withValues(alpha: 0.4)),
-                  ),
                 ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.hourglass_top_rounded,
-                      size: 16,
-                      color: Color(0xFFB45309),
+              ],
+            ),
+          ),
+          body: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: Column(
+              children: [
+                // ── Banner Menunggu Konfirmasi Dokter (Sisi Pasien) ──
+                if (isWaiting)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFFBEA),
+                      border: Border(
+                        bottom: BorderSide(color: AppColors.warningYellow.withValues(alpha: 0.4)),
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        widget.isDoctor
-                            ? 'Permintaan konsultasi ini belum dikonfirmasi aktif.'
-                            : 'Menunggu konfirmasi dokter. Anda tetap dapat mengirim pesan.',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.hourglass_top_rounded,
+                          size: 16,
                           color: Color(0xFFB45309),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // ── Area Chat Pesan ──
-            Expanded(
-              child: !_hasLoadedConsultation
-                  ? const Center(
-                      child:
-                          CircularProgressIndicator(color: AppColors.primary))
-                  : StreamBuilder<List<ChatMessage>>(
-                      stream: _consultationService.watchMessages(
-                        widget.consultationId,
-                        patientUid: _effectivePatientUid,
-                      ),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasError) {
-                          return Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.error_outline_rounded,
-                                      size: 40, color: Colors.red.shade400),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    'Gagal memuat pesan: ${snapshot.error}',
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                        fontSize: 13,
-                                        color: AppColors.neutralGray),
-                                  ),
-                                ],
-                              ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            widget.isDoctor
+                                ? 'Permintaan konsultasi ini belum dikonfirmasi aktif.'
+                                : 'Menunggu konfirmasi dokter. Anda tetap dapat mengirim pesan.',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFB45309),
                             ),
-                          );
-                        }
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(
-                                color: AppColors.primary),
-                          );
-                        }
-
-                        final messages = snapshot.data ?? [];
-
-                        // Scroll ke bawah saat ada pesan baru
-                        WidgetsBinding.instance
-                            .addPostFrameCallback((_) => _scrollToBottom());
-
-                        if (messages.isEmpty) {
-                          return LayoutBuilder(
-                            builder: (context, constraints) {
-                              return SingleChildScrollView(
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                      minHeight: constraints.maxHeight),
-                                  child: Center(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(24),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.chat_bubble_outline_rounded,
-                                            size: 56,
-                                            color: AppColors.neutralGray
-                                                .withValues(alpha: 0.4),
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Text(
-                                            widget.isDoctor
-                                                ? 'Belum ada pesan dengan pasien ini'
-                                                : 'Mulai percakapan dengan dokter',
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              color: AppColors.neutralGray,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ],
+                // ── Area Chat Pesan ──
+                Expanded(
+                  child: !_hasLoadedConsultation
+                      ? const Center(
+                          child:
+                              CircularProgressIndicator(color: AppColors.primary))
+                      : StreamBuilder<List<ChatMessage>>(
+                          stream: _consultationService.watchMessages(
+                            widget.consultationId,
+                            patientUid: _effectivePatientUid,
+                          ),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasError) {
+                              return Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.error_outline_rounded,
+                                          size: 40, color: Colors.red.shade400),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'Gagal memuat pesan: ${snapshot.error}',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                            fontSize: 13,
+                                            color: AppColors.neutralGray),
                                       ),
-                                    ),
+                                    ],
                                   ),
                                 ),
                               );
-                            },
-                          );
-                        }
+                            }
 
-                        return ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          itemCount: messages.length,
-                          itemBuilder: (_, i) => ChatBubble(
-                            message: messages[i],
-                            currentUserRole: widget.isDoctor ? 'doctor' : 'patient',
-                            peerPhotoUrl: '',
-                            peerInitials: _consultation?.patientInitials ?? 'P',
-                            lastReadByPeerAt: widget.isDoctor
-                                ? _consultation?.lastReadByPatientAt
-                                : _consultation?.lastReadByDoctorAt,
-                          ),
-                        );
-                      },
-                    ),
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(
+                                    color: AppColors.primary),
+                              );
+                            }
+
+                            final messages = snapshot.data ?? [];
+
+                            // Scroll ke bawah saat ada pesan baru
+                            WidgetsBinding.instance
+                                .addPostFrameCallback((_) => _scrollToBottom());
+
+                            if (messages.isEmpty) {
+                              return LayoutBuilder(
+                                builder: (context, constraints) {
+                                  return SingleChildScrollView(
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                          minHeight: constraints.maxHeight),
+                                      child: Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(24),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 24, vertical: 20),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.cardBackground,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                              border: Border.all(
+                                                color: const Color(0xFFE2ECF2),
+                                                width: 1.2,
+                                              ),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withValues(alpha: 0.04),
+                                                  blurRadius: 10,
+                                                  offset: const Offset(0, 3),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  Icons.chat_bubble_outline_rounded,
+                                                  size: 52,
+                                                  color: AppColors.primary
+                                                      .withValues(alpha: 0.75),
+                                                ),
+                                                const SizedBox(height: 12),
+                                                Text(
+                                                  widget.isDoctor
+                                                      ? 'Belum ada pesan dengan pasien ini'
+                                                      : 'Mulai percakapan dengan dokter',
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: AppColors.primaryText,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            }
+
+                            return ListView.builder(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              itemCount: messages.length,
+                              itemBuilder: (_, i) => ChatBubble(
+                                message: messages[i],
+                                currentUserRole: widget.isDoctor ? 'doctor' : 'patient',
+                                peerPhotoUrl: '',
+                                peerInitials: _consultation?.patientInitials ?? 'P',
+                                lastReadByPeerAt: widget.isDoctor
+                                    ? _consultation?.lastReadByPatientAt
+                                    : _consultation?.lastReadByDoctorAt,
+                              ),
+                            );
+                          },
+                        ),
+                ),
+
+                // ── Bar Pratinjau Lampiran (jika ada yang dipilih) ──
+                if (_attachmentBytes != null) _buildAttachmentPreviewBar(),
+
+                // ── Kolom Input Bar Menempel di atas Keyboard ──
+                _buildInputBar(context),
+              ],
             ),
-
-            // ── Bar Pratinjau Lampiran (jika ada yang dipilih) ──
-            if (_attachmentBytes != null) _buildAttachmentPreviewBar(),
-
-            // ── Kolom Input Bar Menempel di atas Keyboard ──
-            _buildInputBar(context),
-          ],
+          ),
         ),
-      ),
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isLargeScreen = constraints.maxWidth > 520;
+        if (isLargeScreen) {
+          final maxH = constraints.maxHeight.isFinite
+              ? constraints.maxHeight.clamp(0.0, 880.0)
+              : 860.0;
+          return Scaffold(
+            backgroundColor: AppColors.desktopBackground,
+            body: Center(
+              child: Container(
+                width: 420,
+                height: maxH,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(36),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 30,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    width: 3,
+                  ),
+                ),
+                child: chatContent,
+              ),
+            ),
+          );
+        }
+        return chatContent;
+      },
     );
   }
 

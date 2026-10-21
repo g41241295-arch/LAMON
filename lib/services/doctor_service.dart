@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import '../models/consultation_model.dart';
 import '../models/doctor_model.dart';
@@ -140,7 +142,8 @@ class DoctorService {
   }
 
   /// Konfirmasi konsultasi oleh dokter:
-  /// Ubah status menjadi 'active' dan isi 'doctorConfirmedAt'.
+  /// Ubah status menjadi 'active', isi 'doctorConfirmedAt', dan reset unreadForDoctor=0
+  /// agar badge di Beranda langsung hilang begitu dokter menekan tombol konfirmasi.
   Future<void> confirmConsultation({
     required String patientUid,
     required String consultationId,
@@ -154,8 +157,10 @@ class DoctorService {
           .update({
         'status': 'active',
         'doctorConfirmedAt': FieldValue.serverTimestamp(),
+        'unreadForDoctor': 0,
+        'lastReadByDoctorAt': FieldValue.serverTimestamp(),
       });
-      debugPrint('[DoctorService] Konsultasi $consultationId dikonfirmasi dokter.');
+      debugPrint('[DoctorService] Konsultasi $consultationId dikonfirmasi dokter (status=active, unread=0).');
     } catch (e) {
       debugPrint('[DoctorService] Gagal confirmConsultation: $e');
       rethrow;
@@ -249,6 +254,66 @@ class DoctorService {
     } catch (e) {
       debugPrint('[DoctorService] Gagal updateDoctorProfile: $e');
       rethrow;
+    }
+  }
+
+  /// Mengunggah foto profil dokter dan memperbarui field [photoUrl] di Firestore.
+  ///
+  /// Strategi:
+  /// 1. Coba upload ke Firebase Storage (path: doctors/{doctorId}/profile.jpg).
+  /// 2. Jika Storage gagal (mis. belum di-setup), kompres gambar ke base64 JPEG
+  ///    dan simpan langsung di field photoUrl Firestore (max ~200 KB).
+  ///
+  /// Mengembalikan URL final (HTTPS atau data:image/jpeg;base64,…) yang disimpan.
+  Future<String> updateDoctorPhotoUrl({
+    required String doctorId,
+    required Uint8List imageBytes,
+  }) async {
+    // — Coba upload ke Firebase Storage terlebih dahulu —
+    try {
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('doctors/$doctorId/profile.jpg');
+
+      final metadata = SettableMetadata(
+        contentType: 'image/jpeg',
+        customMetadata: {'doctorId': doctorId},
+      );
+
+      final task = await storageRef.putData(imageBytes, metadata);
+      final downloadUrl = await task.ref.getDownloadURL();
+
+      await _db.collection('doctors').doc(doctorId).update({
+        'photoUrl': downloadUrl,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      debugPrint('[DoctorService] Foto profil dokter $doctorId berhasil diunggah ke Storage: $downloadUrl');
+      return downloadUrl;
+    } catch (storageError) {
+      debugPrint('[DoctorService] Firebase Storage gagal ($storageError). Fallback ke base64 Firestore.');
+
+      // — Fallback: simpan sebagai base64 langsung di Firestore —
+      // Sudah dikompres di sisi klien (maks 512px, kualitas 60-70) sebelum dipanggil.
+      final base64Str = base64Encode(imageBytes);
+      final dataUrl = 'data:image/jpeg;base64,$base64Str';
+
+      // Periksa ukuran: batas dokumen Firestore 1 MiB, string base64 ~4/3 * byte asli.
+      // Gambar 200 KB → base64 ~267 KB → aman.
+      if (imageBytes.lengthInBytes > 200 * 1024) {
+        throw Exception(
+          'Ukuran gambar terlalu besar untuk disimpan sebagai base64 (maks ~150 KB setelah dikompres). '
+          'Aktifkan Firebase Storage untuk foto resolusi lebih tinggi.',
+        );
+      }
+
+      await _db.collection('doctors').doc(doctorId).update({
+        'photoUrl': dataUrl,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      debugPrint('[DoctorService] Foto profil dokter $doctorId disimpan sebagai base64 di Firestore (${imageBytes.lengthInBytes} bytes).');
+      return dataUrl;
     }
   }
 

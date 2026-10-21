@@ -473,7 +473,7 @@ class _DiseasePredictionHistoryScreenState
         curve: Curves.easeOut,
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             // Lebar border SAMA (1.5 px) di semua kartu agar konten selalu sejajar

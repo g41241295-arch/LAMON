@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_colors.dart';
 
 class AdminTheme {
   // Blue gradient for specific elements (cards, header, buttons)
@@ -9,7 +10,7 @@ class AdminTheme {
   );
 
   // Background color for cards/boxes
-  static const Color cardColor = Colors.white;
+  static const Color cardColor = AppColors.cardBackground;
 
   // Main text color for readability over gradient and cards
   static const Color navyText = Color(0xFF1E3A8A);

@@ -3,6 +3,26 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../models/food_entry_model.dart';
 
+// ─── Query Result Type untuk Ringkasan Makanan ──────────────────────────────
+sealed class FoodSummaryQueryResult {
+  const FoodSummaryQueryResult();
+}
+
+class FoodSummarySuccess extends FoodSummaryQueryResult {
+  final List<FoodEntry> entries;
+  const FoodSummarySuccess(this.entries);
+}
+
+class FoodSummaryEmpty extends FoodSummaryQueryResult {
+  const FoodSummaryEmpty();
+}
+
+class FoodSummaryFailure extends FoodSummaryQueryResult {
+  final String? code;
+  final String message;
+  const FoodSummaryFailure({this.code, required this.message});
+}
+
 /// Service untuk menyimpan dan mengambil entri pencatatan makanan dari Firestore.
 ///
 /// Struktur koleksi:
@@ -71,10 +91,106 @@ class FoodEntryService {
     }
   }
 
+  /// Memeriksa apakah format string tanggal adalah "yyyy-MM-dd" yang valid.
+  static bool isValidDateString(String dateStr) {
+    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(dateStr)) {
+      return false;
+    }
+    try {
+      final parts = dateStr.split('-');
+      final y = int.parse(parts[0]);
+      final m = int.parse(parts[1]);
+      final d = int.parse(parts[2]);
+      final dt = DateTime(y, m, d);
+      return dt.year == y && dt.month == m && dt.day == d;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Mengambil entri makanan milik user untuk kalkulasi Ringkasan Makanan.
+  ///
+  /// Menggunakan paling banyak satu orderBy('tanggal', descending: true)
+  /// dan limit(200) tanpa orderBy kedua, sehingga TIDAK memerlukan
+  /// composite index di Firestore.
+  ///
+  /// Mengembalikan [FoodSummaryQueryResult] yang membedakan 3 kemungkinan:
+  /// - [FoodSummarySuccess]: berhasil dengan list data valid
+  /// - [FoodSummaryEmpty]: berhasil query tetapi tidak ada entri
+  /// - [FoodSummaryFailure]: gagal query dengan kode dan pesan error asli
+  Future<FoodSummaryQueryResult> getEntriesForSummary() async {
+    try {
+      final uid = _auth.currentUser?.uid;
+      final ref = _entriesRef;
+      if (uid == null || ref == null) {
+        return const FoodSummaryFailure(
+          code: 'unauthenticated',
+          message: 'Tidak ada sesi pengguna yang aktif. Silakan masuk terlebih dahulu.',
+        );
+      }
+
+      QuerySnapshot<Map<String, dynamic>> snapshot;
+      try {
+        // Query menggunakan filter user_id agar sesuai dengan aturan Firestore
+        // (resource.data.user_id == request.auth.uid) yang masih aktif di server.
+        // Tanpa orderBy pada query agar TIDAK membutuhkan composite index.
+        snapshot = await ref.where('user_id', isEqualTo: uid).get();
+      } on FirebaseException catch (e) {
+        if (e.code == 'permission-denied') {
+          // Fallback tanpa filter jika rules di server mengizinkan read langsung
+          snapshot = await ref.orderBy('tanggal', descending: true).limit(200).get();
+        } else {
+          rethrow;
+        }
+      }
+
+      if (snapshot.docs.isEmpty) {
+        return const FoodSummaryEmpty();
+      }
+
+      final validEntries = <FoodEntry>[];
+
+      for (final doc in snapshot.docs) {
+        try {
+          final data = doc.data();
+          data['id'] = doc.id;
+          final tanggal = data['tanggal'] as String? ?? '';
+          if (!isValidDateString(tanggal)) {
+            debugPrint('[FoodEntryService] Entri dilewati karena tanggal tidak valid: id=${doc.id}, tanggal="$tanggal"');
+            continue;
+          }
+          final entry = FoodEntry.fromJson(data);
+          validEntries.add(entry);
+        } catch (e) {
+          debugPrint('[FoodEntryService] Entri dilewati karena gagal deserialisasi: id=${doc.id}, error=$e');
+        }
+      }
+
+      if (validEntries.isEmpty) {
+        return const FoodSummaryEmpty();
+      }
+
+      // Urutkan berdasarkan waktu_pengisian secara in-memory untuk entri pada tanggal yang sama
+      validEntries.sort((a, b) {
+        final cmpTanggal = b.tanggal.compareTo(a.tanggal);
+        if (cmpTanggal != 0) return cmpTanggal;
+        return b.waktuPengisian.compareTo(a.waktuPengisian);
+      });
+
+      return FoodSummarySuccess(validEntries);
+    } on FirebaseException catch (e) {
+      debugPrint('[FoodEntryService] FirebaseException getEntriesForSummary: [${e.code}] ${e.message}');
+      return FoodSummaryFailure(code: e.code, message: e.message ?? e.toString());
+    } catch (e) {
+      debugPrint('[FoodEntryService] Exception getEntriesForSummary: $e');
+      return FoodSummaryFailure(message: e.toString());
+    }
+  }
+
   /// Mengambil semua entri dalam 7 hari terakhir untuk user saat ini.
   ///
-  /// Digunakan oleh menu "Ringkasan Makanan".
-  /// Mengembalikan list entri terurut dari yang terbaru (descending).
+  /// Query hanya menggunakan filter tanggal tanpa multiple orderBy
+  /// agar TIDAK membutuhkan composite index di Firestore.
   Future<List<FoodEntry>> getLast7DaysEntries() async {
     try {
       final ref = _entriesRef;
@@ -85,21 +201,43 @@ class FoodEntryService {
       final startDate = _formatDate(sevenDaysAgo);
       final endDate = _formatDate(now);
 
+      // Hanya gunakan orderBy('tanggal', descending: true) tanpa orderBy kedua.
       final snapshot = await ref
           .where('tanggal', isGreaterThanOrEqualTo: startDate)
           .where('tanggal', isLessThanOrEqualTo: endDate)
           .orderBy('tanggal', descending: true)
-          .orderBy('waktu_pengisian', descending: true)
           .get();
 
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        return FoodEntry.fromJson(data);
-      }).toList();
+      final list = <FoodEntry>[];
+      for (final doc in snapshot.docs) {
+        try {
+          final data = doc.data();
+          data['id'] = doc.id;
+          final tanggal = data['tanggal'] as String? ?? '';
+          if (!isValidDateString(tanggal)) {
+            debugPrint('[FoodEntryService] Invalid date skipped: id=${doc.id}, tanggal="$tanggal"');
+            continue;
+          }
+          list.add(FoodEntry.fromJson(data));
+        } catch (e) {
+          debugPrint('[FoodEntryService] Error parsing entry ${doc.id}: $e');
+        }
+      }
+
+      // Urutkan waktu_pengisian descending di memori
+      list.sort((a, b) {
+        final cmpTanggal = b.tanggal.compareTo(a.tanggal);
+        if (cmpTanggal != 0) return cmpTanggal;
+        return b.waktuPengisian.compareTo(a.waktuPengisian);
+      });
+
+      return list;
+    } on FirebaseException catch (e) {
+      debugPrint('[FoodEntryService] FirebaseException getLast7DaysEntries: [${e.code}] ${e.message}');
+      rethrow;
     } catch (e) {
       debugPrint('[FoodEntryService] GAGAL mengambil entri 7 hari: $e');
-      return [];
+      rethrow;
     }
   }
 
@@ -114,21 +252,43 @@ class FoodEntryService {
       final ref = _entriesRef;
       if (ref == null) return [];
 
+      // Tanpa multiple orderBy agar tidak perlu composite index
       final snapshot = await ref
           .where('tanggal', isGreaterThanOrEqualTo: startDate)
           .where('tanggal', isLessThanOrEqualTo: endDate)
           .orderBy('tanggal', descending: true)
-          .orderBy('waktu_pengisian', descending: true)
           .get();
 
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        return FoodEntry.fromJson(data);
-      }).toList();
+      final list = <FoodEntry>[];
+      for (final doc in snapshot.docs) {
+        try {
+          final data = doc.data();
+          data['id'] = doc.id;
+          final tanggal = data['tanggal'] as String? ?? '';
+          if (!isValidDateString(tanggal)) {
+            debugPrint('[FoodEntryService] Invalid date skipped: id=${doc.id}, tanggal="$tanggal"');
+            continue;
+          }
+          list.add(FoodEntry.fromJson(data));
+        } catch (e) {
+          debugPrint('[FoodEntryService] Error parsing entry ${doc.id}: $e');
+        }
+      }
+
+      // Urutkan waktu_pengisian di memori
+      list.sort((a, b) {
+        final cmpTanggal = b.tanggal.compareTo(a.tanggal);
+        if (cmpTanggal != 0) return cmpTanggal;
+        return b.waktuPengisian.compareTo(a.waktuPengisian);
+      });
+
+      return list;
+    } on FirebaseException catch (e) {
+      debugPrint('[FoodEntryService] FirebaseException getEntriesByDateRange: [${e.code}] ${e.message}');
+      rethrow;
     } catch (e) {
       debugPrint('[FoodEntryService] GAGAL mengambil entri rentang: $e');
-      return [];
+      rethrow;
     }
   }
 

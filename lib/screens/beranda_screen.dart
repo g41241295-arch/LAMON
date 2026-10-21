@@ -9,6 +9,7 @@ import 'beranda/widgets/meal_alarm_card.dart';
 import 'beranda/widgets/daily_summary_card.dart';
 import 'beranda/widgets/main_menu_list.dart';
 import 'beranda/widgets/info_cards_section.dart';
+import '../routes/app_routes.dart';
 
 class BerandaScreen extends StatefulWidget {
   const BerandaScreen({super.key});
@@ -135,16 +136,16 @@ class BerandaScreenState extends State<BerandaScreen> with WidgetsBindingObserve
   void _onMainMenuTap(BerandaMenuItem menu) {
     switch (menu.id) {
       case 'catat-makananmu':
-        Navigator.pushNamed(context, '/catat-makananmu');
+        Navigator.pushNamed(context, AppRoutes.catatMakanan);
         break;
       case 'ringkasan-makanan':
-        Navigator.pushNamed(context, '/ringkasan-makanan');
+        Navigator.pushNamed(context, AppRoutes.ringkasanMakanan);
         break;
       case 'prediksi-penyakit':
-        Navigator.pushNamed(context, '/prediksi-penyakit');
+        Navigator.pushNamed(context, AppRoutes.diseasePrediction);
         break;
       case 'konsul-dokter':
-        Navigator.pushNamed(context, '/konsultasi');
+        Navigator.pushNamed(context, AppRoutes.konsultasi);
         break;
       case 'pengingat-jam-makan':
       default:

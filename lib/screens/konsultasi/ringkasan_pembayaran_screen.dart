@@ -129,7 +129,7 @@ class _RingkasanPembayaranScreenState
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2ECF2), width: 1.2),
         boxShadow: [
@@ -207,7 +207,7 @@ class _RingkasanPembayaranScreenState
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2ECF2), width: 1.2),
         boxShadow: [
@@ -446,7 +446,7 @@ class _DoctorSummaryCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2ECF2), width: 1.2),
         boxShadow: [

@@ -21,6 +21,10 @@ class AppColors {
   static const Color inputIcon = Color(0xFF8EAAB9);
 
   // Card Colors
+  /// Latar kartu informasi semi-transparan (85% opacity / 0xD9FFFFFF)
+  /// agar menyatu lembut dengan latar gradasi kuning-krem tanpa mengorbankan keterbacaan teks.
+  static const Color cardBackground = Color(0xD9FFFFFF);
+
   static const Color lunchCardGradientStart = Color(0xFF639BC6);
   static const Color lunchCardGradientEnd = Color(0xFF80B6DC);
   static const Color lunchCardBorder = Color(0xFF76A8D0);
@@ -30,6 +34,13 @@ class AppColors {
   static const Color summaryCardBorder = Color(0xFFA5D5F0);
   static const Color summaryCardText = Color(0xFF1E5D7D);
   static const Color summaryCardSubtext = Color(0xFF527F97);
+
+  // Gastropedia Theme Colors (Krem lembut / warm off-white)
+  static const Color gastropediaCardBg = Color(0xFFFCF9EE);
+  static const Color gastropediaCardBorder = Color(0xFFEBE3D0);
+  static const Color gastropediaAccordionHeaderStart = Color(0xFFFFFDF5);
+  static const Color gastropediaAccordionHeaderEnd = Color(0xFFF5EEDB);
+  static const Color gastropediaAccordionBorder = Color(0xFFE5DDC7);
 
   // Accents & Status
   static const Color orangeAccent = Color(0xFFE5983A);
