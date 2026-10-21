@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../constants/app_colors.dart';
 import '../constants/admin_theme.dart';
 import '../routes/app_routes.dart';
 import '../services/ensiklopedia_service.dart';
@@ -21,7 +20,6 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String _adminName = 'Admin';
   String _adminId = '';
-  String? _adminPhotoUrl;
   bool _loadingAdmin = true;
   final _ensiklopediaService = EnsiklopediaService();
   bool _snackBarCleared = false;
@@ -47,7 +45,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     _adminId = user.uid;
-    _adminPhotoUrl = user.photoURL;
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       if (!mounted) return;
@@ -62,9 +59,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           final local = email.split('@').first.toLowerCase();
           final cleaned = local.startsWith('admin') ? local.substring('admin'.length) : local;
           name = cleaned.isEmpty ? 'Admin' : cleaned[0].toUpperCase() + cleaned.substring(1);
-        }
-        if (data['foto'] != null && data['foto'].toString().isNotEmpty) {
-          _adminPhotoUrl = data['foto'];
         }
       } else {
         name = user.displayName ?? 'Admin';
@@ -155,138 +149,72 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  String get _displayAdminName {
+    final trimmed = _adminName.trim();
+    if (trimmed.isEmpty) return 'Admin';
+    return trimmed[0].toUpperCase() + trimmed.substring(1);
+  }
+
+  Future<void> _openAdminProfile() async {
+    await Navigator.pushNamed(context, AppRoutes.adminProfile);
+    if (mounted) {
+      _loadAdminData();
+    }
+  }
+
   Widget _buildHeader() {
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.65),
-      child: GestureDetector(
-        onTapDown: (d) {},
-        child: PopupMenuButton<String>(
-          onSelected: (value) {
-            if (value == 'keluar') _confirmLogout();
-          },
-          offset: const Offset(0, 50),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          itemBuilder: (_) => [
-            PopupMenuItem(
-              value: 'keluar',
-              child: Row(
-                children: [
-                  const Icon(Icons.logout_rounded, color: Color(0xFFD32F2F), size: 18),
-                  const SizedBox(width: 10),
-                  Text('Keluar', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFFD32F2F))),
-                ],
-              ),
+    return GestureDetector(
+      onTap: _openAdminProfile,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 4,
+              offset: Offset(0, 2),
             ),
           ],
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircleAvatar(
+              radius: 14,
+              backgroundColor: Color(0xFF276F8F),
+              child: Icon(Icons.person, size: 16, color: Colors.white),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Avatar lingkaran
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFFE8F4FB),
-                    border: Border.all(color: const Color(0xFF337AA3).withValues(alpha: 0.3), width: 1.5),
+            const SizedBox(width: 8),
+            _loadingAdmin
+                ? Container(
+                    width: 60,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  )
+                : Text(
+                    _displayAdminName,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF276F8F),
+                    ),
                   ),
-                  child: _adminPhotoUrl != null && _adminPhotoUrl!.isNotEmpty
-                      ? ClipOval(
-                          child: Image.network(
-                            _adminPhotoUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, e, s) => Center(
-                              child: Text(
-                                _adminName.isNotEmpty ? _adminName[0].toUpperCase() : 'A',
-                                style: GoogleFonts.poppins(color: const Color(0xFF337AA3), fontSize: 14, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                        )
-                      : Center(
-                          child: Text(
-                            _adminName.isNotEmpty ? _adminName[0].toUpperCase() : 'A',
-                            style: GoogleFonts.poppins(color: const Color(0xFF337AA3), fontSize: 14, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Admin',
-                        style: GoogleFonts.poppins(
-                          fontSize: 10,
-                          color: AppColors.neutralGray,
-                          fontWeight: FontWeight.w500,
-                          height: 1.1,
-                        ),
-                      ),
-                      _loadingAdmin
-                          ? Container(width: 60, height: 13, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(4)))
-                          : Text(
-                              _adminName,
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF1C4E68),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 4),
-                const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF337AA3), size: 18),
-              ],
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.keyboard_arrow_down,
+              color: Color(0xFF276F8F),
+              size: 20,
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Future<void> _confirmLogout() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text('Konfirmasi Keluar', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
-        content: Text('Apakah Anda yakin ingin keluar dari akun admin?', style: GoogleFonts.poppins()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Batal', style: GoogleFonts.poppins()),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Keluar', style: GoogleFonts.poppins(color: const Color(0xFFD32F2F), fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true && mounted) {
-      await FirebaseAuth.instance.signOut();
-      if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-    }
-  }
 
   Widget _buildWelcomeBanner() {
     return Container(

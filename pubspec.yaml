@@ -54,6 +54,7 @@ flutter:
     - assets/images/berita/
     - assets/images/doctors/
     - assets/images/banks/
+    - assets/images/profil_admin/
     - assets/fonts/
     - assets/icon/
 
