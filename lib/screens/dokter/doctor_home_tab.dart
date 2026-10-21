@@ -447,19 +447,14 @@ class DoctorHomeTab extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFE8F4F8), Color(0xFFD2EBF5)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFFC0E2F0).withValues(alpha: 0.8),
-          width: 1,
+        image: const DecorationImage(
+          image: AssetImage('assets/images/card_jam_aktif_bg.png'),
+          fit: BoxFit.cover,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

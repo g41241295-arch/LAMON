@@ -162,41 +162,68 @@ class _RingkasanPembayaranScreenState
               ),
             )
           else
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: List.generate(_activeHours.length, (i) {
-                final hour = _activeHours[i];
-                final isSelected = i == _selectedHourIndex;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedHourIndex = i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.primary
-                          : AppColors.primary.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: isSelected
-                            ? AppColors.primary
-                            : AppColors.primary.withValues(alpha: 0.2),
-                      ),
+            // Setiap chip membentang PENUH (Expanded) dalam Row per baris.
+            // Chip dikelompokkan 2 per baris; baris terakhir mengisi penuh jika ganjil.
+            Builder(builder: (context) {
+              final chunks = <List<int>>[];
+              for (int i = 0; i < _activeHours.length; i += 2) {
+                chunks.add([
+                  i,
+                  if (i + 1 < _activeHours.length) i + 1,
+                ]);
+              }
+              return Column(
+                children: chunks.asMap().entries.map((entry) {
+                  final rowIdx = entry.key;
+                  final indices = entry.value;
+                  return Padding(
+                    padding: EdgeInsets.only(top: rowIdx == 0 ? 0 : 6),
+                    child: Row(
+                      children: [
+                        for (int k = 0; k < indices.length; k++) ...[
+                          if (k > 0) const SizedBox(width: 8),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(
+                                  () => _selectedHourIndex = indices[k]),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: indices[k] == _selectedHourIndex
+                                      ? AppColors.primary
+                                      : AppColors.primary
+                                          .withValues(alpha: 0.06),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: indices[k] == _selectedHourIndex
+                                        ? AppColors.primary
+                                        : AppColors.primary
+                                            .withValues(alpha: 0.2),
+                                  ),
+                                ),
+                                child: Text(
+                                  _activeHours[indices[k]].display,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: indices[k] == _selectedHourIndex
+                                        ? Colors.white
+                                        : AppColors.primaryText,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    child: Text(
-                      hour.display,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: isSelected ? Colors.white : AppColors.primaryText,
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ),
+                  );
+                }).toList(),
+              );
+            }),
         ],
       ),
     );

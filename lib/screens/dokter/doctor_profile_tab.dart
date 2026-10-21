@@ -245,8 +245,10 @@ class _DoctorProfileTabState extends State<DoctorProfileTab> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 40 + bottomInset),
       child: Column(
         children: [
           const SizedBox(height: 8),

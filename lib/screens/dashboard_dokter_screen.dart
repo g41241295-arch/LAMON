@@ -248,7 +248,6 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
         builder: (_) => Scaffold(
           backgroundColor: AppColors.bgGradientMiddle,
           body: SafeArea(
-            bottom: false,
             child: Column(
               children: [
                 AppHeaderPill(
