@@ -519,29 +519,6 @@ class NotificationService {
     }
   }
 
-  // ── Uji Alarm (kDebugMode only) ───────────────────────────────────────────
-
-  /// Menjadwalkan alarm uji coba 60 detik dari sekarang.
-  /// Pengaturan IDENTIK dengan alarm asli (channel, sound, vibration, flags).
-  /// Hanya tersedia di kDebugMode.
-  Future<void> scheduleTestAlarm() async {
-    assert(kDebugMode, 'scheduleTestAlarm hanya tersedia di debug mode');
-    final testTime = DateTime.now().add(const Duration(seconds: 60));
-    if (kDebugMode) {
-      debugPrint(
-          '[NotifService] 🧪 Menjadwalkan alarm uji pukul ${testTime.toLocal()}, '
-          'channelId=$_kChannelId, '
-          'sound=${_kUseBundledAlarmSound ? "BUNDLED:$_kBundledAlarmSoundName" : "SYSTEM_URI:$_kSystemAlarmUri"}, '
-          'insistent=true, ongoing=true, vibrationPattern=${_kVibrationPattern.toList()}, '
-          'timeoutAfter=${_kTimeoutAfterMs}ms');
-    }
-    await scheduleMealReminder(
-      id: 9999999,
-      title: '🧪 Uji Alarm LAMON',
-      body: 'Alarm uji berhasil! Geser notifikasi atau tekan "Matikan" untuk berhenti.',
-      scheduledDateTime: testTime,
-    );
-  }
 }
 
 // ── Top-level background handler (wajib di luar class) ────────────────────
