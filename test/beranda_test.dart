@@ -181,10 +181,10 @@ void main() {
     expect(find.text('Ringkasan\nmakanan'), findsOneWidget);
 
     // Scroll horizontal Menu Utama
-    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -200));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -200));
     await tester.pump(const Duration(milliseconds: 300));
 
-    await tester.drag(find.byType(ListView), const Offset(-240, 0));
+    await tester.drag(find.byType(ListView), const Offset(-380, 0));
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.textContaining('Prediksi'), findsOneWidget);
     expect(find.textContaining('Konsul'), findsOneWidget);

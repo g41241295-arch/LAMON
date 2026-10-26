@@ -5,11 +5,13 @@ import 'package:google_fonts/google_fonts.dart';
 class InfoCardsSection extends StatelessWidget {
   final VoidCallback onGastropediaTap;
   final VoidCallback onBeritaTap;
+  final double hPad;
 
   const InfoCardsSection({
     super.key,
     required this.onGastropediaTap,
     required this.onBeritaTap,
+    this.hPad = 20.0,
   });
 
   @override
@@ -17,8 +19,9 @@ class InfoCardsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Label "Seputar Informasi" - sejajar dengan label Menu Utama
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: EdgeInsets.symmetric(horizontal: hPad),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
@@ -46,8 +49,9 @@ class InfoCardsSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
+        // Dua kartu: Gastropedia & Berita Kesehatan - sejajar dengan Ringkasan hari ini
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: EdgeInsets.symmetric(horizontal: hPad),
           child: Column(
             children: [
               _InfoCard(
@@ -115,21 +119,25 @@ class _InfoCard extends StatelessWidget {
         ),
         child: Stack(
           children: [
+            // Konten Teks: beri ruang yang cukup agar "Berita Kesehatan" tidak terpotong
             Padding(
-              padding: const EdgeInsets.only(left: 120, top: 14, bottom: 14, right: 54),
+              padding: const EdgeInsets.only(left: 104, top: 14, bottom: 14, right: 42),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF134563),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF134563),
+                      ),
+                      maxLines: 1,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -146,43 +154,51 @@ class _InfoCard extends StatelessWidget {
                 ],
               ),
             ),
-            // Illustration
+            // Ilustrasi
             Positioned(
-              left: 10,
+              left: 8,
               bottom: 0,
               child: Image.asset(
                 assetPath,
-                width: 100,
-                height: 90,
+                width: 92,
+                height: 86,
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
-                    width: 100,
-                    height: 90,
+                    width: 92,
+                    height: 86,
                     color: Colors.transparent,
                     alignment: Alignment.center,
-                    child: kDebugMode ? Text(
-                      assetPath.split('/').last,
-                      style: const TextStyle(fontSize: 8, color: Colors.black54),
-                      textAlign: TextAlign.center,
-                    ) : const SizedBox(),
+                    child: kDebugMode
+                        ? Text(
+                            assetPath.split('/').last,
+                            style: const TextStyle(fontSize: 8, color: Colors.black54),
+                            textAlign: TextAlign.center,
+                          )
+                        : const SizedBox(),
                   );
                 },
               ),
             ),
-            // Button arrow
+            // Tombol panah
             Positioned(
-              right: 16,
+              right: 14,
               top: 0,
               bottom: 0,
               child: Center(
                 child: CircleAvatar(
                   radius: 11,
-                  backgroundColor: isBlue ? const Color(0xFFCBE5F6) : const Color(0xFFFDE899),
-                  child: const Icon(Icons.chevron_right_rounded, size: 16, color: Color(0xFF134563)),
+                  backgroundColor: isBlue
+                      ? const Color(0xFFCBE5F6)
+                      : const Color(0xFFFDE899),
+                  child: const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 16,
+                    color: Color(0xFF134563),
+                  ),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),

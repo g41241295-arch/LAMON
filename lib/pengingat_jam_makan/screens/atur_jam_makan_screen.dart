@@ -684,4 +684,5 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
       ),
     );
   }
+
 }

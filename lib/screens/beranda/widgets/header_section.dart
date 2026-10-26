@@ -94,7 +94,7 @@ class SapaanCard extends StatelessWidget {
                   ],
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -117,28 +117,28 @@ class SapaanCard extends StatelessWidget {
                         child: Text(
                           customTitle ?? 'Sehatkan Lambung,\nMulai dari Hari ini',
                           style: GoogleFonts.poppins(
-                            fontSize: 15.5,
+                            fontSize: 15.0,
                             fontWeight: FontWeight.w800,
                             color: const Color(0xFF134563),
-                            height: 1.2,
+                            height: 1.15,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 5),
                       SizedBox(
                         width: cardWidth * 0.58,
                         child: Text(
                           customSubtitle ??
-                              'Yuk, jaga pola makan dan\npantau kesehatan lambungmu setiap hari',
+                              'Yuk, jaga pola makan dan pantau kesehatan lambungmu setiap hari',
                           style: GoogleFonts.poppins(
-                            fontSize: 10,
+                            fontSize: 9.5,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF625232),
-                            height: 1.2,
+                            height: 1.22,
                           ),
-                          maxLines: 2,
+                          maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
