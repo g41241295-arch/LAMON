@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lamon/pengingat_jam_makan/screens/pilih_kondisi_screen.dart';
 
-/// Ubah nilai ini untuk memperbesar/memperkecil semua kartu Menu Utama sekaligus.
-const double kMenuCardScale = 1.15;
 
 class BerandaMenuItem {
   final String id;
@@ -28,8 +26,13 @@ class BerandaMenuItem {
 
 class MainMenuList extends StatelessWidget {
   final void Function(BerandaMenuItem item) onMenuTap;
+  final double hPad;
 
-  const MainMenuList({super.key, required this.onMenuTap});
+  const MainMenuList({
+    super.key,
+    required this.onMenuTap,
+    this.hPad = 20.0,
+  });
 
   static const List<BerandaMenuItem> items = [
     BerandaMenuItem(
@@ -52,7 +55,7 @@ class MainMenuList extends StatelessWidget {
     ),
     BerandaMenuItem(
       id: 'ringkasan-makanan',
-      title: 'Ringkasan\nMakan',
+      title: 'Ringkasan\nmakanan',
       assetPath: 'assets/images/menu-ringkasan1_crop.png',
       bgPath: 'assets/images/menu_card_bg_oranye.png',
       route: '/ringkasan-makanan',
@@ -83,10 +86,10 @@ class MainMenuList extends StatelessWidget {
   Widget build(BuildContext context) {
     final W = MediaQuery.of(context).size.width;
     final s = W / 390;
-    final cardW = W * 0.374 * kMenuCardScale;
-    final cardH = W * 0.28 * kMenuCardScale;
-    final gap = W * 0.0385;
-    final listPad = 20.0; // sama dengan padding kiri label "Menu Utama"
+    final cardW = W * 0.40;
+    final cardH = W * 0.30;
+    final gap = W * 0.038;
+    final listPad = hPad; // sama dengan padding kiri label "Menu Utama"
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,14 +188,14 @@ class _MenuCard extends StatelessWidget {
     // Area ilustrasi = 62% tinggi kartu (dari atas sampai batas strip)
     final illusAreaH = cardH * 0.62;
     // Padding kiri-kanan ilustrasi
-    final illusPad = W * 0.015 * kMenuCardScale;
+    final illusPad = W * 0.015;
     // Ukuran tombol & padding
-    final btnSize = 20.0 * s * kMenuCardScale;
-    final btnPadR = W * 0.026 * kMenuCardScale;
-    final radius = 16.0 * s * kMenuCardScale;
+    final btnSize = 20.0 * s;
+    final btnPadR = W * 0.026;
+    final radius = 16.0 * s;
     // Font
-    final fontSize = 11.0 * s * kMenuCardScale;
-    final txtPadL = W * 0.032 * kMenuCardScale;
+    final fontSize = 11.0 * s;
+    final txtPadL = W * 0.032;
 
     return GestureDetector(
       onTap: onTap,

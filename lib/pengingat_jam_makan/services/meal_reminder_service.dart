@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/meal_reminder_plan.dart';
+import '../../screens/beranda/models/meal_schedule_model.dart';
+import '../../screens/beranda/services/beranda_meal_service.dart';
 import 'notification_service.dart';
 
 /// Layanan sinkronisasi rencana jadwal pengingat jam makan.
@@ -45,8 +47,22 @@ class MealReminderService with WidgetsBindingObserver {
   StreamSubscription<DocumentSnapshot>? _firestoreSubscription;
   bool _isInitialized = false;
 
+  /// Notifier daftar jadwal jam makan hari ini untuk Beranda
+  final ValueNotifier<List<MealScheduleItem>> todaySchedulesNotifier =
+      ValueNotifier<List<MealScheduleItem>>(BerandaMealService.defaultSchedules);
+
+  /// Notifier rencana jadwal aktif pengguna
+  final ValueNotifier<MealReminderPlan?> activePlanNotifier =
+      ValueNotifier<MealReminderPlan?>(null);
+
   // ── Aksesor UID ───────────────────────────────────────────────────────────
-  String? get currentUid => FirebaseAuth.instance.currentUser?.uid;
+  String? get currentUid {
+    try {
+      return FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      return null;
+    }
+  }
 
   // ── Inisialisasi ──────────────────────────────────────────────────────────
 
@@ -523,6 +539,8 @@ class MealReminderService with WidgetsBindingObserver {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(keyBerandaSchedule);
     await _clearAlarmOwnerUid();
+    todaySchedulesNotifier.value = BerandaMealService.defaultSchedules;
+    activePlanNotifier.value = null;
   }
 
   // ── Sinkronisasi ke Beranda ───────────────────────────────────────────────
@@ -532,13 +550,16 @@ class MealReminderService with WidgetsBindingObserver {
       final prefs = await SharedPreferences.getInstance();
       final now = DateTime.now();
       final plan = await loadPlan();
+      activePlanNotifier.value = plan;
 
       if (plan != null && plan.enabled && plan.isDateActive(now)) {
         final mealItems = plan.toMealScheduleItems();
         final jsonList = mealItems.map((item) => item.toJson()).toList();
         await prefs.setString(keyBerandaSchedule, jsonEncode(jsonList));
+        todaySchedulesNotifier.value = mealItems;
       } else {
         await prefs.remove(keyBerandaSchedule);
+        todaySchedulesNotifier.value = BerandaMealService.defaultSchedules;
       }
     } catch (e) {
       debugPrint('[MealReminder] Gagal syncTodayScheduleToBeranda: $e');

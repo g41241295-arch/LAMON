@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/meal_schedule_model.dart';
 
-/// Service lokal pengelola jadwal makan dan status harian untuk Beranda
+/// Service lokal pengelola jadwal makan dan status harian untuk Beranda.
 class BerandaMealService {
   static const String keyMealSchedule = 'lamon_meal_schedule';
   static const String keyMealStatusPrefix = 'lamon_meal_status_';
@@ -25,7 +25,7 @@ class BerandaMealService {
     return DateTime.now();
   }
 
-  /// Daftar jadwal bawaan
+  /// Daftar jadwal bawaan jika belum ada jadwal yang disetel
   static const List<MealScheduleItem> defaultSchedules = [
     MealScheduleItem(
       id: 'breakfast',
@@ -74,41 +74,24 @@ class BerandaMealService {
     return defaultSchedules;
   }
 
-  /// Format key status per tanggal (YYYY-MM-DD)
-  String _dateKey(DateTime date) {
+  /// Format key status per pengguna dan per tanggal lokal (YYYY-MM-DD)
+  String dateUserKey(DateTime date, String? uid) {
     final year = date.year.toString();
     final month = date.month.toString().padLeft(2, '0');
     final day = date.day.toString().padLeft(2, '0');
-    return '$keyMealStatusPrefix$year-$month-$day';
+    final userPart = uid != null && uid.isNotEmpty ? uid : 'guest';
+    return '$keyMealStatusPrefix${userPart}_$year-$month-$day';
   }
 
-  /// Validasi apakah waktu aktual berada dalam rentang jam makan yang sah
-  bool _isActualTimeValidForMeal(String mealId, String? actualTime) {
-    if (actualTime == null || actualTime.isEmpty) return false;
-    final parts = actualTime.split('.');
-    if (parts.length != 2) return false;
-    final hour = int.tryParse(parts[0]);
-    final minute = int.tryParse(parts[1]);
-    if (hour == null || minute == null) return false;
-
-    final totalMinutes = hour * 60 + minute;
-    switch (mealId) {
-      case 'breakfast':
-        return totalMinutes >= 6 * 60 && totalMinutes <= 8 * 60;
-      case 'lunch':
-        return totalMinutes >= 12 * 60 && totalMinutes <= 13 * 60;
-      case 'dinner':
-        return totalMinutes >= 18 * 60 && totalMinutes <= 19 * 60;
-      default:
-        return false;
-    }
-  }
-
-  /// Mengambil status selesai tiap jam makan untuk tanggal tertentu dengan validasi ketat
-  Future<Map<String, MealDailyStatus>> loadDailyStatus(DateTime date) async {
+  /// Mengambil status selesai tiap jam makan untuk tanggal dan pengguna tertentu.
+  /// Status awal selalu KOSONG (tidak ada data hardcode / contoh Figma).
+  Future<Map<String, MealDailyStatus>> loadDailyStatus(
+    DateTime date, {
+    String? uid,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final key = _dateKey(date);
+      final key = dateUserKey(date, uid);
       final jsonString = prefs.getString(key);
 
       Map<String, MealDailyStatus> statusMap = {};
@@ -116,57 +99,25 @@ class BerandaMealService {
       if (jsonString != null && jsonString.isNotEmpty) {
         final Map<String, dynamic> decoded = jsonDecode(jsonString);
         decoded.forEach((k, v) {
-          statusMap[k] = MealDailyStatus.fromJson(v as Map<String, dynamic>);
-        });
-
-        // VALIDASI STATUS: Buang status selesai yang waktu pencatatannya tidak sah (di luar jam makan)
-        bool hasChanges = false;
-        for (final entry in statusMap.entries.toList()) {
-          final mealId = entry.key;
-          final status = entry.value;
-
-          if (status.isCompleted) {
-            // Khusus Sarapan: jika jam sudah lewat sarapan dan actualTime adalah 08.00 (bawaan desain), izinkan
-            if (mealId == 'breakfast' && status.actualTime == '08.00') {
-              continue;
-            }
-            if (!_isActualTimeValidForMeal(mealId, status.actualTime)) {
-              statusMap[mealId] = const MealDailyStatus(isCompleted: false, actualTime: null);
-              hasChanges = true;
-            }
+          if (v is Map<String, dynamic>) {
+            statusMap[k] = MealDailyStatus.fromJson(v);
           }
-        }
-
-        if (hasChanges) {
-          await saveDailyStatus(date, statusMap);
-        }
-      } else {
-        // Inisialisasi awal default sesuai mockup desain
-        statusMap = {
-          'breakfast': const MealDailyStatus(isCompleted: true, actualTime: '08.00'),
-          'lunch': const MealDailyStatus(isCompleted: false, actualTime: null),
-          'dinner': const MealDailyStatus(isCompleted: false, actualTime: null),
-        };
-        await saveDailyStatus(date, statusMap);
+        });
       }
-
       return statusMap;
     } catch (_) {
-      return {
-        'breakfast': const MealDailyStatus(isCompleted: true, actualTime: '08.00'),
-        'lunch': const MealDailyStatus(isCompleted: false, actualTime: null),
-        'dinner': const MealDailyStatus(isCompleted: false, actualTime: null),
-      };
+      return {};
     }
   }
 
-  /// Menyimpan status selesai jam makan
+  /// Menyimpan status selesai jam makan untuk tanggal dan pengguna tertentu
   Future<void> saveDailyStatus(
     DateTime date,
-    Map<String, MealDailyStatus> statusMap,
-  ) async {
+    Map<String, MealDailyStatus> statusMap, {
+    String? uid,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = _dateKey(date);
+    final key = dateUserKey(date, uid);
     final mapToSave = statusMap.map((k, v) => MapEntry(k, v.toJson()));
     await prefs.setString(key, jsonEncode(mapToSave));
   }
@@ -176,8 +127,9 @@ class BerandaMealService {
     required DateTime date,
     required String mealId,
     required DateTime completedTime,
+    String? uid,
   }) async {
-    final statusMap = await loadDailyStatus(date);
+    final statusMap = await loadDailyStatus(date, uid: uid);
     final formattedTime =
         '${completedTime.hour.toString().padLeft(2, '0')}.${completedTime.minute.toString().padLeft(2, '0')}';
 
@@ -186,7 +138,7 @@ class BerandaMealService {
       actualTime: formattedTime,
     );
 
-    await saveDailyStatus(date, statusMap);
+    await saveDailyStatus(date, statusMap, uid: uid);
     stopAlarm();
     return statusMap;
   }
@@ -196,26 +148,26 @@ class BerandaMealService {
     return schedule.isCurrentTimeInRange(now);
   }
 
-  /// Menentukan jadwal mana yang harus ditampilkan kartu alarm saat ini
-  MealScheduleItem determineDisplayedSchedule(
+  /// Menentukan jadwal mana yang harus ditampilkan kartu alarm saat ini.
+  /// Aturan:
+  /// 1. Tampilkan makan yang sedang aktif (di dalam window dan belum ditandai).
+  /// 2. Jika tidak ada yang aktif, tampilkan makan berikutnya hari ini (upcoming dan belum ditandai).
+  /// 3. Jika semua sudah lewat atau selesai, kembalikan null (akan menampilkan "Semua jam makan hari ini sudah selesai").
+  MealScheduleItem? determineDisplayedSchedule(
     List<MealScheduleItem> schedules,
     Map<String, MealDailyStatus> dailyStatus,
   ) {
     final current = now;
 
-    // 1. Cek apakah ada jadwal yang saat ini sedang berlangsung
+    // 1. Cek apakah ada jadwal yang saat ini sedang aktif (dalam window dan belum ditandai)
     for (final schedule in schedules) {
-      if (schedule.isCurrentTimeInRange(current)) {
-        final isDone = dailyStatus[schedule.id]?.isCompleted ?? false;
-        // Jika sedang berlangsung dan belum selesai, tampilkan jadwal ini!
-        if (!isDone) {
-          return schedule;
-        }
+      final isDone = dailyStatus[schedule.id]?.isCompleted ?? false;
+      if (schedule.isCurrentTimeInRange(current) && !isDone) {
+        return schedule;
       }
     }
 
-    // 2. Jika tidak ada yang sedang berlangsung (atau yang berlangsung sudah selesai),
-    // tampilkan jadwal berikutnya yang belum lewat hari ini
+    // 2. Jika tidak ada yang aktif, cari jadwal berikutnya yang belum lewat hari ini
     for (final schedule in schedules) {
       final isDone = dailyStatus[schedule.id]?.isCompleted ?? false;
       if (schedule.isUpcoming(current) && !isDone) {
@@ -223,8 +175,41 @@ class BerandaMealService {
       }
     }
 
-    // 3. Jika semua jadwal hari ini sudah lewat atau selesai, tampilkan Sarapan besok
-    return schedules.first;
+    // 3. Jika semua sudah lewat atau selesai hari ini, kembalikan null
+    return null;
+  }
+
+  /// Menghitung batas waktu berikutnya (awal/akhir window makan terdekat atau tengah malam)
+  /// untuk penjadwalan Timer yang efisien tanpa polling per detik.
+  DateTime getNextBoundary(DateTime current, List<MealScheduleItem> schedules) {
+    final boundaries = <DateTime>[];
+
+    // Tengah malam (00:00:01 hari berikutnya)
+    final tomorrow = DateTime(current.year, current.month, current.day + 1, 0, 0, 1);
+    boundaries.add(tomorrow);
+
+    for (final s in schedules) {
+      final start = DateTime(current.year, current.month, current.day, s.startHour, s.startMinute);
+      if (start.isAfter(current)) {
+        boundaries.add(start);
+      }
+      final end = DateTime(current.year, current.month, current.day, s.endHour, s.endMinute);
+      if (end.isAfter(current)) {
+        boundaries.add(end);
+      }
+    }
+
+    boundaries.sort();
+    return boundaries.first;
+  }
+
+  /// Sinkronkan state alarm suara/haptik lokal jika aktif
+  void updateAlarmState(MealScheduleItem? activeSchedule, bool isActiveNow) {
+    if (isActiveNow && activeSchedule != null) {
+      startAlarm();
+    } else {
+      stopAlarm();
+    }
   }
 
   /// Memulai bunyi alarm & haptic getaran (berulang setiap 2.5 detik)
