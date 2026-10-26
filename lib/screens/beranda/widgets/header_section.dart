@@ -48,8 +48,17 @@ class HeaderChip extends StatelessWidget {
 
 class SapaanCard extends StatelessWidget {
   final String userName;
+  final String? customGreeting;
+  final String? customTitle;
+  final String? customSubtitle;
 
-  const SapaanCard({super.key, required this.userName});
+  const SapaanCard({
+    super.key,
+    required this.userName,
+    this.customGreeting,
+    this.customTitle,
+    this.customSubtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -92,19 +101,21 @@ class SapaanCard extends StatelessWidget {
                       SizedBox(
                         width: cardWidth * 0.58,
                         child: Text(
-                          'Halo, $displayName !',
+                          customGreeting ?? 'Halo, $displayName !',
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF8D5B20),
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(height: 4),
                       SizedBox(
                         width: cardWidth * 0.58,
                         child: Text(
-                          'Sehatkan Lambung,\nMulai dari Hari ini',
+                          customTitle ?? 'Sehatkan Lambung,\nMulai dari Hari ini',
                           style: GoogleFonts.poppins(
                             fontSize: 15.0,
                             fontWeight: FontWeight.w800,
@@ -112,13 +123,15 @@ class SapaanCard extends StatelessWidget {
                             height: 1.15,
                           ),
                           maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(height: 5),
                       SizedBox(
                         width: cardWidth * 0.58,
                         child: Text(
-                          'Yuk, jaga pola makan dan pantau kesehatan lambungmu setiap hari',
+                          customSubtitle ??
+                              'Yuk, jaga pola makan dan pantau kesehatan lambungmu setiap hari',
                           style: GoogleFonts.poppins(
                             fontSize: 9.5,
                             fontWeight: FontWeight.w500,
@@ -126,6 +139,7 @@ class SapaanCard extends StatelessWidget {
                             height: 1.22,
                           ),
                           maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

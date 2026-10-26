@@ -314,7 +314,7 @@ class _BeritaDetailScreenState extends State<BeritaDetailScreen> {
                                 },
                                 icon: const Icon(Icons.open_in_new, size: 16),
                                 label: const Text(
-                                  'Baca Sumber',
+                                  'Baca selengkapnya di sumber',
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,

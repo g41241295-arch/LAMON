@@ -338,20 +338,24 @@ class BeritaService {
     }
   }
 
-  // ── Seeding 9 Artikel Statis ──────────────────────────────────────────────
+  // ── Seeding 9 Artikel Statis (Upsert Bawaan Pengguna) ─────────────────────
 
   Future<SeedResult> seedStaticArticles() async {
     _ensureInitialized();
 
     final statics = BeritaRepository.getStaticAll();
     for (final s in statics) {
-      if (!_memoryArticles.any((a) => a.id == s.id)) {
+      final idx = _memoryArticles.indexWhere((a) => a.id == s.id);
+      if (idx == -1) {
         _memoryArticles.add(s);
+      } else {
+        _memoryArticles[idx] = s;
       }
     }
     _notify();
 
     int inserted = 0;
+    int updated = 0;
     int skipped = 0;
 
     final articles = _buildSeedData();
@@ -359,27 +363,44 @@ class BeritaService {
       for (final article in articles) {
         final docId = article['id'] as String;
         final ref = _firestore.collection(_collection).doc(docId);
+        bool isNew = true;
         try {
           final snap = await ref.get();
           if (snap.exists) {
-            skipped++;
-            continue;
+            isNew = false;
+            final existingData = snap.data();
+            final updatedById = existingData?['updatedById'];
+            // Kebijakan: Jika artikel bawaan sudah diedit manual oleh admin,
+            // JANGAN timpa (skip agar hasil edit admin tetap aman).
+            if (updatedById != null && updatedById != 'seed_script') {
+              skipped++;
+              continue;
+            }
           }
         } catch (_) {}
+
         final Map<String, dynamic> data = Map.from(article);
         data.remove('id');
         data['createdBy'] = 'system';
         data['createdById'] = 'seed_script';
-        data['createdAt'] = FieldValue.serverTimestamp();
+        if (isNew) {
+          data['createdAt'] = FieldValue.serverTimestamp();
+        }
         data['updatedAt'] = FieldValue.serverTimestamp();
-        await ref.set(data);
-        inserted++;
+
+        await ref.set(data, SetOptions(merge: true));
+        if (isNew) {
+          inserted++;
+        } else {
+          updated++;
+        }
       }
     } catch (e) {
-      debugPrint('[BeritaService] seedStaticArticles remote push note: $e');
+      debugPrint('[BeritaService] seedStaticArticles remote push error: $e');
+      rethrow;
     }
 
-    return SeedResult(inserted: inserted > 0 ? inserted : 9, skipped: skipped);
+    return SeedResult(inserted: inserted + updated, skipped: skipped);
   }
 
   List<Map<String, dynamic>> _buildSeedData() {

@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
+import '../../models/gastropedia_item_model.dart';
 
 class PopularFoodItem {
   final String name;
   final String imageAsset;
   final double rating;
   final int ratingCount;
+  final GastropediaItem gastropediaItem;
 
   PopularFoodItem({
     required this.name,
     required this.imageAsset,
     required this.rating,
     required this.ratingCount,
+    required this.gastropediaItem,
   });
 }
 
@@ -37,14 +41,14 @@ class PopularFoodCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: '${item.name}, rating ${item.rating}, ${item.ratingCount} ulasan',
+      label: '${item.name}, rating ${item.rating}',
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.gastropediaCardBg,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: const Color(0xFFE2ECF2),
+            color: AppColors.gastropediaCardBorder,
             width: 1.2,
           ),
           boxShadow: [
@@ -129,7 +133,7 @@ class PopularFoodCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              "${item.rating} (${item.ratingCount})",
+                              "${item.rating}",
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF7C8E97),

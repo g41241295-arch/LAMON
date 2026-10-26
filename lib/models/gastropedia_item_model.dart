@@ -148,6 +148,7 @@ class GastropediaData {
       name: 'Capcay',
       category: GastropediaCategory.makanan,
       imageAsset: 'assets/images/gastropedia/capcay.jpg',
+      isRecommended: true,
       deskripsi:
           'Capcay adalah masakan yang terdiri dari aneka sayuran, seperti wortel, kembang kol, dan sawi, serta tambahan protein, seperti ayam, udang, atau bakso. Proses pengolahan capcay umumnya menggunakan minyak dan bumbu pelengkap, seperti saus tiram, kecap, atau kaldu.',
       manfaat: [
@@ -273,6 +274,54 @@ class GastropediaData {
         '3. Kalsium & Zat Besi -> mendukung kekuatan tubuh.',
       ],
     ),
+    const GastropediaItem(
+      id: 'salad-sayur-segar',
+      name: 'Salad Sayur Segar',
+      category: GastropediaCategory.makanan,
+      imageAsset:
+          'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=200',
+      calories: 120,
+      protein: 4,
+      carbs: 14,
+      fat: 5,
+      deskripsi:
+          'Salad Sayur Segar memadukan selada romaine renyah, timun jepang iris, tomat matang tanpa biji, dan jagung manis pipil dengan sentuhan minyak zaitun extra virgin non-asam. Sayuran hijau segar kaya serat larut dan air membantu menetralkan asam lambung serta mencegah refluks ke esofagus.',
+      manfaat: [
+        '1. Menetralkan asam lambung berlebih\nKandungan air dan sifat alkalis dari sayuran hijau segar menenangkan sensasi perih pada lambung.',
+        '2. Melancarkan motilitas usus\nSerat alami membantu pergerakan makanan di saluran cerna tanpa memicu kontraksi berlebih.',
+        '3. Mencegah inflamasi mukosa lambung\nKaya antioksidan flavonoid dan vitamin C alami yang memperkuat lapisan pelindung lambung.',
+      ],
+      kandungan: [
+        '1. Klorofil & Air alami -> membersihkan sisa metabolit dan menyejukkan lambung.',
+        '2. Vitamin A, C, & K -> menjaga elastisitas jaringan dinding organ pencernaan.',
+        '3. Asam Folat & Magnesium -> membantu relaksasi otot sfingter esofagus.',
+        '4. Lemak sehat (Monounsaturated) -> berasal dari minyak zaitun untuk melapisi dinding lambung.',
+      ],
+    ),
+    const GastropediaItem(
+      id: 'sup-ayam-diet',
+      name: 'Sup Ayam Diet',
+      category: GastropediaCategory.makanan,
+      imageAsset:
+          'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=200',
+      calories: 165,
+      protein: 18,
+      carbs: 12,
+      fat: 4,
+      deskripsi:
+          'Sup Ayam Diet diracik dari potongan dada ayam rebus tanpa kulit, wortel empuk, labu siam, dan kaldu bening gurih tanpa bumbu merica tajam atau santan. Sangat lembut dan hangat di perut, menjadi pilihan terbaik untuk meredakan rasa perih saat maag kambuh atau GERD.',
+      manfaat: [
+        '1. Meredakan ketegangan dan kram perut\nKuah kaldu ayam hangat memberikan efek relaksasi pada sfingter esofagus bagian bawah.',
+        '2. Sumber protein pemulih mukosa\nProtein tinggi tanpa lemak dari dada ayam mempercepat regenerasi sel lambung yang meradang.',
+        '3. Mudah dicerna dan ramah lambung\nKomposisi sayuran empuk dan daging rebus tidak membebani kerja pengosongan lambung.',
+      ],
+      kandungan: [
+        '1. Protein hewani murni -> memperbaiki jaringan selaput lendir lambung yang luka.',
+        '2. Kolagen kaldu ayam -> memperkuat lapisan mukosa pelindung asam lambung.',
+        '3. Kalium & Elektrolit -> menstabilkan keseimbangan cairan dan asam lambung tubuh.',
+        '4. Beta-karoten wortel -> melindungi integritas sel epitel pencernaan.',
+      ],
+    ),
 
     // ==========================================
     // 2. BUAH
@@ -354,6 +403,7 @@ class GastropediaData {
       name: 'Alpukat',
       category: GastropediaCategory.buah,
       imageAsset: 'assets/images/gastropedia/alpukat.jpg',
+      isRecommended: true,
       deskripsi:
           'Alpukat kaya akan lemak tak jenuh tunggal yang sehat serta tekstur lembut yang menenangkan mukosa lambung, tidak menyebabkan refluks selama dikonsumsi dalam porsi wajar.',
       manfaat: [
@@ -372,6 +422,7 @@ class GastropediaData {
       name: 'Buah Naga',
       category: GastropediaCategory.buah,
       imageAsset: 'assets/images/gastropedia/buah_naga.jpg',
+      isRecommended: true,
       deskripsi:
           'Buah naga manis dengan daging merah atau putih kaya akan serat larut, air, dan biji kecil yang mengandung lemak baik. Sangat efektif mendinginkan perut yang begah.',
       manfaat: [
@@ -383,6 +434,30 @@ class GastropediaData {
         '1. Betalain & Flavonoid -> antioksidan penangkal inflamasi lambung.',
         '2. Vitamin C & Zat Besi -> pembentukan hemoglobin dan daya tahan.',
         '3. Serat pangan alami -> melancarkan waktu transit makanan.',
+      ],
+    ),
+    const GastropediaItem(
+      id: 'smoothie-bowl-buah-naga',
+      name: 'Smoothie Bowl Buah Naga',
+      category: GastropediaCategory.buah,
+      imageAsset:
+          'https://images.unsplash.com/photo-1496412705862-e0088f16f791?w=200',
+      calories: 145,
+      protein: 5,
+      carbs: 28,
+      fat: 2,
+      deskripsi:
+          'Smoothie Bowl Buah Naga memadukan pure buah naga merah segar, pisang matang lembut, dan susu almond non-dairy rendah lemak. Teksturnya yang kental dan dingin alami memberikan sensasi sejuk instan pada kerongkongan serta perut bagian atas yang panas akibat refluks asam lambung.',
+      manfaat: [
+        '1. Mendinginkan sensasi panas di ulu hati (Heartburn)\nSifat buah naga yang menyejukkan meredakan iritasi pada dinding kerongkongan secara instan.',
+        '2. Prebiotik alami lambung dan usus\nBiji halus dan serat larut buah naga menutrisi mikrobioma baik di saluran pencernaan.',
+        '3. Antasida alami dari pisang & buah naga\nMembantu menetralkan keasaman cairan lambung tanpa bahan kimia sintetis.',
+      ],
+      kandungan: [
+        '1. Betalain & Antioksidan -> zat warna alami penangkal inflamasi kronis lambung.',
+        '2. Serat larut & Pektin -> membentuk lapisan gel pelindung dinding mukosa lambung.',
+        '3. Kalium & Vitamin C -> menormalkan pH lambung dan meningkatkan daya tahan tubuh.',
+        '4. Zat Besi & Fosfor -> mendukung regenerasi sel darah dan energi harian.',
       ],
     ),
 

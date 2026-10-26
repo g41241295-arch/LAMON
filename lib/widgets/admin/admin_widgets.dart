@@ -33,11 +33,13 @@ class AdminGradientBackground extends StatelessWidget {
 class AdminScaffold extends StatelessWidget {
   final Widget? header;
   final Widget body;
+  final Widget? floatingActionButton;
 
   const AdminScaffold({
     super.key,
     this.header,
     required this.body,
+    this.floatingActionButton,
   });
 
   @override
@@ -56,6 +58,7 @@ class AdminScaffold extends StatelessWidget {
         extendBody: true,
         extendBodyBehindAppBar: true,
         resizeToAvoidBottomInset: true,
+        floatingActionButton: floatingActionButton,
         body: Stack(
           children: [
             Positioned.fill(
@@ -238,6 +241,7 @@ class AdminInputField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final TextInputType keyboardType;
   final bool readOnly;
+  final String? suffixText;
 
   const AdminInputField({
     super.key,
@@ -249,6 +253,7 @@ class AdminInputField extends StatelessWidget {
     this.onChanged,
     this.keyboardType = TextInputType.text,
     this.readOnly = false,
+    this.suffixText,
   });
 
   @override
@@ -291,6 +296,12 @@ class AdminInputField extends StatelessWidget {
               hintStyle: GoogleFonts.poppins(
                 fontSize: 13,
                 color: AppColors.inputPlaceholder,
+              ),
+              suffixText: suffixText,
+              suffixStyle: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.neutralGray,
               ),
             ),
           ),

@@ -200,7 +200,8 @@ class _DiseasePredictionHistoryDetailScreenState
   }
 
   Widget _buildHeader() {
-    return Padding(
+    return Container(
+      color: Colors.transparent,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -237,15 +238,31 @@ class _DiseasePredictionHistoryDetailScreenState
               ),
             ),
           ),
-          const Expanded(
-            child: Text(
+          // Judul dalam pill / badge krem
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7D6),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: const Color(0xFFE8DCAB),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: const Text(
               'Detail Pemeriksaan',
-              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: AppColors.primaryDark,
-                letterSpacing: -0.2,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: AppColors.primaryText,
+                letterSpacing: 0.2,
               ),
             ),
           ),
@@ -440,7 +457,7 @@ class _DiseasePredictionHistoryDetailScreenState
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.cardBackground,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: bannerBorder,
@@ -517,7 +534,7 @@ class _DiseasePredictionHistoryDetailScreenState
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.glassCardBackground,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: const Color(0xFFE2E8F0),
@@ -628,7 +645,7 @@ class _DiseasePredictionHistoryDetailScreenState
         Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.glassCardBackground,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: const Color(0xFFE2E8F0),
@@ -880,7 +897,7 @@ class _DiseasePredictionHistoryDetailScreenState
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.glassCardBackground,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: const Color(0xFFE2E8F0),

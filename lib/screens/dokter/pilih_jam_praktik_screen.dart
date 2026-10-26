@@ -121,7 +121,7 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
     final formattedDate = AppDateFormatter.formatLongDate(widget.date);
 
     return Scaffold(
-      backgroundColor: AppColors.bgGradientTop,
+      backgroundColor: AppColors.bgGradientMiddle,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -136,33 +136,63 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
         bottom: false,
         child: Column(
           children: [
-            // ── Bagian Atas (Header Kuning) ──
+            // ── Bagian Atas (Header Tanggal) ──
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.fromLTRB(24, 6, 24, 20),
+              child: Row(
                 children: [
-                  Text(
-                    formattedDate,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primaryText,
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.calendar_month_rounded,
+                      color: AppColors.primary,
+                      size: 24,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Pilih jam praktik untuk tanggal ini',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.summaryCardSubtext,
-                      fontWeight: FontWeight.w500,
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          formattedDate,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primaryText,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        const Text(
+                          'Pilih jam praktik untuk tanggal ini',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.summaryCardSubtext,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
 
             // ── Panel Bawah Gradasi Biru Bulat ──
             Expanded(
@@ -255,9 +285,12 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
                               child: ElevatedButton(
                                 onPressed: _isLoading ? null : _handleSave,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFFACC15), // Kuning
-                                  foregroundColor: const Color(0xFF713F12),
-                                  elevation: 2,
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  disabledBackgroundColor:
+                                      AppColors.primary.withValues(alpha: 0.4),
+                                  disabledForegroundColor: Colors.white70,
+                                  elevation: 1,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(24),
                                   ),
@@ -272,14 +305,14 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
                                           strokeWidth: 2,
                                           valueColor:
                                               AlwaysStoppedAnimation<Color>(
-                                                  Color(0xFF713F12)),
+                                                  Colors.white),
                                         ),
                                       )
                                     : const Text(
                                         'Simpan',
                                         style: TextStyle(
                                           fontSize: 15,
-                                          fontWeight: FontWeight.w800,
+                                          fontWeight: FontWeight.w700,
                                         ),
                                       ),
                               ),
@@ -305,7 +338,7 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: isSelected ? AppColors.primary : Colors.transparent,

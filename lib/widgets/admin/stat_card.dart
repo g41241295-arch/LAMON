@@ -41,7 +41,7 @@ class StatCard extends StatelessWidget {
       height: StatCardDims.cardHeight,
       padding: const EdgeInsets.all(StatCardDims.cardPadding),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(StatCardDims.cardRadius),
         boxShadow: [
           BoxShadow(

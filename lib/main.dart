@@ -58,6 +58,11 @@ class _LamonAppState extends State<LamonApp> {
             primary: AppColors.primary,
           ),
           scaffoldBackgroundColor: AppColors.bgGradientMiddle,
+          cardColor: AppColors.cardBackground,
+          cardTheme: const CardThemeData(
+            color: AppColors.cardBackground,
+            elevation: 0,
+          ),
           fontFamily: 'Segoe UI',
           appBarTheme: const AppBarTheme(
             backgroundColor: Colors.transparent,

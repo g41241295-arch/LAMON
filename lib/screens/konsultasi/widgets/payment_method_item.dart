@@ -37,11 +37,11 @@ class PaymentMethodItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             color: isSelected
-                ? AppColors.primary.withValues(alpha: 0.06)
-                : Colors.white,
+                ? AppColors.primary
+                : AppColors.cardBackground,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isSelected ? AppColors.primary : const Color(0xFFE2ECF2),
+              color: isSelected ? AppColors.primaryDark : const Color(0xFFE2ECF2),
               width: isSelected ? 1.8 : 1.2,
             ),
             boxShadow: [
@@ -90,7 +90,7 @@ class PaymentMethodItem extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: isSelected ? AppColors.primary : AppColors.primaryText,
+                    color: isSelected ? Colors.white : AppColors.primaryText,
                   ),
                 ),
               ),
@@ -103,10 +103,10 @@ class PaymentMethodItem extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isSelected ? AppColors.primary : AppColors.lightGray,
+                    color: isSelected ? Colors.white : AppColors.lightGray,
                     width: 2,
                   ),
-                  color: isSelected ? AppColors.primary : Colors.transparent,
+                  color: isSelected ? Colors.white.withValues(alpha: 0.25) : Colors.transparent,
                 ),
                 child: isSelected
                     ? const Icon(Icons.check, color: Colors.white, size: 14)

@@ -25,6 +25,9 @@ dependencies:
   firebase_storage: ^13.6.0
   url_launcher: ^6.3.2
 
+dependency_overrides:
+  shared_preferences_android: 2.4.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -50,10 +53,12 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/chat/
     - assets/images/gastropedia/
     - assets/images/berita/
     - assets/images/doctors/
     - assets/images/banks/
+    - assets/images/profil_admin/
     - assets/fonts/
     - assets/icon/
 

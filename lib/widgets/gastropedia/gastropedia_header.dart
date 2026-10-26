@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 
+/// Header bergaya pill krem-emas dengan tombol kembali lingkaran putih.
+/// Dipakai di Profil Admin, Kelola Gastropedia, Tambah/Edit Gastropedia.
+///
+/// - [title] : teks judul di dalam pill.
+/// - [onBack] : callback tombol kembali (default: Navigator.maybePop).
+/// - [trailing] : widget opsional di sisi kanan (contoh: tombol cloud).
+///   Widget ini dibungkus SizedBox(width:40, height:40) agar judul tetap
+///   benar-benar di tengah layar.
 class GastropediaHeader extends StatelessWidget {
   final String title;
   final VoidCallback? onBack;
+  final Widget? trailing;
 
   const GastropediaHeader({
     super.key,
     required this.title,
     this.onBack,
+    this.trailing,
   });
 
   @override
@@ -17,7 +27,7 @@ class GastropediaHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Tombol Kembali (Panah Kiri)
+          // ── Tombol Kembali ──────────────────────────────────────────────
           InkWell(
             onTap: onBack ?? () => Navigator.maybePop(context),
             borderRadius: BorderRadius.circular(24),
@@ -45,11 +55,12 @@ class GastropediaHeader extends StatelessWidget {
             ),
           ),
 
-          // Header Pill Embossed 3D
+          // ── Judul Pill (selalu di tengah karena Expanded + Center) ──────
           Expanded(
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     begin: Alignment.topCenter,
@@ -93,8 +104,12 @@ class GastropediaHeader extends StatelessWidget {
             ),
           ),
 
-          // Penyeimbang lebar di sisi kanan
-          const SizedBox(width: 40),
+          // ── Sisi kanan: trailing atau penyeimbang lebar ─────────────────
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: trailing,
+          ),
         ],
       ),
     );

@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../constants/app_colors.dart';
 import '../constants/admin_theme.dart';
 import '../routes/app_routes.dart';
 import '../services/ensiklopedia_service.dart';
 import '../models/activity_log_model.dart';
+import '../models/berita_article_model.dart';
+import '../services/berita/berita_service.dart';
 import '../widgets/admin/activity_item.dart';
 import '../widgets/admin/admin_widgets.dart';
 import '../widgets/admin/content_menu_tile.dart';
@@ -21,9 +22,9 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String _adminName = 'Admin';
   String _adminId = '';
-  String? _adminPhotoUrl;
   bool _loadingAdmin = true;
   final _ensiklopediaService = EnsiklopediaService();
+  final _beritaService = BeritaService();
   bool _snackBarCleared = false;
 
   @override
@@ -47,7 +48,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     _adminId = user.uid;
-    _adminPhotoUrl = user.photoURL;
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       if (!mounted) return;
@@ -62,9 +62,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           final local = email.split('@').first.toLowerCase();
           final cleaned = local.startsWith('admin') ? local.substring('admin'.length) : local;
           name = cleaned.isEmpty ? 'Admin' : cleaned[0].toUpperCase() + cleaned.substring(1);
-        }
-        if (data['foto'] != null && data['foto'].toString().isNotEmpty) {
-          _adminPhotoUrl = data['foto'];
         }
       } else {
         name = user.displayName ?? 'Admin';
@@ -119,7 +116,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             _buildDraftCard(),
             _buildStatCards(),
             const SizedBox(height: 24),
-            _buildSectionTitle('Aksi Cepat'),
+            _buildSectionTitle('Tambah Konten'),
             const SizedBox(height: 12),
             _buildQuickActions(),
             const SizedBox(height: 24),
@@ -155,138 +152,72 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  String get _displayAdminName {
+    final trimmed = _adminName.trim();
+    if (trimmed.isEmpty) return 'Admin';
+    return trimmed[0].toUpperCase() + trimmed.substring(1);
+  }
+
+  Future<void> _openAdminProfile() async {
+    await Navigator.pushNamed(context, AppRoutes.adminProfile);
+    if (mounted) {
+      _loadAdminData();
+    }
+  }
+
   Widget _buildHeader() {
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.65),
-      child: GestureDetector(
-        onTapDown: (d) {},
-        child: PopupMenuButton<String>(
-          onSelected: (value) {
-            if (value == 'keluar') _confirmLogout();
-          },
-          offset: const Offset(0, 50),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          itemBuilder: (_) => [
-            PopupMenuItem(
-              value: 'keluar',
-              child: Row(
-                children: [
-                  const Icon(Icons.logout_rounded, color: Color(0xFFD32F2F), size: 18),
-                  const SizedBox(width: 10),
-                  Text('Keluar', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFFD32F2F))),
-                ],
-              ),
+    return GestureDetector(
+      onTap: _openAdminProfile,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 4,
+              offset: Offset(0, 2),
             ),
           ],
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircleAvatar(
+              radius: 14,
+              backgroundColor: Color(0xFF276F8F),
+              child: Icon(Icons.person, size: 16, color: Colors.white),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Avatar lingkaran
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFFE8F4FB),
-                    border: Border.all(color: const Color(0xFF337AA3).withValues(alpha: 0.3), width: 1.5),
+            const SizedBox(width: 8),
+            _loadingAdmin
+                ? Container(
+                    width: 60,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  )
+                : Text(
+                    _displayAdminName,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF276F8F),
+                    ),
                   ),
-                  child: _adminPhotoUrl != null && _adminPhotoUrl!.isNotEmpty
-                      ? ClipOval(
-                          child: Image.network(
-                            _adminPhotoUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, e, s) => Center(
-                              child: Text(
-                                _adminName.isNotEmpty ? _adminName[0].toUpperCase() : 'A',
-                                style: GoogleFonts.poppins(color: const Color(0xFF337AA3), fontSize: 14, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                        )
-                      : Center(
-                          child: Text(
-                            _adminName.isNotEmpty ? _adminName[0].toUpperCase() : 'A',
-                            style: GoogleFonts.poppins(color: const Color(0xFF337AA3), fontSize: 14, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Admin',
-                        style: GoogleFonts.poppins(
-                          fontSize: 10,
-                          color: AppColors.neutralGray,
-                          fontWeight: FontWeight.w500,
-                          height: 1.1,
-                        ),
-                      ),
-                      _loadingAdmin
-                          ? Container(width: 60, height: 13, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(4)))
-                          : Text(
-                              _adminName,
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF1C4E68),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 4),
-                const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF337AA3), size: 18),
-              ],
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.keyboard_arrow_down,
+              color: Color(0xFF276F8F),
+              size: 20,
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Future<void> _confirmLogout() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text('Konfirmasi Keluar', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
-        content: Text('Apakah Anda yakin ingin keluar dari akun admin?', style: GoogleFonts.poppins()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Batal', style: GoogleFonts.poppins()),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Keluar', style: GoogleFonts.poppins(color: const Color(0xFFD32F2F), fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true && mounted) {
-      await FirebaseAuth.instance.signOut();
-      if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-    }
-  }
 
   Widget _buildWelcomeBanner() {
     return Container(
@@ -379,13 +310,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildDraftCard() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('berita_articles').where('status', isEqualTo: 'draft').snapshots(),
+    return StreamBuilder<List<BeritaArticle>>(
+      stream: _beritaService.streamAll(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const SizedBox.shrink();
         }
-        int draftCount = snapshot.data!.docs.length;
+        final draftArticles = snapshot.data!.where((a) => a.status == 'draft').toList();
+        final draftCount = draftArticles.length;
+        if (draftCount == 0) {
+          return const SizedBox.shrink();
+        }
         
         return Container(
           margin: const EdgeInsets.only(bottom: 24),
@@ -441,10 +376,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Row(
       children: [
         Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('berita_articles').snapshots(),
+          child: StreamBuilder<List<BeritaArticle>>(
+            stream: _beritaService.streamAll(),
             builder: (context, snapshot) {
-              int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+              Widget countWidget;
+              if (snapshot.hasError) {
+                countWidget = Text(
+                  '-',
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AdminTheme.navyText,
+                  ),
+                );
+              } else if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
+                countWidget = const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AdminTheme.navyText),
+                );
+              } else {
+                final articles = snapshot.data ?? [];
+                final terbitCount = articles.where((a) => a.status == 'terbit').length;
+                countWidget = Text(
+                  terbitCount.toString(),
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AdminTheme.navyText,
+                  ),
+                );
+              }
+
               return GestureDetector(
                 onTap: _openKelolaBerita,
                 child: Container(
@@ -461,14 +424,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        count.toString(),
-                        style: GoogleFonts.poppins(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: AdminTheme.navyText,
-                        ),
-                      ),
+                      countWidget,
                       Text(
                         'Artikel berita',
                         style: GoogleFonts.poppins(
@@ -480,7 +436,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ),
               );
-            }
+            },
           ),
         ),
         const SizedBox(width: 16),
@@ -524,7 +480,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ),
               );
-            }
+            },
           ),
         ),
       ],
@@ -532,12 +488,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: GoogleFonts.poppins(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: AdminTheme.navyText,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        title,
+        style: GoogleFonts.poppins(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: AdminTheme.navyText,
+        ),
       ),
     );
   }
@@ -590,17 +560,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildManageContent() {
     return Column(
       children: [
-        _buildContentStreamCard(
-          title: 'Berita Kesehatan',
-          stream: FirebaseFirestore.instance.collection('berita_articles').snapshots(),
-          imagePath: 'assets/images/admin-berita.png',
-          onTap: _openKelolaBerita,
-          isBerita: true,
+        StreamBuilder<List<BeritaArticle>>(
+          stream: _beritaService.streamAll(),
+          builder: (context, snapshot) {
+            String subtitle;
+            if (snapshot.hasError) {
+              subtitle = 'Gagal memuat data';
+            } else if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
+              subtitle = 'Memuat data...';
+            } else {
+              final articles = snapshot.data ?? [];
+              final count = articles.length;
+              final draftCount = articles.where((a) => a.status == 'draft').length;
+              subtitle = '$count artikel · $draftCount draft';
+            }
+
+            return ContentMenuTile(
+              imagePath: 'assets/images/admin-berita.png',
+              title: 'Berita Kesehatan',
+              subtitle: subtitle,
+              onTap: _openKelolaBerita,
+            );
+          },
         ),
         const SizedBox(height: 12),
         _buildContentStreamCard(
           title: 'Gastropedia',
-          stream: FirebaseFirestore.instance.collection('ensiklopedia').snapshots(),
+          stream: FirebaseFirestore.instance.collection('encyclopedia').snapshots(),
           imagePath: 'assets/images/admin-pisang.png',
           onTap: () => Navigator.pushNamed(context, AppRoutes.adminEnsiklopedia),
           isBerita: false,

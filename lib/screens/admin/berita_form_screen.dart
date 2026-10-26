@@ -7,6 +7,7 @@ import '../../models/berita_article_model.dart';
 import '../../services/berita/berita_service.dart';
 import '../../utils/app_exception.dart';
 import '../../widgets/admin/admin_widgets.dart';
+import '../../widgets/app_header_pill.dart';
 
 const List<String> _kKategori = [
   'Pencernaan',
@@ -336,7 +337,7 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
     final String publishButtonText = isAlreadyPublished ? 'Simpan Perubahan' : 'Terbitkan';
 
     return AdminScaffold(
-      header: AdminAppBar(
+      header: AppHeaderPill(
         title: _isEditMode ? 'Edit Artikel Berita' : 'Tambah Artikel Berita',
       ),
       body: SafeArea(
