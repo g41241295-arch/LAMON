@@ -104,107 +104,122 @@ class CalendarHeaderIllustration extends StatelessWidget {
             ),
           ),
 
-          // 3. Tombol Back Adaptif & Pill "Jadwal Harian" (Top-Left)
+          // 3. Pill "Jadwal Harian" di Tengah Horizontal Layar
+          Positioned(
+            top: topPadding + 6,
+            left: 0,
+            right: 0,
+            height: 44,
+            child: Center(
+              child: GlassContainer(
+                borderRadius: 20,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
+                backgroundColor:
+                    const Color(0xFFFFF7D6).withValues(alpha: 0.88),
+                child: Text(
+                  'Jadwal Harian',
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1E3A8A),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Tombol Back Adaptif (Top-Left)
           Positioned(
             top: topPadding + 6,
             left: 12,
+            child: GestureDetector(
+              onTap: onBack,
+              behavior: HitTestBehavior.opaque,
+              child: ConstrainedBox(
+                constraints:
+                    const BoxConstraints(minWidth: 44, minHeight: 44),
+                child: Center(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: isPicnic
+                        ? const Icon(
+                            Icons.arrow_back_rounded,
+                            key: ValueKey<String>('back_picnic'),
+                            color: Color(0xFFFFF8E1), // Krem cerah untuk kontras di atas piknik
+                            size: 26,
+                            shadows: [
+                              Shadow(
+                                color: Color(0x59000000), // Hitam alpha 35%
+                                blurRadius: 6,
+                                offset: Offset(0, 1),
+                              ),
+                            ],
+                          )
+                        : const Icon(
+                            Icons.arrow_back,
+                            key: ValueKey<String>('back_normal'),
+                            color: Color(0xFF1E3A8A), // Biru tua standar LAMON
+                            size: 24,
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // 4. Baris Pill Kondisi & Pill Instruksi di Bagian Bawah Ilustrasi
+          Positioned(
+            bottom: 38,
+            left: 16,
+            right: 16,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Tombol Back dengan area sentuh >= 44x44dp dan warna adaptif khusus ilustrasi piknik
-                GestureDetector(
-                  onTap: onBack,
-                  behavior: HitTestBehavior.opaque,
-                  child: ConstrainedBox(
-                    constraints:
-                        const BoxConstraints(minWidth: 44, minHeight: 44),
-                    child: Center(
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        child: isPicnic
-                            ? const Icon(
-                                Icons.arrow_back_rounded,
-                                key: ValueKey<String>('back_picnic'),
-                                color: Color(0xFFFFF8E1), // Krem cerah untuk kontras di atas piknik
-                                size: 26,
-                                shadows: [
-                                  Shadow(
-                                    color: Color(0x59000000), // Hitam alpha 35%
-                                    blurRadius: 6,
-                                    offset: Offset(0, 1),
-                                  ),
-                                ],
-                              )
-                            : const Icon(
-                                Icons.arrow_back,
-                                key: ValueKey<String>('back_normal'),
-                                color: Color(0xFF1E3A8A), // Biru tua standar LAMON
-                                size: 24,
-                              ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                // Pill "Jadwal Harian"
+                // Pill Kondisi ("Baik-baik saja" / "Sakit")
                 GlassContainer(
-                  borderRadius: 20,
+                  borderRadius: 16,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
-                  backgroundColor:
-                      const Color(0xFFFFF7D6).withValues(alpha: 0.88),
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  backgroundColor: isHealthy
+                      ? const Color(0xFFFFFBEB).withValues(alpha: 0.9)
+                      : const Color(0xFFFEF3C7).withValues(alpha: 0.9),
                   child: Text(
-                    'Jadwal Harian',
+                    conditionLabel,
                     style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                       color: const Color(0xFF1E3A8A),
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
+                // Pill Instruksi ("Pilih tanggal" / "Pilih tanggal untuk istirahat")
+                Flexible(
+                  child: GlassContainer(
+                    borderRadius: 16,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 5),
+                    backgroundColor: Colors.white.withValues(alpha: 0.88),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        instructionLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: isHealthy
+                              ? const Color(0xFF1E3A8A)
+                              : const Color(0xFF7C2D12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
-            ),
-          ),
-
-          // 4. Pill Kondisi ("Baik-baik saja" / "Sakit")
-          Positioned(
-            top: topPadding + 54,
-            left: 56,
-            child: GlassContainer(
-              borderRadius: 16,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              backgroundColor: isHealthy
-                  ? const Color(0xFFFFFBEB).withValues(alpha: 0.9)
-                  : const Color(0xFFFEF3C7).withValues(alpha: 0.9),
-              child: Text(
-                conditionLabel,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1E3A8A),
-                ),
-              ),
-            ),
-          ),
-
-          // 5. Pill Instruksi ("Pilih tanggal" / "Pilih tanggal untuk istirahat")
-          Positioned(
-            bottom: 38,
-            left: 16,
-            child: GlassContainer(
-              borderRadius: 16,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-              backgroundColor: Colors.white.withValues(alpha: 0.88),
-              child: Text(
-                instructionLabel,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: isHealthy
-                      ? const Color(0xFF1E3A8A)
-                      : const Color(0xFF7C2D12),
-                ),
-              ),
             ),
           ),
         ],
