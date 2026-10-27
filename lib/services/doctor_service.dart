@@ -222,7 +222,7 @@ class DoctorService {
   }
 
   /// Menyimpan jadwal praktik untuk satu tanggal (yyyy-MM-dd).
-  /// [slots] dapat berupa List<String> atau List<dynamic> (gabungan ID slot tetap dan data slot kustom).
+  /// [slots] dapat berupa `List<String>` atau `List<dynamic>` (gabungan ID slot tetap dan data slot kustom).
   /// Jika [slots] kosong, dokumen jadwal tanggal tersebut dihapus (hari libur).
   Future<void> saveSchedule({
     required String doctorId,
