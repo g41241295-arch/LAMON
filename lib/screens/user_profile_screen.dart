@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:image_picker/image_picker.dart';
 import '../constants/app_colors.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/app_header_pill.dart';
@@ -16,11 +19,17 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
+  final ImagePicker _imagePicker = ImagePicker();
+
   bool _isLoading = true;
+  bool _isUploadingPhoto = false;
   String _userName = '';
   String _userEmail = '';
+  String? _uploadedPhotoUrl;
+  String? _googlePhotoUrl;
   String? _photoUrl;
   String? _gender; // 'Pria'/'Laki-laki' atau 'Wanita'/'Perempuan'
+  dynamic _rawBirthDate; // Timestamp, String, atau null
   dynamic _rawHistory; // bool, String, List, atau null
 
   @override
@@ -38,8 +47,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     String name = user.displayName ?? '';
     String email = user.email ?? '';
-    String? photo = user.photoURL;
+    String? googlePhoto = user.photoURL;
+    String? uploadedPhoto;
     String? gender;
+    dynamic rawBirthDate;
     dynamic history;
 
     try {
@@ -54,13 +65,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         if (rawEmail.isNotEmpty) email = rawEmail;
 
         final rawPhoto = (data['photo_url'] ?? data['photoUrl'] ?? '').toString().trim();
-        if (rawPhoto.isNotEmpty) photo = rawPhoto;
+        if (rawPhoto.isNotEmpty) uploadedPhoto = rawPhoto;
 
         // Jenis Kelamin: prioritas root 'jenis_kelamin', lalu 'screeningData' -> 'gender'
         final rawGender = data['jenis_kelamin'] ?? data['screeningData']?['gender'];
         if (rawGender != null) {
           gender = rawGender.toString().trim();
         }
+
+        // Tanggal Lahir: prioritas root 'tanggal_lahir', 'birthDate', lalu 'screeningData' -> 'birthDate' / 'tanggal_lahir'
+        rawBirthDate = data['tanggal_lahir'] ??
+            data['birthDate'] ??
+            data['birth_date'] ??
+            data['screeningData']?['birthDate'] ??
+            data['screeningData']?['tanggal_lahir'];
 
         // Riwayat Penyakit: prioritas root 'riwayat_penyakit_lambung' / 'riwayat_penyakit', lalu 'screeningData' -> 'hasHistory'
         if (data.containsKey('riwayat_penyakit_lambung')) {
@@ -84,8 +102,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       setState(() {
         _userName = name;
         _userEmail = email;
-        _photoUrl = photo;
+        _uploadedPhotoUrl = uploadedPhoto;
+        _googlePhotoUrl = googlePhoto;
+        _photoUrl = (uploadedPhoto != null && uploadedPhoto.isNotEmpty) ? uploadedPhoto : googlePhoto;
         _gender = gender;
+        _rawBirthDate = rawBirthDate;
         _rawHistory = history;
         _isLoading = false;
       });
@@ -110,6 +131,70 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     return lower == 'perempuan' || lower == 'wanita';
   }
 
+  String _formatIndonesianDate(dynamic rawDate) {
+    if (rawDate == null) return 'Belum diisi';
+
+    DateTime? dt;
+    if (rawDate is Timestamp) {
+      dt = rawDate.toDate();
+    } else if (rawDate is DateTime) {
+      dt = rawDate;
+    } else if (rawDate is String) {
+      final trimmed = rawDate.trim();
+      if (trimmed.isEmpty || trimmed == '-' || trimmed.toLowerCase() == 'belum diisi') {
+        return 'Belum diisi';
+      }
+      dt = DateTime.tryParse(trimmed);
+      if (dt == null) {
+        // Coba pola DD-MM-YYYY atau YYYY/MM/DD
+        final parts = trimmed.split(RegExp(r'[-/]'));
+        if (parts.length == 3) {
+          if (parts[0].length == 4) {
+            // YYYY-MM-DD
+            final y = int.tryParse(parts[0]);
+            final m = int.tryParse(parts[1]);
+            final d = int.tryParse(parts[2]);
+            if (y != null && m != null && d != null) {
+              dt = DateTime(y, m, d);
+            }
+          } else if (parts[2].length == 4) {
+            // DD-MM-YYYY
+            final d = int.tryParse(parts[0]);
+            final m = int.tryParse(parts[1]);
+            final y = int.tryParse(parts[2]);
+            if (y != null && m != null && d != null) {
+              dt = DateTime(y, m, d);
+            }
+          }
+        }
+      }
+    }
+
+    if (dt == null) {
+      final str = rawDate.toString().trim();
+      return str.isNotEmpty ? str : 'Belum diisi';
+    }
+
+    const months = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+    if (dt.month >= 1 && dt.month <= 12) {
+      return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
+    }
+    return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
   Widget _buildDefaultAvatar() {
     return Container(
       width: 96,
@@ -127,33 +212,250 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildAvatarImage() {
-    final cleanPhoto = (_photoUrl ?? '').trim();
-    if (cleanPhoto.isNotEmpty) {
-      return ClipOval(
-        child: SizedBox(
-          width: 96,
-          height: 96,
-          child: Image.network(
-            cleanPhoto,
+    // Prioritas: (1) URL foto yang diunggah di Firestore, (2) foto Google user.photoURL, (3) default icon
+    final cleanUploaded = (_uploadedPhotoUrl ?? '').trim();
+    final cleanGoogle = (_googlePhotoUrl ?? '').trim();
+
+    final targetUrl = cleanUploaded.isNotEmpty ? cleanUploaded : cleanGoogle;
+
+    if (targetUrl.isNotEmpty) {
+      return Image.network(
+        targetUrl,
+        width: 96,
+        height: 96,
+        fit: BoxFit.cover,
+        alignment: Alignment.topCenter,
+        filterQuality: FilterQuality.high,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
             width: 96,
             height: 96,
-            fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
-            filterQuality: FilterQuality.high,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Container(
-                width: 96,
-                height: 96,
-                color: const Color(0xFF134563).withValues(alpha: 0.1),
-              );
-            },
-            errorBuilder: (context, error, stackTrace) => _buildDefaultAvatar(),
-          ),
-        ),
+            color: const Color(0xFF134563).withValues(alpha: 0.1),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          // Jika foto unggahan gagal dimuat dan ada foto Google, coba fallback ke foto Google
+          if (cleanUploaded.isNotEmpty && cleanGoogle.isNotEmpty && targetUrl != cleanGoogle) {
+            return Image.network(
+              cleanGoogle,
+              width: 96,
+              height: 96,
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+              filterQuality: FilterQuality.high,
+              errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
+            );
+          }
+          return _buildDefaultAvatar();
+        },
       );
     }
     return _buildDefaultAvatar();
+  }
+
+  // Bottom sheet pilihan sumber foto (persis gaya Profil Dokter)
+  void _showPhotoSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Text(
+                    'Ganti Foto Profil',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primaryText,
+                    ),
+                  ),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  title: const Text(
+                    'Kamera',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: const Text(
+                    'Ambil foto langsung',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickAndUploadPhoto(ImageSource.camera);
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.photo_library_rounded,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  title: const Text(
+                    'Galeri',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: const Text(
+                    'Pilih dari galeri HP',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickAndUploadPhoto(ImageSource.gallery);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Pilih + kompres + upload foto profil (mengikuti ukuran dan kompresi Profil Dokter)
+  Future<void> _pickAndUploadPhoto(ImageSource source) async {
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 70,
+      );
+      if (picked == null) return;
+
+      final ext = picked.path.split('.').last.toLowerCase();
+      if (ext != 'jpg' && ext != 'jpeg' && ext != 'png') {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Format gambar harus JPG atau PNG.'),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      final Uint8List imageBytes = await picked.readAsBytes();
+      if (!mounted) return;
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pengguna tidak terautentikasi.'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      setState(() => _isUploadingPhoto = true);
+
+      String downloadUrl;
+      try {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('users/${user.uid}/profile.jpg');
+
+        final metadata = SettableMetadata(
+          contentType: 'image/jpeg',
+          customMetadata: {'uid': user.uid},
+        );
+
+        final task = await storageRef.putData(imageBytes, metadata);
+        downloadUrl = await task.ref.getDownloadURL();
+      } catch (storageError) {
+        debugPrint('[UserProfileScreen] Firebase Storage gagal: $storageError');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal mengunggah foto ke Storage: $storageError'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Simpan URL ke Firestore di koleksi 'users', field 'photo_url'
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'photo_url': downloadUrl,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      if (mounted) {
+        setState(() {
+          _uploadedPhotoUrl = downloadUrl;
+          _photoUrl = downloadUrl;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Foto profil berhasil diperbarui.'),
+            backgroundColor: AppColors.successGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } on PlatformException catch (e) {
+      debugPrint('[UserProfileScreen] Izin akses ditolak atau dibatalkan: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Izin akses ditolak atau dibatalkan: ${e.message ?? e.code}'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[UserProfileScreen] Gagal mengganti foto: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengganti foto: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingPhoto = false);
+      }
+    }
   }
 
   Widget _buildGenderChip({
@@ -223,7 +525,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         iconColor = AppColors.successGreen;
       }
     } else if (_rawHistory is List) {
-      final list = (_rawHistory as List).map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList();
+      final list = (_rawHistory as List)
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
       if (list.isEmpty || list.contains('tidak ada') || list.contains('tidak')) {
         historyText = 'Tidak ada riwayat penyakit';
         historyIcon = Icons.check_circle_outline_rounded;
@@ -338,20 +643,75 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Avatar Bulat Pengguna
+                  // Avatar Bulat Pengguna dengan tombol kamera di pojok kanan bawah (persis gaya Profil Dokter)
                   Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+                    child: GestureDetector(
+                      onTap: _isUploadingPhoto ? null : _showPhotoSourceSheet,
+                      child: Stack(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.primary,
+                                width: 2.5,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.08),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ClipOval(
+                              child: _isUploadingPhoto
+                                  ? Container(
+                                      width: 96,
+                                      height: 96,
+                                      color: AppColors.primary.withValues(alpha: 0.1),
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                          color: AppColors.primary,
+                                          strokeWidth: 2.5,
+                                        ),
+                                      ),
+                                    )
+                                  : SizedBox(
+                                      width: 96,
+                                      height: 96,
+                                      child: _buildAvatarImage(),
+                                    ),
+                            ),
                           ),
+                          if (!_isUploadingPhoto)
+                            Positioned(
+                              bottom: 2,
+                              right: 2,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.15),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt_rounded,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
-                      child: _buildAvatarImage(),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -505,6 +865,40 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Field Tanggal Lahir (Read-Only dari Skrining)
+                        Text(
+                          'Tanggal Lahir',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1C4E68),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          key: ValueKey(_formatIndonesianDate(_rawBirthDate)),
+                          initialValue: _formatIndonesianDate(_rawBirthDate),
+                          readOnly: true,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: const Color(0xFF1C4E68),
+                          ),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: AppColors.inputBorder),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: AppColors.inputBorder),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          ),
                         ),
                         const SizedBox(height: 16),
 
