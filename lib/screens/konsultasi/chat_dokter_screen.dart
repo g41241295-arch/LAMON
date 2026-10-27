@@ -23,6 +23,7 @@ class ChatDokterScreen extends StatefulWidget {
   final bool isDoctor;
   final String? patientUid;
   final ConsultationModel? initialConsultation;
+  final bool readOnly;
 
   const ChatDokterScreen({
     super.key,
@@ -30,6 +31,7 @@ class ChatDokterScreen extends StatefulWidget {
     this.isDoctor = false,
     this.patientUid,
     this.initialConsultation,
+    this.readOnly = false,
   });
 
   @override
@@ -45,6 +47,8 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
 
   ConsultationModel? _consultation;
   StreamSubscription<ConsultationModel?>? _consultationSub;
+  Stream<List<ChatMessage>>? _messagesStream;
+  String? _currentStreamPatientUid;
   bool _isSending = false;
   bool _isUploading = false;
   bool _hasLoadedConsultation = false;
@@ -66,15 +70,10 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
       _hasLoadedConsultation = true;
     }
 
-    // Mulai listen dengan patientUid yang tersedia saat ini.
-    // Jika initialConsultation sudah ada, patientUid sudah tersedia.
+    _initMessagesStream();
     _listenConsultation();
-
-    // Muat data awal jika belum ada, lalu re-listen dengan patientUid yang benar.
     _loadInitialConsultation();
 
-    // Reset unread segera setelah widget ter-build (via addPostFrameCallback)
-    // agar badge hilang begitu dokter membuka layar chat.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _markRead();
     });
@@ -99,6 +98,23 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     super.dispose();
   }
 
+  void _initMessagesStream() {
+    final pUid = _effectivePatientUid;
+    final resolvedUid = (pUid != null && pUid.isNotEmpty)
+        ? pUid
+        : (!widget.isDoctor ? _consultationService.currentUid : null);
+
+    if (resolvedUid != null && resolvedUid.isNotEmpty) {
+      if (_messagesStream == null || _currentStreamPatientUid != resolvedUid) {
+        _currentStreamPatientUid = resolvedUid;
+        _messagesStream = _consultationService.watchMessages(
+          widget.consultationId,
+          patientUid: resolvedUid,
+        );
+      }
+    }
+  }
+
   Future<void> _loadInitialConsultation() async {
     if (_consultation == null) {
       final data = await _consultationService.fetchById(
@@ -109,8 +125,8 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
         setState(() {
           _consultation = data;
           _hasLoadedConsultation = true;
+          _initMessagesStream();
         });
-        // Re-listen dengan patientUid yang kini sudah tersedia.
         _listenConsultation();
         _markRead();
       }
@@ -121,6 +137,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
       widget.patientUid ?? _consultation?.patientUid;
 
   void _listenConsultation() {
+    _consultationSub?.cancel();
     _consultationSub = _consultationService
         .watchConsultation(widget.consultationId,
             patientUid: _effectivePatientUid)
@@ -129,6 +146,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
         setState(() {
           _consultation = c;
           _hasLoadedConsultation = true;
+          _initMessagesStream();
         });
       }
     }, onError: (e) {
@@ -137,6 +155,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
   }
 
   void _markRead() {
+    if (widget.readOnly) return;
     _consultationService.markChatAsRead(
       consultationId: widget.consultationId,
       role: widget.isDoctor ? 'doctor' : 'patient',
@@ -557,15 +576,15 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
         : (_consultation?.doctorName ?? 'Dokter');
 
     final isWaiting = _consultation?.isWaiting ?? false;
-    final isCompleted = _consultation?.isCompleted ?? false;
+    final isCompleted = widget.readOnly || (_consultation?.isCompleted ?? false);
     final String statusLabel;
     final Color statusColor;
-    if (isWaiting) {
-      statusLabel = 'Menunggu Konfirmasi';
-      statusColor = AppColors.warningYellow;
-    } else if (isCompleted) {
+    if (isCompleted) {
       statusLabel = 'Konsultasi Selesai';
       statusColor = AppColors.neutralGray;
+    } else if (isWaiting) {
+      statusLabel = 'Menunggu Konfirmasi';
+      statusColor = AppColors.warningYellow;
     } else {
       statusLabel = 'Konsultasi Berlangsung';
       statusColor = AppColors.successGreen;
@@ -652,7 +671,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
               ],
             ),
             actions: [
-              if (widget.isDoctor && (_consultation?.isActive ?? false))
+              if (widget.isDoctor && !widget.readOnly && (_consultation?.isActive ?? false))
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
                   child: TextButton.icon(
@@ -684,7 +703,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
             child: Column(
               children: [
                 // ── Banner Menunggu Konfirmasi Dokter (Sisi Pasien) ──
-                if (isWaiting)
+                if (!isCompleted && isWaiting)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -725,12 +744,14 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                           child:
                               CircularProgressIndicator(color: AppColors.primary))
                       : StreamBuilder<List<ChatMessage>>(
-                          stream: _consultationService.watchMessages(
-                            widget.consultationId,
-                            patientUid: _effectivePatientUid,
-                          ),
+                          stream: _messagesStream ??
+                              _consultationService.watchMessages(
+                                widget.consultationId,
+                                patientUid: _effectivePatientUid,
+                              ),
                           builder: (context, snapshot) {
                             if (snapshot.hasError) {
+                              debugPrint('[ChatDokterScreen] watchMessages error: ${snapshot.error}');
                               return Center(
                                 child: Padding(
                                   padding: const EdgeInsets.all(24),
@@ -746,6 +767,16 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                                         style: const TextStyle(
                                             fontSize: 13,
                                             color: AppColors.neutralGray),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      ElevatedButton.icon(
+                                        onPressed: () {
+                                          setState(() {
+                                            _initMessagesStream();
+                                          });
+                                        },
+                                        icon: const Icon(Icons.refresh_rounded, size: 16),
+                                        label: const Text('Coba Lagi'),
                                       ),
                                     ],
                                   ),

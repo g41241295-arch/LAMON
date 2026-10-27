@@ -213,12 +213,14 @@ class AppRoutes {
       bool isDoctor = false;
       String? patientUid;
       ConsultationModel? initialConsultation;
+      bool readOnly = false;
 
       if (settings.arguments is Map<String, dynamic>) {
         final args = settings.arguments as Map<String, dynamic>;
         isDoctor = args['isDoctor'] as bool? ?? false;
         patientUid = args['patientUid'] as String?;
         initialConsultation = args['initialConsultation'] as ConsultationModel?;
+        readOnly = args['readOnly'] as bool? ?? false;
       }
 
       return _createSmoothRoute(
@@ -227,6 +229,7 @@ class AppRoutes {
           isDoctor: isDoctor,
           patientUid: patientUid,
           initialConsultation: initialConsultation,
+          readOnly: readOnly,
         ),
         settings: settings,
       );

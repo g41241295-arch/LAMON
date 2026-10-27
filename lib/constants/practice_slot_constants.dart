@@ -128,7 +128,7 @@ class PracticeSlotConstants {
     }
   }
 
-  /// Parse list slot (berisi string atau map) menjadi List<PracticeSlot>
+  /// Parse list slot (berisi string atau map) menjadi `List<PracticeSlot>`
   static List<PracticeSlot> parseSlots(List<dynamic> rawList) {
     final list = <PracticeSlot>[];
     for (final raw in rawList) {

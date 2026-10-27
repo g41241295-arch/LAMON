@@ -7,6 +7,7 @@ import '../../services/doctor_service.dart';
 import '../../utils/app_date_formatter.dart';
 import '../../widgets/app_header_pill.dart';
 import '../../widgets/app_scaffold.dart';
+import 'chat_dokter_screen.dart';
 import 'widgets/doctor_avatar.dart';
 
 /// Layar Riwayat Konsultasi (Sisi Pasien).
@@ -269,22 +270,40 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
     final finishTime = item.completedAt ?? item.createdAt;
     final finishTimeStr = AppDateFormatter.formatFullDateTime(finishTime);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2ECF2), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatDokterScreen(
+                consultationId: item.id,
+                isDoctor: false,
+                patientUid: item.patientUid,
+                initialConsultation: item,
+                readOnly: true,
+              ),
+            ),
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFE2ECF2), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Baris Atas: Judul "Konsultasi dengan" & Badge Status "Selesai" (Hijau)
           Row(
@@ -468,6 +487,8 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
           ),
         ],
       ),
-    );
+    ),
+  ),
+);
   }
 }

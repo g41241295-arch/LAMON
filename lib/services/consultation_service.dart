@@ -28,6 +28,7 @@ class ConsultationService {
         _storage = storage ?? FirebaseStorage.instance;
 
   String? get _uid => _auth.currentUser?.uid;
+  String? get currentUid => _uid;
 
   /// Referensi sub-koleksi consultations milik user yang sedang login.
   CollectionReference<Map<String, dynamic>>? get _consultationsRef {
@@ -186,7 +187,7 @@ class ConsultationService {
       // Fallback via collectionGroup jika patientUid belum ada
       final groupSnap = await _db
           .collectionGroup('consultations')
-          .where(FieldPath.documentId, isEqualTo: consultationId)
+          .where('consultationId', isEqualTo: consultationId)
           .limit(1)
           .get();
       if (groupSnap.docs.isNotEmpty) {
@@ -410,8 +411,26 @@ class ConsultationService {
     String? mimeType,
     String? doctorId,
   }) async {
-    final messagesRef = _messagesRef(consultationId, patientUid);
-    final consultationDocRef = _consultationDocRef(consultationId, patientUid);
+    // Pastikan patientUid selalu valid. Dokter TIDAK BOLEH menulis ke users/{doctorUid}
+    String? effectivePatientUid = (patientUid != null && patientUid.trim().isNotEmpty)
+        ? patientUid.trim()
+        : null;
+
+    if (effectivePatientUid == null) {
+      if (senderType == 'patient') {
+        effectivePatientUid = _uid;
+      } else {
+        final consultation = await fetchById(consultationId);
+        effectivePatientUid = consultation?.patientUid;
+      }
+    }
+
+    if (effectivePatientUid == null || effectivePatientUid.isEmpty) {
+      throw Exception('patientUid tidak ditemukan untuk konsultasi $consultationId. Pesan dibatalkan.');
+    }
+
+    final messagesRef = _messagesRef(consultationId, effectivePatientUid);
+    final consultationDocRef = _consultationDocRef(consultationId, effectivePatientUid);
 
     if (messagesRef == null || consultationDocRef == null) {
       throw Exception('Referensi konsultasi tidak valid.');
@@ -459,7 +478,7 @@ class ConsultationService {
     }
 
     await batch.commit();
-    debugPrint('[ConsultationService] Pesan $senderType berhasil dikirim via batch.');
+    debugPrint('[ConsultationService] Pesan $senderType berhasil dikirim via batch ke users/$effectivePatientUid/consultations/$consultationId.');
 
     // Jika pengirim adalah pasien, cek apakah dokter punya akun nyata
     if (senderType == 'patient') {
@@ -503,11 +522,26 @@ class ConsultationService {
     required String patientText,
   }) async {
     if (doctorId == null || doctorId.isEmpty) {
-      _scheduleSimulatedDoctorReply(consultationId, patientText);
       return;
     }
 
     try {
+      // 1. Cek status konsultasi: jika sudah aktif atau dikonfirmasi dokter nyata, jangan kirim simulasi
+      final docRef = _consultationDocRef(consultationId);
+      if (docRef != null) {
+        final consultDoc = await docRef.get();
+        if (consultDoc.exists) {
+          final data = consultDoc.data() ?? {};
+          final status = data['status'] as String?;
+          final confirmedAt = data['doctorConfirmedAt'];
+          if (status == 'active' || confirmedAt != null) {
+            debugPrint('[ConsultationService] Konsultasi $consultationId aktif/dikonfirmasi dokter nyata. Simulasi auto-reply dinonaktifkan.');
+            return;
+          }
+        }
+      }
+
+      // 2. Cek apakah dokter memiliki UID di koleksi doctors
       final doc = await _db.collection('doctors').doc(doctorId).get();
       if (doc.exists) {
         final doctorUid = doc.data()?['uid'] as String?;
@@ -516,11 +550,22 @@ class ConsultationService {
           return;
         }
       }
+
+      // 3. Cek apakah ada akun pengguna terdaftar dengan role dokter untuk doctorId ini
+      final userQuery = await _db
+          .collection('users')
+          .where('doctorId', isEqualTo: doctorId)
+          .limit(1)
+          .get();
+      if (userQuery.docs.isNotEmpty) {
+        debugPrint('[ConsultationService] Akun dokter terdaftar di users. Simulasi auto-reply dinonaktifkan.');
+        return;
+      }
     } catch (e) {
       debugPrint('[ConsultationService] Gagal cek akun dokter: $e');
     }
 
-    // Fallback: jalankan simulasi jika dokter belum punya akun nyata
+    // Fallback: jalankan simulasi jika dokter benar-benar dummy tanpa akun
     _scheduleSimulatedDoctorReply(consultationId, patientText);
   }
 
