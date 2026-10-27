@@ -264,14 +264,21 @@ class ConsultationService {
       if (pUid.isEmpty) {
         final groupSnap = await _db
             .collectionGroup('consultations')
-            .where(FieldPath.documentId, isEqualTo: consultationId)
+            .where('consultationId', isEqualTo: consultationId)
             .limit(1)
             .get();
         if (groupSnap.docs.isNotEmpty) {
-          final pathSegments = groupSnap.docs.first.reference.path.split('/');
+          final doc = groupSnap.docs.first;
+          final pathSegments = doc.reference.path.split('/');
           final usersIdx = pathSegments.indexOf('users');
           if (usersIdx != -1 && usersIdx + 1 < pathSegments.length) {
             pUid = pathSegments[usersIdx + 1];
+          }
+          if (pUid.isEmpty) {
+            final dataUid = doc.data()['patientUid'] as String?;
+            if (dataUid != null && dataUid.isNotEmpty) {
+              pUid = dataUid;
+            }
           }
         }
       }
@@ -298,6 +305,26 @@ class ConsultationService {
       debugPrint('[ConsultationService] Gagal completeConsultation: $e');
       rethrow;
     }
+  }
+
+  /// Stream seluruh konsultasi milik pasien (baik active, waiting, maupun completed),
+  /// tanpa filter server-side agar tidak memerlukan composite index dan live real-time.
+  Stream<List<ConsultationModel>> watchAllPatientConsultations({String? patientUid}) {
+    final pUid = patientUid ?? _uid;
+    if (pUid == null || pUid.isEmpty) {
+      return Stream.value(<ConsultationModel>[]);
+    }
+
+    return _db
+        .collection('users')
+        .doc(pUid)
+        .collection('consultations')
+        .snapshots()
+        .map((snap) {
+      return snap.docs
+          .map((doc) => ConsultationModel.fromFirestore(doc))
+          .toList();
+    });
   }
 
   /// Stream daftar riwayat konsultasi pasien berstatus "completed".

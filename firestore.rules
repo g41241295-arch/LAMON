@@ -25,6 +25,8 @@ service cloud.firestore {
     function isDoctorForDoc(docData) {
       return isDoctor() && (
         (myDoctorId() != '' && docData.doctorId == myDoctorId()) ||
+        (docData.doctorId == request.auth.uid) ||
+        (('doctorUid' in docData) && docData.doctorUid == request.auth.uid) ||
         (exists(/databases/$(database)/documents/doctors/$(docData.doctorId)) &&
          ('uid' in get(/databases/$(database)/documents/doctors/$(docData.doctorId)).data) &&
          get(/databases/$(database)/documents/doctors/$(docData.doctorId)).data.uid == request.auth.uid)
@@ -67,20 +69,37 @@ service cloud.firestore {
 
       // Konsultasi dokter (Spesifik per pasien)
       match /consultations/{consultationId} {
-        // Pasien pemilik dapat membaca dan menulis
-        allow read, write: if isSignedIn() && request.auth.uid == userId;
+        // Pasien pemilik dapat membaca semua status
+        allow read: if isSignedIn() && request.auth.uid == userId;
+
+        // Pasien membuat konsultasi baru
+        allow create: if isSignedIn() && request.auth.uid == userId;
+
+        // Pasien update: pasien TIDAK BOLEH menandai status completed (hanya dokter yang berwenang)
+        allow update: if isSignedIn() && request.auth.uid == userId
+                      && (!('status' in request.resource.data.diff(resource.data).affectedKeys()) ||
+                          request.resource.data.status != 'completed' ||
+                          resource.data.status == 'completed');
+
+        allow delete: if isSignedIn() && request.auth.uid == userId;
 
         // Dokter dapat membaca konsultasi yang ditujukan kepadanya
         allow read: if isDoctorForDoc(resource.data);
 
-        // Dokter hanya boleh update field-field status dan pesan tertentu
+        // Dokter hanya boleh update field-field status dan pesan tertentu,
+        // dengan pembatasan transisi status: waiting -> active (konfirmasi) atau active -> completed (selesai).
         allow update: if isDoctorForDoc(resource.data)
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                            'status', 'doctorConfirmedAt', 'lastMessageText', 
                            'lastMessageAt', 'lastMessageSenderType', 
                            'unreadForDoctor', 'unreadForPatient', 'lastReadByDoctorAt',
                            'completedAt'
-                         ]);
+                         ])
+                      && (
+                        !('status' in request.resource.data.diff(resource.data).affectedKeys()) ||
+                        (resource.data.status == 'waiting' && request.resource.data.status == 'active') ||
+                        (resource.data.status == 'active' && request.resource.data.status == 'completed')
+                      );
 
         // Sub-koleksi pesan chat
         match /messages/{messageId} {
