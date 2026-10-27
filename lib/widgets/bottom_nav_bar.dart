@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../routes/app_routes.dart';
 
 class BottomNavBar extends StatelessWidget {
   final VoidCallback? onChatTap;
@@ -78,14 +79,7 @@ class BottomNavBar extends StatelessWidget {
                   tooltip: 'Profil Pengguna',
                   onPressed: onProfileTap ??
                       () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Halaman Profil Pengguna akan segera hadir pada pembaruan berikutnya.',
-                            ),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
+                        Navigator.pushNamed(context, AppRoutes.userProfile);
                       },
                 ),
               ],

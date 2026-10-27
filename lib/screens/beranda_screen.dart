@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/app_state.dart';
 import '../pengingat_jam_makan/models/meal_reminder_plan.dart';
 import '../pengingat_jam_makan/services/meal_reminder_service.dart';
@@ -47,6 +49,28 @@ class BerandaScreenState extends State<BerandaScreen>
   DateTime _currentDate = DateTime.now();
   Timer? _boundaryTimer;
   Timer? _postCompletionTransitionTimer;
+  String? _userPhotoUrl;
+
+  Future<void> _loadUserPhoto() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    String? photo = user.photoURL;
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists) {
+        final data = doc.data() ?? {};
+        final rawPhoto = (data['photo_url'] ?? data['photoUrl'] ?? '').toString().trim();
+        if (rawPhoto.isNotEmpty) {
+          photo = rawPhoto;
+        }
+      }
+    } catch (_) {}
+    if (mounted) {
+      setState(() {
+        _userPhotoUrl = photo;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -60,6 +84,7 @@ class BerandaScreenState extends State<BerandaScreen>
         .addListener(_onPlanChangedFromReminder);
 
     _initializeData();
+    _loadUserPhoto();
   }
 
   @override
@@ -349,7 +374,13 @@ class BerandaScreenState extends State<BerandaScreen>
                                   horizontal: kHPad),
                               child: HeaderChip(
                                 userName: user.name,
-                                onTap: () {},
+                                photoUrl: _userPhotoUrl ?? FirebaseAuth.instance.currentUser?.photoURL,
+                                onTap: () async {
+                                  await Navigator.pushNamed(context, AppRoutes.userProfile);
+                                  if (mounted) {
+                                    _loadUserPhoto();
+                                  }
+                                },
                               ),
                             ),
                             const SizedBox(height: 20),

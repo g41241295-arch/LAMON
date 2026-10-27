@@ -43,6 +43,7 @@ import '../screens/admin/berita_list_admin_screen.dart';
 import '../screens/admin/berita_form_screen.dart';
 import '../models/berita_article_model.dart';
 import '../screens/admin/admin_profile_screen.dart';
+import '../screens/user_profile_screen.dart';
 
 class AppRoutes {
   static const String initial = '/splash';
@@ -54,6 +55,7 @@ class AppRoutes {
   static const String dokter = '/dokter';
   static const String doctorDashboard = '/doctor-dashboard';
   static const String adminDashboard = '/admin-dashboard';
+  static const String userProfile = '/profil';
   static const String placeholder = '/placeholder';
 
   // Screening Flow Routes
@@ -393,6 +395,11 @@ class AppRoutes {
             title: args['title'] as String? ?? 'Halaman Menu',
             description: args['description'] as String?,
           ),
+          settings: settings,
+        );
+      case userProfile:
+        return _createSmoothRoute(
+          const UserProfileScreen(),
           settings: settings,
         );
       case gastropedia:

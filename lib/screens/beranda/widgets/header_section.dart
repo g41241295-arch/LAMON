@@ -4,9 +4,53 @@ import 'package:google_fonts/google_fonts.dart';
 
 class HeaderChip extends StatelessWidget {
   final String userName;
+  final String? photoUrl;
   final VoidCallback onTap;
 
-  const HeaderChip({super.key, required this.userName, required this.onTap});
+  const HeaderChip({
+    super.key,
+    required this.userName,
+    this.photoUrl,
+    required this.onTap,
+  });
+
+  Widget _buildDefaultAvatar() {
+    return const CircleAvatar(
+      radius: 14,
+      backgroundColor: Color(0xFF134563),
+      child: Icon(Icons.person, size: 16, color: Colors.white),
+    );
+  }
+
+  Widget _buildAvatar() {
+    final cleanUrl = (photoUrl ?? '').trim();
+    if (cleanUrl.isNotEmpty) {
+      return ClipOval(
+        child: SizedBox(
+          width: 28,
+          height: 28,
+          child: Image.network(
+            cleanUrl,
+            width: 28,
+            height: 28,
+            fit: BoxFit.cover,
+            alignment: Alignment.topCenter,
+            filterQuality: FilterQuality.high,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                width: 28,
+                height: 28,
+                color: const Color(0xFF134563).withValues(alpha: 0.2),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) => _buildDefaultAvatar(),
+          ),
+        ),
+      );
+    }
+    return _buildDefaultAvatar();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,17 +68,19 @@ class HeaderChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircleAvatar(
-              radius: 14,
-              backgroundColor: const Color(0xFF134563),
-              child: const Icon(Icons.person, size: 16, color: Colors.white),
-            ),
+            _buildAvatar(),
             const SizedBox(width: 8),
-            Text(
-              userName,
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF53311C),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 220),
+              child: Text(
+                userName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF53311C),
+                ),
               ),
             ),
             const SizedBox(width: 4),
