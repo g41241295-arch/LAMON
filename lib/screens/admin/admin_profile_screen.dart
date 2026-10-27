@@ -326,6 +326,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
 
   Widget _buildGenderChip(String gender) {
     final isSelected = _selectedGender == gender;
+    final isFemale = gender == 'Perempuan';
+    // Perempuan terpilih = pink, Laki-laki terpilih = biru (nilai persis dari Profil Dokter)
+    final selectedColor = isFemale ? const Color(0xFFD63384) : AppColors.primary;
+    final selectedBgColor = isFemale
+        ? const Color(0xFFFCE4EF)
+        : AppColors.primary.withValues(alpha: 0.12);
+
     return GestureDetector(
       onTap: () => setState(() => _selectedGender = gender),
       child: AnimatedContainer(
@@ -333,12 +340,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF276F8F).withValues(alpha: 0.12)
-              : const Color(0xFFF8FAFC),
+          color: isSelected ? selectedBgColor : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? const Color(0xFF276F8F) : AppColors.inputBorder,
+            color: isSelected ? selectedColor : AppColors.inputBorder,
             width: isSelected ? 1.8 : 1,
           ),
         ),
@@ -351,7 +356,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                   ? Icons.male_rounded
                   : Icons.female_rounded,
               size: 18,
-              color: isSelected ? const Color(0xFF276F8F) : AppColors.neutralGray,
+              color: isSelected ? selectedColor : AppColors.neutralGray,
             ),
             const SizedBox(width: 6),
             Text(
@@ -360,7 +365,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 color: isSelected
-                    ? const Color(0xFF276F8F)
+                    ? selectedColor
                     : const Color(0xFF1C4E68),
               ),
             ),
@@ -588,9 +593,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                             child: Text(
                               'PROFIL',
                               style: GoogleFonts.poppins(
-                                fontSize: 14,
+                                fontSize: 19,
                                 fontWeight: FontWeight.w900,
-                                letterSpacing: 0.8,
+                                letterSpacing: 1.0,
                                 color: const Color(0xFF1C4E68),
                               ),
                             ),

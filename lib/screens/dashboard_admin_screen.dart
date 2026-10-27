@@ -22,6 +22,8 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String _adminName = 'Admin';
   String _adminId = '';
+  String _adminEmail = '';
+  String? _photoUrl;
   bool _loadingAdmin = true;
   final _ensiklopediaService = EnsiklopediaService();
   final _beritaService = BeritaService();
@@ -48,6 +50,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     _adminId = user.uid;
+    String email = user.email ?? '';
+    String? photoUrl;
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       if (!mounted) return;
@@ -55,10 +59,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (doc.exists) {
         final data = doc.data()!;
         final rawNama = (data['nama'] ?? '').toString().trim();
+        final rawEmail = (data['email'] ?? '').toString().trim();
+        if (rawEmail.isNotEmpty) {
+          email = rawEmail;
+        }
+        final rawPhotoUrl = data['photo_url']?.toString().trim() ?? '';
+        if (rawPhotoUrl.isNotEmpty) {
+          photoUrl = rawPhotoUrl;
+        }
         if (rawNama.isNotEmpty) {
           name = rawNama;
         } else {
-          final email = user.email ?? '';
           final local = email.split('@').first.toLowerCase();
           final cleaned = local.startsWith('admin') ? local.substring('admin'.length) : local;
           name = cleaned.isEmpty ? 'Admin' : cleaned[0].toUpperCase() + cleaned.substring(1);
@@ -68,12 +79,94 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       }
       setState(() {
         _adminName = name;
+        _adminEmail = email;
+        _photoUrl = photoUrl;
         _adminId = user.uid;
         _loadingAdmin = false;
       });
     } catch (e) {
       if (mounted) setState(() => _loadingAdmin = false);
     }
+  }
+
+  String? _resolvePhotoAsset() {
+    final emailLower = _adminEmail.toLowerCase();
+    if (emailLower.contains('laras')) {
+      return 'assets/images/profil_admin/admin_laras.jpg';
+    }
+    if (emailLower.contains('rani')) {
+      return 'assets/images/profil_admin/admin_rani.jpg';
+    }
+
+    final nameLower = _adminName.toLowerCase();
+    if (nameLower.contains('laras')) {
+      return 'assets/images/profil_admin/admin_laras.jpg';
+    }
+    if (nameLower.contains('rani')) {
+      return 'assets/images/profil_admin/admin_rani.jpg';
+    }
+
+    return null;
+  }
+
+  Widget _buildDefaultAvatar() {
+    return const CircleAvatar(
+      radius: 14,
+      backgroundColor: Color(0xFF276F8F),
+      child: Icon(Icons.person, size: 16, color: Colors.white),
+    );
+  }
+
+  Widget _buildAvatar() {
+    final assetPath = _resolvePhotoAsset();
+
+    Widget? imageContent;
+    if (_photoUrl != null && _photoUrl!.isNotEmpty) {
+      imageContent = Image.network(
+        _photoUrl!,
+        width: 28,
+        height: 28,
+        fit: BoxFit.cover,
+        alignment: Alignment.topCenter,
+        filterQuality: FilterQuality.high,
+        errorBuilder: (context, error, stackTrace) {
+          if (assetPath != null) {
+            return Image.asset(
+              assetPath,
+              width: 28,
+              height: 28,
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+              filterQuality: FilterQuality.high,
+              errorBuilder: (context, error, stackTrace) => _buildDefaultAvatar(),
+            );
+          }
+          return _buildDefaultAvatar();
+        },
+      );
+    } else if (assetPath != null) {
+      imageContent = Image.asset(
+        assetPath,
+        width: 28,
+        height: 28,
+        fit: BoxFit.cover,
+        alignment: Alignment.topCenter,
+        filterQuality: FilterQuality.high,
+        errorBuilder: (context, error, stackTrace) => _buildDefaultAvatar(),
+      );
+    }
+
+    if (imageContent != null) {
+      return ClipOval(
+        child: SizedBox(
+          width: 28,
+          height: 28,
+          child: imageContent,
+        ),
+      );
+    }
+
+    return _buildDefaultAvatar();
   }
 
   void _openAddEnsiklopedia() {
@@ -135,7 +228,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   child: Text(
                     'Lihat semua >',
                     style: GoogleFonts.poppins(
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: AdminTheme.navyText,
                     ),
@@ -184,11 +277,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircleAvatar(
-              radius: 14,
-              backgroundColor: Color(0xFF276F8F),
-              child: Icon(Icons.person, size: 16, color: Colors.white),
-            ),
+            _buildAvatar(),
             const SizedBox(width: 8),
             _loadingAdmin
                 ? Container(
@@ -199,11 +288,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       borderRadius: BorderRadius.circular(4),
                     ),
                   )
-                : Text(
-                    _displayAdminName,
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF276F8F),
+                : ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 220),
+                    child: Text(
+                      _displayAdminName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF276F8F),
+                      ),
                     ),
                   ),
             const SizedBox(width: 4),
@@ -261,7 +356,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Text(
                   'Halo, $_adminName!',
                   style: GoogleFonts.poppins(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF8D5B20),
                     height: 1.1,
@@ -273,7 +368,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Text(
                   'Kelola Konten,\nJaga Lambung Pengguna',
                   style: GoogleFonts.poppins(
-                    fontSize: 17,
+                    fontSize: 15,
                     fontWeight: FontWeight.w800,
                     color: const Color(0xFF134563),
                     height: 1.2,
@@ -283,7 +378,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Text(
                   'Pantau dan kelola berita\nserta gastropedia.',
                   style: GoogleFonts.poppins(
-                    fontSize: 11,
+                    fontSize: 9.5,
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFF625232),
                     height: 1.3,
@@ -384,15 +479,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 countWidget = Text(
                   '-',
                   style: GoogleFonts.poppins(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
                     color: AdminTheme.navyText,
                   ),
                 );
               } else if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
                 countWidget = const SizedBox(
-                  width: 22,
-                  height: 22,
+                  width: 26,
+                  height: 26,
                   child: CircularProgressIndicator(strokeWidth: 2, color: AdminTheme.navyText),
                 );
               } else {
@@ -401,8 +496,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 countWidget = Text(
                   terbitCount.toString(),
                   style: GoogleFonts.poppins(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
                     color: AdminTheme.navyText,
                   ),
                 );
@@ -419,7 +514,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
                     ],
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -428,7 +523,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Text(
                         'Artikel berita',
                         style: GoogleFonts.poppins(
-                          fontSize: 12,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
                           color: AdminTheme.navyText.withValues(alpha: 0.7),
                         ),
                       ),
@@ -456,7 +552,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
                     ],
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -464,15 +560,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Text(
                         count.toString(),
                         style: GoogleFonts.poppins(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
                           color: AdminTheme.navyText,
                         ),
                       ),
                       Text(
                         'Gastropedia',
                         style: GoogleFonts.poppins(
-                          fontSize: 12,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
                           color: AdminTheme.navyText.withValues(alpha: 0.7),
                         ),
                       ),
@@ -504,7 +601,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Text(
         title,
         style: GoogleFonts.poppins(
-          fontSize: 16,
+          fontSize: 15,
           fontWeight: FontWeight.w700,
           color: AdminTheme.navyText,
         ),
