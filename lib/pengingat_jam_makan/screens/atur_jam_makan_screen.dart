@@ -227,59 +227,75 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Tombol Back & Pill "Jadwal Harian"
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: const Padding(
-                          padding: EdgeInsets.all(6),
-                          child: Icon(
-                            Icons.arrow_back,
-                            color: Color(0xFF1E3A8A),
-                            size: 24,
+                  // Tombol Back di Kiri & Pill "Jadwal Harian" di Tengah Horizontal Layar
+                  SizedBox(
+                    height: 40,
+                    width: double.infinity,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Pill "Jadwal Harian" rata tengah horizontal layar
+                        Center(
+                          child: GlassContainer(
+                            borderRadius: 22,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 8),
+                            backgroundColor:
+                                const Color(0xFFFFF7D6).withValues(alpha: 0.88),
+                            child: Text(
+                              'Jadwal Harian',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF1E3A8A),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      GlassContainer(
-                        borderRadius: 22,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 8),
-                        backgroundColor:
-                            const Color(0xFFFFF7D6).withValues(alpha: 0.88),
-                        child: Text(
-                          'Jadwal Harian',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1E3A8A),
+                        // Tombol Back di kiri
+                        Positioned(
+                          left: 0,
+                          child: GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: const Padding(
+                              padding: EdgeInsets.all(6),
+                              child: Icon(
+                                Icons.arrow_back,
+                                color: Color(0xFF1E3A8A),
+                                size: 24,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 12),
 
-                  // Pill Tanggal (tanpa angka nol di depan)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 36),
-                    child: GlassContainer(
-                      borderRadius: 18,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 5),
-                      backgroundColor: Colors.white.withValues(alpha: 0.85),
-                      border: Border.all(
-                        color: const Color(0xFF93C5FD).withValues(alpha: 0.7),
-                        width: 1.2,
-                      ),
-                      child: Text(
-                        _datePillText,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF1E3A8A),
+                  // Pill Tanggal (Rata Tengah Horizontal Layar)
+                  SizedBox(
+                    width: double.infinity,
+                    child: Center(
+                      child: GlassContainer(
+                        borderRadius: 18,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 5),
+                        backgroundColor: Colors.white.withValues(alpha: 0.85),
+                        border: Border.all(
+                          color: const Color(0xFF93C5FD).withValues(alpha: 0.7),
+                          width: 1.2,
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            _datePillText,
+                            maxLines: 1,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF1E3A8A),
+                            ),
+                          ),
                         ),
                       ),
                     ),

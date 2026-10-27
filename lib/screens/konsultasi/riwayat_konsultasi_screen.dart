@@ -91,7 +91,7 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
         title: 'Riwayat Konsultasi',
       ),
       body: StreamBuilder<List<ConsultationModel>>(
-        stream: _consultationService.watchCompletedConsultations(),
+        stream: _consultationService.watchAllPatientConsultations(),
         builder: (context, snapshot) {
           // ── 1. State Loading ──
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -114,7 +114,7 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
             );
           }
 
-          // ── 2. State Error ──
+          // ── 2. State Error (Tampil sebagai error, bukan empty) ──
           if (snapshot.hasError) {
             return Center(
               child: Padding(
@@ -156,10 +156,31 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
             );
           }
 
-          final list = snapshot.data ?? [];
+          final allList = snapshot.data ?? [];
 
-          // ── 3. State Kosong (Empty) ──
-          if (list.isEmpty) {
+          // ── Pisahkan Sisi Klien: Sedang Berlangsung vs Selesai ──
+          final ongoingList = allList
+              .where((c) => c.isActive || c.isWaiting)
+              .toList();
+
+          ongoingList.sort((a, b) {
+            final timeA = a.lastMessageAt ?? a.createdAt;
+            final timeB = b.lastMessageAt ?? b.createdAt;
+            return timeB.compareTo(timeA);
+          });
+
+          final completedList = allList
+              .where((c) => c.isCompleted)
+              .toList();
+
+          completedList.sort((a, b) {
+            final timeA = a.completedAt ?? a.createdAt;
+            final timeB = b.completedAt ?? b.createdAt;
+            return timeB.compareTo(timeA);
+          });
+
+          // ── 3. State Kosong (Empty) hanya jika kedua bagian kosong ──
+          if (ongoingList.isEmpty && completedList.isEmpty) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -197,7 +218,7 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Sesi konsultasi yang telah diselesaikan oleh dokter akan tercatat rapi di halaman ini.',
+                      'Konsultasi yang sedang berlangsung dan yang sudah selesai akan tampil di halaman ini.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
@@ -211,56 +232,379 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
             );
           }
 
-          // ── 4. Daftar Kartu Dikelompokkan per Tanggal ──
-          final grouped = _groupByDate(list);
-          final sortedDateKeys = grouped.keys.toList();
+          // ── 4. Tampilan Riwayat Konsultasi (Dua Bagian) ──
+          final groupedCompleted = _groupByDate(completedList);
+          final sortedDateKeys = groupedCompleted.keys.toList();
 
-          return ListView.builder(
+          return ListView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-            itemCount: sortedDateKeys.length,
-            itemBuilder: (context, index) {
-              final dateKey = sortedDateKeys[index];
-              final items = grouped[dateKey]!;
-              final firstDate = items.first.completedAt ?? items.first.createdAt;
-              final formattedHeaderDate =
-                  AppDateFormatter.formatLongDate(firstDate);
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header Tanggal
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8, bottom: 12),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.calendar_today_rounded,
-                          size: 15,
-                          color: AppColors.primary,
+            children: [
+              // ══════════════════════════════════════════════════════════════
+              // BAGIAN ATAS: Sedang Berlangsung (hanya jika ada)
+              // ══════════════════════════════════════════════════════════════
+              if (ongoingList.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: AppColors.successGreen,
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(width: 8),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Sedang Berlangsung (${ongoingList.length})',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ...ongoingList.map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _buildOngoingConsultationCard(context, item),
+                    )),
+                const SizedBox(height: 10),
+              ],
+
+              // ══════════════════════════════════════════════════════════════
+              // BAGIAN BAWAH: Selesai (hanya jika ada)
+              // ══════════════════════════════════════════════════════════════
+              if (completedList.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 12),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline_rounded,
+                        size: 16,
+                        color: AppColors.neutralGray,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Selesai (${completedList.length})',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ...sortedDateKeys.expand((dateKey) {
+                  final items = groupedCompleted[dateKey]!;
+                  final firstDate =
+                      items.first.completedAt ?? items.first.createdAt;
+                  final formattedHeaderDate =
+                      AppDateFormatter.formatLongDate(firstDate);
+
+                  return [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4, bottom: 10),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today_rounded,
+                            size: 14,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            formattedHeaderDate,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryText,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ...items.map((item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: _buildConsultationHistoryCard(context, item),
+                        )),
+                  ];
+                }),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildOngoingConsultationCard(
+      BuildContext context, ConsultationModel item) {
+    final isActive = item.isActive;
+
+    final badgeBg = isActive ? const Color(0xFFE8F5E9) : const Color(0xFFFFF8E1);
+    final badgeBorder =
+        isActive ? const Color(0xFFC8E6C9) : const Color(0xFFFFECB3);
+    final badgeColor =
+        isActive ? const Color(0xFF2E7D32) : const Color(0xFFB45309);
+    final badgeDotColor =
+        isActive ? AppColors.successGreen : const Color(0xFFB45309);
+    final badgeText = isActive ? 'Berlangsung' : 'Menunggu Konfirmasi';
+
+    final buttonLabel = isActive ? 'Lanjutkan Chat' : 'Buka Chat';
+
+    void openLiveChat() {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatDokterScreen(
+            consultationId: item.id,
+            isDoctor: false,
+            patientUid: item.patientUid,
+            initialConsultation: item,
+            readOnly: false, // LIVE CHAT!
+          ),
+        ),
+      );
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: openLiveChat,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: isActive
+                  ? AppColors.successGreen.withValues(alpha: 0.35)
+                  : const Color(0xFFE2ECF2),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Baris Atas: Label & Badge Status
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Konsultasi Dokter',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.summaryCardSubtext,
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: badgeBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: badgeBorder, width: 1),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: badgeDotColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
                         Text(
-                          formattedHeaderDate,
-                          style: const TextStyle(
-                            fontSize: 14,
+                          badgeText,
+                          style: TextStyle(
+                            fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.primaryText,
+                            color: badgeColor,
                           ),
                         ),
                       ],
                     ),
                   ),
-
-                  // Daftar Kartu Konsultasi pada Tanggal Ini
-                  ...items.map((item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: _buildConsultationHistoryCard(context, item),
-                      )),
                 ],
-              );
-            },
-          );
-        },
+              ),
+              const SizedBox(height: 12),
+
+              // Baris Tengah: Foto, Nama, Spesialisasi, dan Waktu Praktik
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  DoctorAvatar(
+                    photoUrl: item.effectiveDoctorPhotoUrl,
+                    doctorId: item.doctorId,
+                    doctorName: item.doctorName,
+                    size: 56,
+                    borderRadius: 14,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.doctorName,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryText,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          item.doctorSpecialty,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.summaryCardSubtext,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.access_time_rounded,
+                              size: 14,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              item.scheduledTime.isNotEmpty
+                                  ? item.scheduledTime
+                                  : 'Sesuai Jadwal',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              // Cuplikan Pesan Terakhir Satu Baris (Ellipsis) dengan Jamnya
+              if (item.lastMessageText != null &&
+                  item.lastMessageText!.trim().isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFEDF2F7)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        size: 13,
+                        color: AppColors.neutralGray,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          item.lastMessageText!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.primaryText,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      if (item.lastMessageAt != null) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          AppDateFormatter.formatTime(item.lastMessageAt!),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.neutralGray,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: Color(0xFFEEF3F6)),
+              const SizedBox(height: 12),
+
+              // Baris Bawah: Badge Pesan Belum Dibaca + Tombol Utama Pill Terisi
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (item.unreadForPatient > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade600,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${item.unreadForPatient} belum dibaca',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
+                  else
+                    const SizedBox.shrink(),
+                  ElevatedButton.icon(
+                    onPressed: openLiveChat,
+                    icon: const Icon(Icons.chat_rounded, size: 16),
+                    label: Text(buttonLabel),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

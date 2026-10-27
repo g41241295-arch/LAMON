@@ -51,7 +51,9 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
   String? _currentStreamPatientUid;
   bool _isSending = false;
   bool _isUploading = false;
+  bool _isCompleting = false;
   bool _hasLoadedConsultation = false;
+  int _previousMessageCount = 0;
 
   // Selected attachment state
   Uint8List? _attachmentBytes;
@@ -59,6 +61,22 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
   String? _attachmentType; // 'image' | 'file'
   String? _attachmentMimeType;
   int? _attachmentSize;
+
+  void _showAppSnackBar(String message, {bool isError = false, bool isSuccess = false}) {
+    if (!mounted) return;
+    final color = isError
+        ? Colors.red
+        : (isSuccess ? AppColors.successGreen : AppColors.primary);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(bottom: 80, left: 16, right: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -185,15 +203,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
 
       final bytes = await picked.readAsBytes();
       if (bytes.lengthInBytes > 5 * 1024 * 1024) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Ukuran gambar maksimal 5 MB.'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
+        _showAppSnackBar('Ukuran gambar maksimal 5 MB.', isError: true);
         return;
       }
 
@@ -205,15 +215,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
         _attachmentSize = bytes.lengthInBytes;
       });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal memilih gambar: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      _showAppSnackBar('Gagal memilih gambar: $e', isError: true);
     }
   }
 
@@ -231,15 +233,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
       if (bytes == null) return;
 
       if (bytes.lengthInBytes > 5 * 1024 * 1024) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Ukuran dokumen maksimal 5 MB.'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
+        _showAppSnackBar('Ukuran dokumen maksimal 5 MB.', isError: true);
         return;
       }
 
@@ -251,15 +245,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
         _attachmentSize = bytes.lengthInBytes;
       });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal memilih dokumen: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      _showAppSnackBar('Gagal memilih dokumen: $e', isError: true);
     }
   }
 
@@ -387,16 +373,9 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
           final base64Data = base64Encode(attachBytes);
           uploadedUrl = 'data:$attachMime;base64,$base64Data';
         } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                    'Penyimpanan dokumen PDF membutuhkan Firebase Storage aktif: $e'),
-                backgroundColor: Colors.orange.shade800,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
+          _showAppSnackBar(
+              'Penyimpanan dokumen PDF membutuhkan Firebase Storage aktif: $e',
+              isError: true);
           setState(() {
             _isSending = false;
             _isUploading = false;
@@ -424,15 +403,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
       );
       _scrollToBottom();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal mengirim pesan: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      _showAppSnackBar('Gagal mengirim pesan: $e', isError: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -456,6 +427,8 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
   }
 
   Future<void> _showSelesaikanKonsultasiDialog() async {
+    if (_isCompleting) return;
+
     final shouldComplete = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -485,29 +458,20 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     );
 
     if (shouldComplete == true) {
+      if (_isCompleting) return;
+      setState(() => _isCompleting = true);
       try {
         await _consultationService.completeConsultation(
           consultationId: widget.consultationId,
           patientUid: _effectivePatientUid,
         );
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Sesi konsultasi telah diselesaikan.'),
-              backgroundColor: AppColors.successGreen,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
+        _showAppSnackBar('Sesi konsultasi telah diselesaikan.', isSuccess: true);
       } catch (e) {
+        debugPrint('[ChatDokterScreen] Gagal menyelesaikan konsultasi: $e');
+        _showAppSnackBar('Gagal menyelesaikan konsultasi. Coba lagi.', isError: true);
+      } finally {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Gagal menyelesaikan konsultasi: $e'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          setState(() => _isCompleting = false);
         }
       }
     }
@@ -642,9 +606,11 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                           fontWeight: FontWeight.w800,
                           color: AppColors.primaryText,
                         ),
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
                             width: 7,
@@ -655,12 +621,16 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                             ),
                           ),
                           const SizedBox(width: 5),
-                          Text(
-                            statusLabel,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: statusColor,
-                              fontWeight: FontWeight.w600,
+                          Flexible(
+                            child: Text(
+                              statusLabel,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: statusColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -680,18 +650,27 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                           AppColors.successGreen.withValues(alpha: 0.12),
                       foregroundColor: AppColors.successGreen,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
+                          horizontal: 8, vertical: 4),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    onPressed: _showSelesaikanKonsultasiDialog,
-                    icon: const Icon(Icons.check_circle_outline_rounded,
-                        size: 16),
-                    label: const Text(
-                      'Selesai',
-                      style:
-                          TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                    onPressed: _isCompleting ? null : _showSelesaikanKonsultasiDialog,
+                    icon: _isCompleting
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.successGreen,
+                            ),
+                          )
+                        : const Icon(Icons.check_circle_outline_rounded,
+                            size: 16),
+                    label: Text(
+                      _isCompleting ? 'Memproses...' : 'Selesai',
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -794,9 +773,28 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
 
                             final messages = snapshot.data ?? [];
 
-                            // Scroll ke bawah saat ada pesan baru
-                            WidgetsBinding.instance
-                                .addPostFrameCallback((_) => _scrollToBottom());
+                            // Auto-scroll ke pesan terbaru:
+                            // 1. Saat pertama kali chat dibuka / pesan dimuat
+                            // 2. Saat pesan baru masuk dan user sedang berada di dekat bagian bawah
+                            if (messages.isNotEmpty) {
+                              if (_previousMessageCount == 0) {
+                                _previousMessageCount = messages.length;
+                                WidgetsBinding.instance
+                                    .addPostFrameCallback((_) => _scrollToBottom());
+                              } else if (messages.length > _previousMessageCount) {
+                                final isNearBottom = !_scrollController.hasClients ||
+                                    (_scrollController.position.maxScrollExtent -
+                                            _scrollController.offset <=
+                                        120);
+                                _previousMessageCount = messages.length;
+                                if (isNearBottom) {
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) => _scrollToBottom());
+                                }
+                              } else {
+                                _previousMessageCount = messages.length;
+                              }
+                            }
 
                             if (messages.isEmpty) {
                               return LayoutBuilder(
@@ -903,30 +901,37 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
         final isLargeScreen = constraints.maxWidth > 520;
         if (isLargeScreen) {
           final maxH = constraints.maxHeight.isFinite
-              ? constraints.maxHeight.clamp(0.0, 880.0)
+              ? constraints.maxHeight
               : 860.0;
           return Scaffold(
             backgroundColor: AppColors.desktopBackground,
+            resizeToAvoidBottomInset: false,
             body: Center(
-              child: Container(
-                width: 420,
-                height: maxH,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(36),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 30,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    width: 3,
-                  ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 420,
+                  maxHeight: maxH,
                 ),
-                child: chatContent,
+                child: Container(
+                  width: 420,
+                  height: maxH,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(36),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                    border: Border.all(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      width: 3,
+                    ),
+                  ),
+                  child: chatContent,
+                ),
               ),
             ),
           );
@@ -1015,7 +1020,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
@@ -1030,6 +1035,8 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
           children: [
             // Tombol Lampiran (+)
             IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
               icon: const Icon(
                 Icons.add_circle_outline_rounded,
                 color: AppColors.primary,
@@ -1040,6 +1047,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                   : _showAttachmentOptions,
               tooltip: 'Lampirkan file atau foto',
             ),
+            const SizedBox(width: 4),
 
             // Input Teks
             Expanded(
@@ -1048,7 +1056,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                   color: const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: TextField(
                   controller: _inputController,
                   focusNode: _focusNode,
@@ -1087,6 +1095,8 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                       ),
                     )
                   : IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                       icon: const Icon(
                         Icons.send_rounded,
                         color: Colors.white,

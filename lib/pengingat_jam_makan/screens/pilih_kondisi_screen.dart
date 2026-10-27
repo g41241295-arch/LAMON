@@ -60,40 +60,41 @@ class PilihKondisiScreen extends StatelessWidget {
             ),
           ),
 
-          // 3. Tombol Back & Pill "Jadwal Harian" di Bagian Atas
+          // 3. Pill "Jadwal Harian" di Tengah Horizontal Layar & Tombol Back di Kiri Atas
+          Positioned(
+            top: topPadding + 12,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: GlassContainer(
+                borderRadius: 22,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                backgroundColor: const Color(0xFFFFF7D6).withValues(alpha: 0.85),
+                child: Text(
+                  'Jadwal Harian',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1E3A8A),
+                  ),
+                ),
+              ),
+            ),
+          ),
           Positioned(
             top: topPadding + 12,
             left: 20,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: const Padding(
-                    padding: EdgeInsets.all(6),
-                    child: Icon(
-                      Icons.arrow_back,
-                      color: Color(0xFF1E3A8A),
-                      size: 24,
-                    ),
-                  ),
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: const Padding(
+                padding: EdgeInsets.all(6),
+                child: Icon(
+                  Icons.arrow_back,
+                  color: Color(0xFF1E3A8A),
+                  size: 24,
                 ),
-                const SizedBox(width: 8),
-                GlassContainer(
-                  borderRadius: 22,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                  backgroundColor: const Color(0xFFFFF7D6).withValues(alpha: 0.85),
-                  child: Text(
-                    'Jadwal Harian',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1E3A8A),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
 
