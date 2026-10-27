@@ -72,8 +72,11 @@ class ConsultationModel {
   final String patientName;
   final String? patientGender;
   final int? patientAge;
-  final String status; // "waiting" | "active" (data lama tanpa status default "active")
+  final String status; // "waiting" | "active" | "completed"
   final DateTime? doctorConfirmedAt;
+  final DateTime? completedAt;
+  final String doctorPhotoUrl;
+  final String? patientPhotoUrl;
   final String? lastMessageText;
   final DateTime? lastMessageAt;
   final String? lastMessageSenderType;
@@ -104,6 +107,9 @@ class ConsultationModel {
     this.patientAge,
     this.status = 'active',
     this.doctorConfirmedAt,
+    this.completedAt,
+    this.doctorPhotoUrl = '',
+    this.patientPhotoUrl,
     this.lastMessageText,
     this.lastMessageAt,
     this.lastMessageSenderType,
@@ -118,6 +124,9 @@ class ConsultationModel {
 
   /// Konsultasi sudah aktif.
   bool get isActive => status == 'active';
+
+  /// Konsultasi telah selesai.
+  bool get isCompleted => status == 'completed';
 
   /// Tampilan nama pasien (dengan fallback).
   String get displayPatientName {
@@ -156,7 +165,11 @@ class ConsultationModel {
     return '';
   }
 
-  String get doctorPhotoUrl => doctorPhotoAsset;
+  /// Path asset atau URL foto dokter yang efektif
+  String get effectiveDoctorPhotoUrl {
+    if (doctorPhotoUrl.trim().isNotEmpty) return doctorPhotoUrl.trim();
+    return doctorPhotoAsset;
+  }
 
   ConsultationModel copyWith({
     String? id,
@@ -180,6 +193,9 @@ class ConsultationModel {
     int? patientAge,
     String? status,
     DateTime? doctorConfirmedAt,
+    DateTime? completedAt,
+    String? doctorPhotoUrl,
+    String? patientPhotoUrl,
     String? lastMessageText,
     DateTime? lastMessageAt,
     String? lastMessageSenderType,
@@ -210,6 +226,9 @@ class ConsultationModel {
       patientAge: patientAge ?? this.patientAge,
       status: status ?? this.status,
       doctorConfirmedAt: doctorConfirmedAt ?? this.doctorConfirmedAt,
+      completedAt: completedAt ?? this.completedAt,
+      doctorPhotoUrl: doctorPhotoUrl ?? this.doctorPhotoUrl,
+      patientPhotoUrl: patientPhotoUrl ?? this.patientPhotoUrl,
       lastMessageText: lastMessageText ?? this.lastMessageText,
       lastMessageAt: lastMessageAt ?? this.lastMessageAt,
       lastMessageSenderType: lastMessageSenderType ?? this.lastMessageSenderType,
@@ -258,6 +277,9 @@ class ConsultationModel {
       patientAge: (data['patientAge'] as num?)?.toInt(),
       status: data['status'] as String? ?? 'active',
       doctorConfirmedAt: (data['doctorConfirmedAt'] as Timestamp?)?.toDate(),
+      completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
+      doctorPhotoUrl: data['doctorPhotoUrl'] as String? ?? '',
+      patientPhotoUrl: data['patientPhotoUrl'] as String? ?? data['patientPhoto'] as String?,
       lastMessageText: data['lastMessageText'] as String?,
       lastMessageAt: (data['lastMessageAt'] as Timestamp?)?.toDate(),
       lastMessageSenderType: data['lastMessageSenderType'] as String?,
@@ -291,6 +313,11 @@ class ConsultationModel {
         'status': status,
         if (doctorConfirmedAt != null)
           'doctorConfirmedAt': Timestamp.fromDate(doctorConfirmedAt!),
+        if (completedAt != null)
+          'completedAt': Timestamp.fromDate(completedAt!),
+        if (doctorPhotoUrl.isNotEmpty) 'doctorPhotoUrl': doctorPhotoUrl,
+        if (patientPhotoUrl != null && patientPhotoUrl!.isNotEmpty)
+          'patientPhotoUrl': patientPhotoUrl,
         if (lastMessageText != null) 'lastMessageText': lastMessageText,
         if (lastMessageAt != null)
           'lastMessageAt': Timestamp.fromDate(lastMessageAt!),

@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'constants/app_colors.dart';
 import 'providers/app_state.dart';
 import 'routes/app_routes.dart';
 import 'pengingat_jam_makan/services/notification_service.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,9 +41,45 @@ class LamonApp extends StatefulWidget {
 
 class _LamonAppState extends State<LamonApp> {
   final AppState _appState = AppState();
+  StreamSubscription<User?>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _initChatNotificationListener();
+  }
+
+  void _initChatNotificationListener() {
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) async {
+      if (user == null) {
+        ChatInAppNotificationService.instance.stopListening();
+        return;
+      }
+
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        final rawDocId = doc.data()?['doctorId'] ?? doc.data()?['doctor_id'];
+        final doctorId = rawDocId?.toString().trim();
+        final isDoctor = doctorId != null && doctorId.isNotEmpty;
+
+        ChatInAppNotificationService.instance.startListeningForUser(
+          uid: user.uid,
+          isDoctor: isDoctor,
+          doctorId: doctorId,
+        );
+      } catch (e) {
+        debugPrint('[LamonApp] Gagal deteksi role untuk chat notification: $e');
+        ChatInAppNotificationService.instance.startListeningForUser(
+          uid: user.uid,
+          isDoctor: false,
+        );
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _appState.dispose();
     super.dispose();
   }
@@ -49,6 +89,8 @@ class _LamonAppState extends State<LamonApp> {
     return AppStateScope(
       notifier: _appState,
       child: MaterialApp(
+        navigatorKey: ChatInAppNotificationService.navigatorKey,
+        scaffoldMessengerKey: ChatInAppNotificationService.messengerKey,
         title: 'LAMON - Pemantauan Kesehatan Lambung',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(

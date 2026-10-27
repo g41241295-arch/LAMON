@@ -82,6 +82,7 @@ class ConsultationService {
     String patientName = '';
     String? patientGender;
     int? patientAge;
+    String? patientPhotoUrl;
 
     try {
       final userDoc = await _db.collection('users').doc(uid).get();
@@ -89,6 +90,7 @@ class ConsultationService {
         final data = userDoc.data() ?? {};
         patientName = (data['nama'] ?? data['name'] ?? '').toString().trim();
         patientGender = data['jenis_kelamin']?.toString();
+        patientPhotoUrl = (data['photo_url'] ?? data['photoUrl'])?.toString().trim();
 
         final birthDateVal = data['tanggal_lahir'] ?? data['screeningData']?['birthDate'];
         if (birthDateVal != null) {
@@ -100,6 +102,17 @@ class ConsultationService {
       }
     } catch (e) {
       debugPrint('[ConsultationService] Gagal membaca profil pasien untuk snapshot: $e');
+    }
+
+    // Ambil foto dokter dari collection 'doctors' jika ada
+    String doctorPhotoUrl = '';
+    try {
+      final docDoc = await _db.collection('doctors').doc(doctorId).get();
+      if (docDoc.exists) {
+        doctorPhotoUrl = (docDoc.data()?['photoUrl'] ?? '').toString().trim();
+      }
+    } catch (e) {
+      debugPrint('[ConsultationService] Gagal membaca foto dokter: $e');
     }
 
     // Fallback nama pasien jika belum tersimpan di Firestore
@@ -139,6 +152,8 @@ class ConsultationService {
       patientName: patientName,
       patientGender: patientGender,
       patientAge: patientAge,
+      doctorPhotoUrl: doctorPhotoUrl,
+      patientPhotoUrl: patientPhotoUrl,
       status: 'waiting',
       unreadForDoctor: 0,
       unreadForPatient: 0,
@@ -235,6 +250,82 @@ class ConsultationService {
       debugPrint('[ConsultationService] Gagal markAsPaid: $e');
       rethrow;
     }
+  }
+
+  /// Menandai konsultasi sebagai "completed" (selesai).
+  /// Dipanggil oleh dokter setelah sesi konsultasi berakhir.
+  Future<void> completeConsultation({
+    required String consultationId,
+    String? patientUid,
+  }) async {
+    try {
+      String pUid = (patientUid ?? '').trim();
+      if (pUid.isEmpty) {
+        final groupSnap = await _db
+            .collectionGroup('consultations')
+            .where(FieldPath.documentId, isEqualTo: consultationId)
+            .limit(1)
+            .get();
+        if (groupSnap.docs.isNotEmpty) {
+          final pathSegments = groupSnap.docs.first.reference.path.split('/');
+          final usersIdx = pathSegments.indexOf('users');
+          if (usersIdx != -1 && usersIdx + 1 < pathSegments.length) {
+            pUid = pathSegments[usersIdx + 1];
+          }
+        }
+      }
+
+      if (pUid.isEmpty) {
+        pUid = _uid ?? '';
+      }
+
+      if (pUid.isEmpty) {
+        throw Exception('patientUid tidak ditemukan untuk konsultasi $consultationId');
+      }
+
+      await _db
+          .collection('users')
+          .doc(pUid)
+          .collection('consultations')
+          .doc(consultationId)
+          .update({
+        'status': 'completed',
+        'completedAt': FieldValue.serverTimestamp(),
+      });
+      debugPrint('[ConsultationService] Konsultasi $consultationId ditandai selesai (completed).');
+    } catch (e) {
+      debugPrint('[ConsultationService] Gagal completeConsultation: $e');
+      rethrow;
+    }
+  }
+
+  /// Stream daftar riwayat konsultasi pasien berstatus "completed".
+  Stream<List<ConsultationModel>> watchCompletedConsultations({String? patientUid}) {
+    final pUid = patientUid ?? _uid;
+    if (pUid == null || pUid.isEmpty) {
+      return Stream.value(<ConsultationModel>[]);
+    }
+
+    return _db
+        .collection('users')
+        .doc(pUid)
+        .collection('consultations')
+        .where('status', isEqualTo: 'completed')
+        .snapshots()
+        .map((snap) {
+      final list = snap.docs
+          .map((doc) => ConsultationModel.fromFirestore(doc))
+          .toList();
+
+      // Urutkan terbaru: completedAt ?? createdAt descending
+      list.sort((a, b) {
+        final timeA = a.completedAt ?? a.createdAt;
+        final timeB = b.completedAt ?? b.createdAt;
+        return timeB.compareTo(timeA);
+      });
+
+      return list;
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────

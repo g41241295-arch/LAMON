@@ -32,12 +32,12 @@ class ConsultationConstants {
   ];
 
   /// Template balasan simulasi dari dokter.
+  /// Bersifat perkenalan dan ramah, tanpa diagnosis atau rekomendasi obat.
   /// TODO(chat-realtime): Hapus dan ganti dengan sistem chat real-time.
   static const List<String> simulatedDoctorReplies = [
-    'Dari keluhan yang telah dijelaskan, hal tersebut termasuk salah satu gejala dari penyakit GERD. Kapan terakhir kali anda makan?',
-    'Baik, saya mengerti. Apakah Anda sering merasakan nyeri ulu hati atau sensasi terbakar di dada?',
-    'Terima kasih sudah menceritakan keluhannya. Saya akan bantu analisis lebih lanjut. Apakah ada riwayat penyakit lambung sebelumnya?',
-    'Sebaiknya hindari makanan pedas dan asam untuk sementara. Makan dengan porsi kecil tapi sering. Apakah ada pertanyaan lain?',
+    'Halo! Terima kasih sudah menghubungi, pesan Anda sudah kami terima. Dokter akan segera menindaklanjuti setelah mengonfirmasi jadwal konsultasi ini.',
+    'Selamat datang di layanan konsultasi dokter LAMON. Pesan Anda telah kami terima dan dokter akan segera bergabung sesuai jadwal konsultasi.',
+    'Terima kasih telah menyampaikan keluhan Anda. Dokter kami akan segera menindaklanjuti pesan Anda dalam sesi konsultasi ini.',
   ];
 }
 

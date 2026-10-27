@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import '../models/consultation_model.dart';
 import '../models/doctor_model.dart';
+import 'consultation_service.dart';
 
 /// Service untuk mengelola data dan operasi dokter:
 /// - Daftar dan detail dokter untuk pasien (watchAll, watchRecommended, fetchById)
@@ -209,19 +210,25 @@ class DoctorService {
       for (final doc in snap.docs) {
         final data = doc.data();
         final rawSlots = data['slots'] as List<dynamic>? ?? [];
-        map[doc.id] = rawSlots.map((s) => s.toString()).toList();
+        map[doc.id] = rawSlots.map((s) {
+          if (s is Map) {
+            return s['id']?.toString() ?? s.toString();
+          }
+          return s.toString();
+        }).toList();
       }
       return map;
     });
   }
 
   /// Menyimpan jadwal praktik untuk satu tanggal (yyyy-MM-dd).
-  /// Jika [slotIds] kosong, dokumen jadwal tanggal tersebut dihapus (hari libur).
+  /// [slots] dapat berupa List<String> atau List<dynamic> (gabungan ID slot tetap dan data slot kustom).
+  /// Jika [slots] kosong, dokumen jadwal tanggal tersebut dihapus (hari libur).
   Future<void> saveSchedule({
     required String doctorId,
     required String dateKey, // "yyyy-MM-dd"
     required DateTime date,
-    required List<String> slotIds,
+    required List<dynamic> slotIds,
   }) async {
     final docRef = _db
         .collection('doctors')
@@ -245,6 +252,17 @@ class DoctorService {
       debugPrint('[DoctorService] Gagal saveSchedule: $e');
       rethrow;
     }
+  }
+
+  /// Selesaikan konsultasi oleh dokter (mendelegasikan ke ConsultationService).
+  Future<void> completeConsultation({
+    required String consultationId,
+    String? patientUid,
+  }) async {
+    await ConsultationService().completeConsultation(
+      consultationId: consultationId,
+      patientUid: patientUid,
+    );
   }
 
   /// Memperbarui profil dokter: nama, strNumber, gender (+ updatedAt).

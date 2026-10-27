@@ -52,13 +52,10 @@ class _RingkasanPembayaranScreenState
       if (doc.exists && doc.data() != null) {
         final rawSlots = doc.data()!['slots'] as List<dynamic>? ?? [];
         if (rawSlots.isNotEmpty) {
-          final mapped = <OperatingHour>[];
-          for (final sId in rawSlots) {
-            final slot = PracticeSlotConstants.findById(sId.toString());
-            if (slot != null) {
-              mapped.add(OperatingHour(start: slot.startTime, end: slot.endTime));
-            }
-          }
+          final parsedSlots = PracticeSlotConstants.parseSlots(rawSlots);
+          final mapped = parsedSlots
+              .map((slot) => OperatingHour(start: slot.startTime, end: slot.endTime))
+              .toList();
           if (mapped.isNotEmpty && mounted) {
             setState(() {
               _activeHours = mapped;
@@ -152,7 +149,7 @@ class _RingkasanPembayaranScreenState
             ),
           ),
           const SizedBox(height: 10),
-          if (_doctor.operatingHours.isEmpty)
+          if (_activeHours.isEmpty)
             const Text(
               'Jam tidak tersedia',
               style: TextStyle(

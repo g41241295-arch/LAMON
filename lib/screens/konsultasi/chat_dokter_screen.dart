@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../constants/app_colors.dart';
 import '../../models/consultation_model.dart';
 import '../../services/consultation_service.dart';
+import '../../services/notification_service.dart';
 import 'widgets/chat_bubble.dart';
 import 'widgets/doctor_avatar.dart';
 
@@ -14,7 +15,7 @@ import 'widgets/doctor_avatar.dart';
 ///
 /// Menggunakan StreamBuilder dari Firestore untuk tampilan pesan real-time.
 /// Mematuhi spesifikasi:
-/// - Subjudul menampilkan status konsultasi ("Aktif" / "Menunggu konfirmasi"), tanpa status "Online" palsu.
+/// - Subjudul menampilkan status konsultasi ("Konsultasi Berlangsung" / "Menunggu Konfirmasi" / "Konsultasi Selesai"), tanpa status kehadiran palsu.
 /// - Banner peringatan jika konsultasi masih menunggu konfirmasi.
 /// - Read receipt ("Dibaca" / "Terkirim") sinkron antara kedua belah pihak.
 class ChatDokterScreen extends StatefulWidget {
@@ -58,6 +59,8 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
   @override
   void initState() {
     super.initState();
+    ChatInAppNotificationService.instance.currentActiveConsultationId =
+        widget.consultationId;
     _consultation = widget.initialConsultation;
     if (_consultation != null) {
       _hasLoadedConsultation = true;
@@ -85,6 +88,10 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
 
   @override
   void dispose() {
+    if (ChatInAppNotificationService.instance.currentActiveConsultationId ==
+        widget.consultationId) {
+      ChatInAppNotificationService.instance.currentActiveConsultationId = null;
+    }
     _consultationSub?.cancel();
     _inputController.dispose();
     _scrollController.dispose();
@@ -429,6 +436,120 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     });
   }
 
+  Future<void> _showSelesaikanKonsultasiDialog() async {
+    final shouldComplete = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text('Selesaikan Konsultasi?',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: const Text(
+          'Apakah Anda yakin ingin menyelesaikan sesi konsultasi ini? Setelah diselesaikan, percakapan akan ditutup dan masuk ke riwayat konsultasi pasien.',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.successGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Ya, Selesaikan'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldComplete == true) {
+      try {
+        await _consultationService.completeConsultation(
+          consultationId: widget.consultationId,
+          patientUid: _effectivePatientUid,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sesi konsultasi telah diselesaikan.'),
+              backgroundColor: AppColors.successGreen,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal menyelesaikan konsultasi: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Widget _buildPatientHeaderAvatar() {
+    final photoUrl = _consultation?.patientPhotoUrl?.trim() ?? '';
+    if (photoUrl.isNotEmpty && (photoUrl.startsWith('http://') || photoUrl.startsWith('https://'))) {
+      return CircleAvatar(
+        radius: 18,
+        backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+        backgroundImage: NetworkImage(photoUrl),
+        onBackgroundImageError: (_, _) {},
+      );
+    }
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+      child: Text(
+        _consultation?.patientInitials ?? 'P',
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: AppColors.primary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompletedBar() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        border: Border(
+          top: BorderSide(color: Colors.black.withValues(alpha: 0.08)),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.check_circle_rounded,
+                color: AppColors.successGreen, size: 20),
+            const SizedBox(width: 8),
+            const Text(
+              'Konsultasi telah selesai',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                color: AppColors.primaryText,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final titleName = widget.isDoctor
@@ -436,8 +557,19 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
         : (_consultation?.doctorName ?? 'Dokter');
 
     final isWaiting = _consultation?.isWaiting ?? false;
-    final statusLabel = isWaiting ? 'Menunggu konfirmasi' : 'Aktif';
-    final statusColor = isWaiting ? AppColors.warningYellow : AppColors.successGreen;
+    final isCompleted = _consultation?.isCompleted ?? false;
+    final String statusLabel;
+    final Color statusColor;
+    if (isWaiting) {
+      statusLabel = 'Menunggu Konfirmasi';
+      statusColor = AppColors.warningYellow;
+    } else if (isCompleted) {
+      statusLabel = 'Konsultasi Selesai';
+      statusColor = AppColors.neutralGray;
+    } else {
+      statusLabel = 'Konsultasi Berlangsung';
+      statusColor = AppColors.successGreen;
+    }
 
     final Widget chatContent = Stack(
       fit: StackFit.expand,
@@ -469,21 +601,10 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
             title: Row(
               children: [
                 if (widget.isDoctor)
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                    child: Text(
-                      _consultation?.patientInitials ?? 'P',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  )
+                  _buildPatientHeaderAvatar()
                 else
                   DoctorAvatar(
-                    photoUrl: _consultation?.doctorPhotoUrl ?? '',
+                    photoUrl: _consultation?.effectiveDoctorPhotoUrl ?? '',
                     doctorId: _consultation?.doctorId,
                     doctorName: _consultation?.doctorName,
                     size: 36,
@@ -530,6 +651,32 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                 ),
               ],
             ),
+            actions: [
+              if (widget.isDoctor && (_consultation?.isActive ?? false))
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      backgroundColor:
+                          AppColors.successGreen.withValues(alpha: 0.12),
+                      foregroundColor: AppColors.successGreen,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: _showSelesaikanKonsultasiDialog,
+                    icon: const Icon(Icons.check_circle_outline_rounded,
+                        size: 16),
+                    label: const Text(
+                      'Selesai',
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+            ],
           ),
           body: GestureDetector(
             behavior: HitTestBehavior.translucent,
@@ -682,6 +829,10 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                               );
                             }
 
+                            final peerPhoto = widget.isDoctor
+                                ? (_consultation?.patientPhotoUrl ?? '')
+                                : (_consultation?.effectiveDoctorPhotoUrl ?? '');
+
                             return ListView.builder(
                               controller: _scrollController,
                               padding: const EdgeInsets.symmetric(
@@ -690,7 +841,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                               itemBuilder: (_, i) => ChatBubble(
                                 message: messages[i],
                                 currentUserRole: widget.isDoctor ? 'doctor' : 'patient',
-                                peerPhotoUrl: '',
+                                peerPhotoUrl: peerPhoto,
                                 peerInitials: _consultation?.patientInitials ?? 'P',
                                 lastReadByPeerAt: widget.isDoctor
                                     ? _consultation?.lastReadByPatientAt
@@ -704,8 +855,11 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                 // ── Bar Pratinjau Lampiran (jika ada yang dipilih) ──
                 if (_attachmentBytes != null) _buildAttachmentPreviewBar(),
 
-                // ── Kolom Input Bar Menempel di atas Keyboard ──
-                _buildInputBar(context),
+                // ── Kolom Input Bar Menempel di atas Keyboard / Bar Selesai ──
+                if (isCompleted)
+                  _buildCompletedBar()
+                else
+                  _buildInputBar(context),
               ],
             ),
           ),

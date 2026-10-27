@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
+import '../../constants/practice_slot_constants.dart';
 import '../../models/consultation_model.dart';
 import '../../models/doctor_model.dart';
 import '../../services/doctor_service.dart';
@@ -35,15 +36,40 @@ class DoctorHomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (doctor.id.isNotEmpty) {
+      return StreamBuilder<List<ConsultationModel>>(
+        stream: DoctorService().watchDoctorConsultations(doctor.id),
+        initialData: consultations,
+        builder: (context, snapshot) {
+          final liveList = snapshot.data ?? consultations;
+          return _buildHomeContent(context, liveList);
+        },
+      );
+    }
+    return _buildHomeContent(context, consultations);
+  }
+
+  Widget _buildHomeContent(BuildContext context, List<ConsultationModel> consultations) {
     final now = DateTime.now();
     final doctorName = doctor.formattedNameWithDoctorTitle;
 
-    // Hitung statistik:
+    // Hitung statistik pasien hari ini:
+    // Hanya menghitung konsultasi berbayar yang SUDAH dikonfirmasi ('active' atau 'completed')
+    // dengan jadwal atau konfirmasi/pembuatan pada hari ini.
     final todayConsultations = consultations.where((c) {
       if (c.paymentStatus != PaymentStatus.paid) return false;
-      return c.createdAt.year == now.year &&
+      final isConfirmed = c.status == 'active' || c.status == 'completed';
+      if (!isConfirmed) return false;
+
+      final isCreatedToday = c.createdAt.year == now.year &&
           c.createdAt.month == now.month &&
           c.createdAt.day == now.day;
+      final isConfirmedToday = c.doctorConfirmedAt != null &&
+          c.doctorConfirmedAt!.year == now.year &&
+          c.doctorConfirmedAt!.month == now.month &&
+          c.doctorConfirmedAt!.day == now.day;
+
+      return isCreatedToday || isConfirmedToday;
     }).toList();
 
     final waitingResponseList = consultations.where((c) {
@@ -442,7 +468,14 @@ class DoctorHomeTab extends StatelessWidget {
 
     if (todaySlots.isNotEmpty) {
       title = 'Jadwal Praktik Hari Ini';
-      timeRange = todaySlots.join(', ');
+      final formattedSlots = todaySlots.map((s) {
+        final parsed = PracticeSlot.fromDynamic(s);
+        if (parsed.startTime.isNotEmpty && parsed.endTime.isNotEmpty) {
+          return '${parsed.label} (${parsed.startTime}-${parsed.endTime})';
+        }
+        return s;
+      }).toList();
+      timeRange = formattedSlots.join(', ');
       subtitle = 'Jangan lupa bersiap sebelum sesi dimulai!';
     } else if (waitingConfirmationCount > 0) {
       title = 'Ada Pasien Menunggu';

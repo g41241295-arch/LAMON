@@ -27,6 +27,7 @@ import '../screens/konsultasi/ringkasan_pembayaran_screen.dart';
 import '../screens/konsultasi/virtual_account_screen.dart';
 import '../screens/konsultasi/payment_success_screen.dart';
 import '../screens/konsultasi/chat_dokter_screen.dart';
+import '../screens/konsultasi/riwayat_konsultasi_screen.dart';
 import '../screens/berita/berita_list_screen.dart';
 import '../screens/berita/berita_detail_screen.dart';
 import '../models/reflux_prediction_model.dart';
@@ -80,6 +81,7 @@ class AppRoutes {
   // Konsultasi Dokter Routes
   static const String konsultasi = '/konsultasi';
   static const String konsulDokterAlias = '/konsul-dokter'; // alias dari menu beranda
+  static const String consultationHistory = '/konsultasi/riwayat';
   // Route dinamis konsultasi — path parameter di-parse di onGenerateRoute:
   // /konsultasi/dokter/:doctorId
   // /konsultasi/pembayaran/:doctorId
@@ -226,6 +228,17 @@ class AppRoutes {
           patientUid: patientUid,
           initialConsultation: initialConsultation,
         ),
+        settings: settings,
+      );
+    }
+
+    // /konsultasi/riwayat → Riwayat Konsultasi Pasien
+    if (uri.path == consultationHistory ||
+        (uri.pathSegments.length == 2 &&
+            uri.pathSegments[0] == 'konsultasi' &&
+            uri.pathSegments[1] == 'riwayat')) {
+      return _createSmoothRoute(
+        const RiwayatKonsultasiScreen(),
         settings: settings,
       );
     }

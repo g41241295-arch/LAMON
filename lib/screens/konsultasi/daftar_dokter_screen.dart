@@ -104,54 +104,90 @@ class _DaftarDokterScreenState extends State<DaftarDokterScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Tombol debug seed (kanan AppHeaderPill, hanya di debug mode)
-    Widget? rightAction;
-    if (kDebugMode) {
-      rightAction = Padding(
-        padding: const EdgeInsets.only(right: 0),
-        child: _isSeeding
-            ? const SizedBox(
-                width: 40,
-                height: 40,
-                child: Center(
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.primary),
-                  ),
-                ),
-              )
-            : InkWell(
-                onTap: _runSeed,
-                borderRadius: BorderRadius.circular(24),
-                child: Container(
+    // Tombol Riwayat Konsultasi (konsisten dengan Riwayat Prediksi Penyakit)
+    final historyButton = Semantics(
+      label: 'Riwayat Konsultasi',
+      button: true,
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, '/konsultasi/riwayat'),
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: const Color(0xFFD6E2E8),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.history_rounded,
+            color: AppColors.primary,
+            size: 22,
+          ),
+        ),
+      ),
+    );
+
+    Widget rightAction = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        historyButton,
+        if (kDebugMode) ...[
+          const SizedBox(width: 8),
+          _isSeeding
+              ? const SizedBox(
                   width: 40,
                   height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFD6E2E8),
-                      width: 1.2,
+                  child: Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: AppColors.primary),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
                   ),
-                  child: const Icon(
-                    Icons.cloud_upload_outlined,
-                    color: AppColors.primary,
-                    size: 20,
+                )
+              : InkWell(
+                  onTap: _runSeed,
+                  borderRadius: BorderRadius.circular(24),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFD6E2E8),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.cloud_upload_outlined,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                   ),
                 ),
-              ),
-      );
-    }
+        ],
+      ],
+    );
 
     // TabBar untuk dua tab Pilih Dokter / Rekomendasi
     final tabBar = TabBar(

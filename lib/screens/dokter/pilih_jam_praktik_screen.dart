@@ -26,10 +26,29 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
   late final Set<String> _selectedSlots;
   bool _isLoading = false;
 
+  // State untuk Slot Kustom "Lainnya"
+  bool _isCustomSelected = false;
+  String? _customStartTime;
+  String? _customEndTime;
+
   @override
   void initState() {
     super.initState();
-    _selectedSlots = Set<String>.from(widget.initialSlots);
+    _selectedSlots = <String>{};
+
+    for (final raw in widget.initialSlots) {
+      if (raw == 'pagi' || raw == 'siang' || raw == 'malam') {
+        _selectedSlots.add(raw);
+      } else if (raw.startsWith('custom') || raw.contains('.')) {
+        // Inisialisasi slot kustom dari data jadwal yang tersimpan
+        final parsed = PracticeSlot.fromDynamic(raw);
+        if (parsed.startTime.isNotEmpty && parsed.endTime.isNotEmpty) {
+          _customStartTime = parsed.startTime;
+          _customEndTime = parsed.endTime;
+          _isCustomSelected = true;
+        }
+      }
+    }
   }
 
   void _toggleSlot(String slotId) {
@@ -42,11 +61,102 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
     });
   }
 
+  TimeOfDay _parseTimeOfDay(String str, {TimeOfDay fallback = const TimeOfDay(hour: 8, minute: 0)}) {
+    try {
+      final parts = str.replaceAll(':', '.').split('.');
+      if (parts.length >= 2) {
+        return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+      }
+    } catch (_) {}
+    return fallback;
+  }
+
+  String _formatTimeOfDay(TimeOfDay time) {
+    final h = time.hour.toString().padLeft(2, '0');
+    final m = time.minute.toString().padLeft(2, '0');
+    return '$h.$m';
+  }
+
+  Future<void> _pickCustomTimeRange() async {
+    final initialStart = _customStartTime != null
+        ? _parseTimeOfDay(_customStartTime!)
+        : const TimeOfDay(hour: 8, minute: 0);
+
+    final pickedStart = await showTimePicker(
+      context: context,
+      initialTime: initialStart,
+      helpText: 'PILIH JAM MULAI PRAKTIK',
+      confirmText: 'LANJUT',
+      cancelText: 'BATAL',
+    );
+    if (pickedStart == null) return;
+
+    if (!mounted) return;
+
+    final initialEnd = _customEndTime != null
+        ? _parseTimeOfDay(_customEndTime!)
+        : TimeOfDay(hour: (pickedStart.hour + 2) % 24, minute: pickedStart.minute);
+
+    final pickedEnd = await showTimePicker(
+      context: context,
+      initialTime: initialEnd,
+      helpText: 'PILIH JAM SELESAI PRAKTIK',
+      confirmText: 'SIMPAN JAM',
+      cancelText: 'BATAL',
+    );
+    if (pickedEnd == null) return;
+
+    final startMinutes = pickedStart.hour * 60 + pickedStart.minute;
+    final endMinutes = pickedEnd.hour * 60 + pickedEnd.minute;
+
+    if (endMinutes <= startMinutes) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Jam selesai harus setelah jam mulai.'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _customStartTime = _formatTimeOfDay(pickedStart);
+      _customEndTime = _formatTimeOfDay(pickedEnd);
+      _isCustomSelected = true;
+    });
+  }
+
   Future<void> _handleSave() async {
     final dateKey = AppDateFormatter.formatDateKey(widget.date);
 
+    // Kumpulkan seluruh slot yang dipilih
+    final slotsToSave = <dynamic>[];
+    for (final s in _selectedSlots) {
+      if (s == 'pagi' || s == 'siang' || s == 'malam') {
+        slotsToSave.add(s);
+      }
+    }
+
+    if (_isCustomSelected &&
+        _customStartTime != null &&
+        _customEndTime != null &&
+        _customStartTime!.isNotEmpty &&
+        _customEndTime!.isNotEmpty) {
+      final customId = 'custom_${_customStartTime}_$_customEndTime';
+      slotsToSave.add({
+        'id': customId,
+        'label': 'Lainnya',
+        'startTime': _customStartTime!,
+        'endTime': _customEndTime!,
+        'isCustom': true,
+      });
+    }
+
     // Jika tidak ada slot dipilih, konfirmasi apakah ini hari libur
-    if (_selectedSlots.isEmpty) {
+    if (slotsToSave.isEmpty) {
       final shouldDelete = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -84,14 +194,14 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
         doctorId: widget.doctorId,
         dateKey: dateKey,
         date: widget.date,
-        slotIds: _selectedSlots.toList(),
+        slotIds: slotsToSave,
       );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              _selectedSlots.isEmpty
+              slotsToSave.isEmpty
                   ? 'Jadwal dihapus (hari libur).'
                   : 'Jadwal praktik berhasil disimpan.',
             ),
@@ -231,17 +341,20 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Daftar 3 Slot Kartu
+                      // Daftar 4 Slot Kartu (3 Tetap + 1 Lainnya)
                       Expanded(
-                        child: ListView.separated(
-                          itemCount: PracticeSlotConstants.allSlots.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: 14),
-                          itemBuilder: (context, index) {
-                            final slot = PracticeSlotConstants.allSlots[index];
-                            final isSelected = _selectedSlots.contains(slot.id);
-                            return _buildSlotCard(slot, isSelected);
-                          },
+                        child: ListView(
+                          children: [
+                            ...PracticeSlotConstants.allSlots.map((slot) {
+                              final isSelected = _selectedSlots.contains(slot.id);
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 14),
+                                child: _buildSlotCard(slot, isSelected),
+                              );
+                            }),
+                            _buildCustomSlotCard(),
+                            const SizedBox(height: 14),
+                          ],
                         ),
                       ),
 
@@ -409,6 +522,133 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
               child: isSelected
                   ? const Icon(Icons.check, size: 16, color: Colors.white)
                   : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Kartu ke-4: "Lainnya" (Jam Praktik Kustom)
+  Widget _buildCustomSlotCard() {
+    final hasCustomTime = _customStartTime != null && _customEndTime != null;
+    final timeDisplay = hasCustomTime
+        ? '$_customStartTime - $_customEndTime WIB'
+        : 'Atur jam praktik kustom sendiri';
+
+    return GestureDetector(
+      onTap: () {
+        if (!_isCustomSelected || !hasCustomTime) {
+          _pickCustomTimeRange();
+        } else {
+          // Jika sudah terpilih dan diketuk, buka picker untuk mengubah jam
+          _pickCustomTimeRange();
+        }
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: _isCustomSelected ? AppColors.primary : Colors.transparent,
+            width: _isCustomSelected ? 2 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _isCustomSelected
+                  ? AppColors.primary.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Kotak Ikon Biru Rounded
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F2F8),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.more_time_rounded,
+                  color: AppColors.primary, size: 24),
+            ),
+            const SizedBox(width: 14),
+
+            // Judul & Rentang Jam
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        'Lainnya',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryText,
+                        ),
+                      ),
+                      if (hasCustomTime && _isCustomSelected) ...[
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: _pickCustomTimeRange,
+                          child: const Icon(
+                            Icons.edit_outlined,
+                            size: 15,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    timeDisplay,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: hasCustomTime && _isCustomSelected
+                          ? AppColors.primary
+                          : AppColors.summaryCardSubtext,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Centang status terpilih
+            GestureDetector(
+              onTap: () {
+                if (!hasCustomTime) {
+                  _pickCustomTimeRange();
+                } else {
+                  setState(() => _isCustomSelected = !_isCustomSelected);
+                }
+              },
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _isCustomSelected ? AppColors.primary : Colors.transparent,
+                  border: Border.all(
+                    color: _isCustomSelected
+                        ? AppColors.primary
+                        : AppColors.inputBorder,
+                    width: 2,
+                  ),
+                ),
+                child: _isCustomSelected
+                    ? const Icon(Icons.check, size: 16, color: Colors.white)
+                    : null,
+              ),
             ),
           ],
         ),

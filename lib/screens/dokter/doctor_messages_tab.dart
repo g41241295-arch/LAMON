@@ -295,18 +295,28 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
             ),
           );
         },
-        leading: CircleAvatar(
-          radius: 22,
-          backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
-          child: Text(
-            item.patientInitials,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primary,
-            ),
-          ),
-        ),
+        leading: (item.patientPhotoUrl != null &&
+                item.patientPhotoUrl!.isNotEmpty &&
+                (item.patientPhotoUrl!.startsWith('http://') ||
+                    item.patientPhotoUrl!.startsWith('https://')))
+            ? CircleAvatar(
+                radius: 22,
+                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
+                backgroundImage: NetworkImage(item.patientPhotoUrl!),
+                onBackgroundImageError: (_, _) {},
+              )
+            : CircleAvatar(
+                radius: 22,
+                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
+                child: Text(
+                  item.patientInitials,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
