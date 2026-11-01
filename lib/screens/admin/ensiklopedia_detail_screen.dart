@@ -360,7 +360,7 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
 
           // Informasi Nutrisi
           const SizedBox(height: 14),
-          _sectionLabel('Informasi Nutrisi'),
+          _sectionLabel('Informasi Nutrisi (${entry.servingUnit})'),
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,

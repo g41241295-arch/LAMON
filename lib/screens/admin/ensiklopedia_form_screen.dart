@@ -326,6 +326,7 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
           protein: protVal,
           carbs: carbsVal,
           fat: fatVal,
+          servingUnit: widget.initialEntry?.servingUnit ?? 'per 100g',
         );
 
         final newId = await _service.updateEntry(
@@ -370,6 +371,7 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
           protein: protVal,
           carbs: carbsVal,
           fat: fatVal,
+          servingUnit: 'per 100g',
         );
 
         await _service.createEntry(entry, widget.adminName, widget.adminId);

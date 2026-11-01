@@ -26,9 +26,10 @@ class EnsiklopediaEntry {
   final List<String> kandungan;
   final bool isRecommended;
   final int calories;
-  final int protein;
-  final int carbs;
-  final int fat;
+  final num protein;
+  final num carbs;
+  final num fat;
+  final String servingUnit;
 
   EnsiklopediaEntry({
     required this.id,
@@ -55,6 +56,7 @@ class EnsiklopediaEntry {
     this.protein = 6,
     this.carbs = 18,
     this.fat = 6,
+    this.servingUnit = 'per 100g',
   });
 
   factory EnsiklopediaEntry.fromFirestore(DocumentSnapshot doc) {
@@ -92,9 +94,10 @@ class EnsiklopediaEntry {
       kandungan: parseStringList(data['kandungan']),
       isRecommended: data['isRecommended'] == true,
       calories: (data['calories'] is num) ? (data['calories'] as num).toInt() : 150,
-      protein: (data['protein'] is num) ? (data['protein'] as num).toInt() : 6,
-      carbs: (data['carbs'] is num) ? (data['carbs'] as num).toInt() : 18,
-      fat: (data['fat'] is num) ? (data['fat'] as num).toInt() : 6,
+      protein: (data['protein'] is num) ? (data['protein'] as num) : 6,
+      carbs: (data['carbs'] is num) ? (data['carbs'] as num) : 18,
+      fat: (data['fat'] is num) ? (data['fat'] as num) : 6,
+      servingUnit: data['servingUnit']?.toString() ?? 'per 100g',
     );
   }
 
@@ -123,6 +126,7 @@ class EnsiklopediaEntry {
       'protein': protein,
       'carbs': carbs,
       'fat': fat,
+      'servingUnit': servingUnit,
     };
   }
 }

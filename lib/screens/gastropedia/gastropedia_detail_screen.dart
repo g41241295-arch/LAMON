@@ -160,16 +160,47 @@ class GastropediaDetailScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "Informasi Nilai Gizi",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1E5D7D),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE2ECF2).withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            item.servingUnit,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF639BC6),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Divider(height: 1, color: Color(0xFFE2ECF2)),
+                    const SizedBox(height: 12),
+                    Row(
                       children: [
                         Expanded(child: _buildNutritionItem(Icons.local_fire_department, "Kalori", "${item.calories} Kcal")),
-                        Expanded(child: _buildNutritionItem(Icons.set_meal, "Protein", "${item.protein}g")),
+                        Expanded(child: _buildNutritionItem(Icons.set_meal, "Protein", "${_formatNutrient(item.protein)}g")),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Expanded(child: _buildNutritionItem(Icons.grass, "Karbo", "${item.carbs}g")),
-                        Expanded(child: _buildNutritionItem(Icons.opacity, "Lemak", "${item.fat}g")),
+                        Expanded(child: _buildNutritionItem(Icons.grass, "Karbo", "${_formatNutrient(item.carbs)}g")),
+                        Expanded(child: _buildNutritionItem(Icons.opacity, "Lemak", "${_formatNutrient(item.fat)}g")),
                       ],
                     ),
                   ],
@@ -258,6 +289,13 @@ class GastropediaDetailScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatNutrient(num value) {
+    if (value % 1 == 0) {
+      return value.toInt().toString();
+    }
+    return value.toString();
   }
 
   Widget _buildNutritionItem(IconData icon, String label, String value) {

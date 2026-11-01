@@ -44,9 +44,10 @@ class GastropediaItem {
   final List<String> kandungan;
   final bool isRecommended;
   final int calories;
-  final int protein;
-  final int carbs;
-  final int fat;
+  final num protein;
+  final num carbs;
+  final num fat;
+  final String servingUnit;
   final String status;
 
   const GastropediaItem({
@@ -62,6 +63,7 @@ class GastropediaItem {
     this.protein = 6,
     this.carbs = 18,
     this.fat = 6,
+    this.servingUnit = 'per 100g',
     this.status = 'terbit',
   });
 
@@ -82,10 +84,11 @@ class GastropediaItem {
       data['kategori']?.toString() ?? data['category']?.toString(),
     );
 
+    final stat = GastropediaData.getById(doc.id);
+
     String img = data['imageAsset']?.toString() ?? data['imageUrl']?.toString() ?? '';
     if (img.isEmpty) {
       // Fallback ke gambar lokal jika ID cocok dengan data statis
-      final stat = GastropediaData.getById(doc.id);
       if (stat != null) {
         img = stat.imageAsset;
       } else {
@@ -98,6 +101,52 @@ class GastropediaItem {
         data['penjelasanLengkap']?.toString() ??
         '';
 
+    // Deteksi apakah data Firestore masih menggunakan nilai dummy konstan yang lama (150, 6, 18, 6)
+    final bool isOldDummy = (data['calories'] == 150 &&
+        data['protein'] == 6 &&
+        data['carbs'] == 18 &&
+        data['fat'] == 6);
+
+    final int calVal;
+    if (stat != null && (data['calories'] == null || isOldDummy)) {
+      calVal = stat.calories;
+    } else if (data['calories'] is num) {
+      calVal = (data['calories'] as num).toInt();
+    } else {
+      calVal = stat?.calories ?? 150;
+    }
+
+    final num protVal;
+    if (stat != null && (data['protein'] == null || isOldDummy)) {
+      protVal = stat.protein;
+    } else if (data['protein'] is num) {
+      protVal = data['protein'] as num;
+    } else {
+      protVal = stat?.protein ?? 6;
+    }
+
+    final num carbsVal;
+    if (stat != null && (data['carbs'] == null || isOldDummy)) {
+      carbsVal = stat.carbs;
+    } else if (data['carbs'] is num) {
+      carbsVal = data['carbs'] as num;
+    } else {
+      carbsVal = stat?.carbs ?? 18;
+    }
+
+    final num fatVal;
+    if (stat != null && (data['fat'] == null || isOldDummy)) {
+      fatVal = stat.fat;
+    } else if (data['fat'] is num) {
+      fatVal = data['fat'] as num;
+    } else {
+      fatVal = stat?.fat ?? 6;
+    }
+
+    final String unitVal = data['servingUnit']?.toString() ??
+        stat?.servingUnit ??
+        'per 100g';
+
     return GastropediaItem(
       id: doc.id,
       name: data['istilah']?.toString() ?? data['name']?.toString() ?? '',
@@ -107,10 +156,11 @@ class GastropediaItem {
       manfaat: parseList(data['manfaat']),
       kandungan: parseList(data['kandungan']),
       isRecommended: data['isRecommended'] == true,
-      calories: (data['calories'] is num) ? (data['calories'] as num).toInt() : 150,
-      protein: (data['protein'] is num) ? (data['protein'] as num).toInt() : 6,
-      carbs: (data['carbs'] is num) ? (data['carbs'] as num).toInt() : 18,
-      fat: (data['fat'] is num) ? (data['fat'] as num).toInt() : 6,
+      calories: calVal,
+      protein: protVal,
+      carbs: carbsVal,
+      fat: fatVal,
+      servingUnit: unitVal,
       status: data['status']?.toString() ?? 'terbit',
     );
   }
@@ -133,6 +183,7 @@ class GastropediaItem {
       'protein': protein,
       'carbs': carbs,
       'fat': fat,
+      'servingUnit': servingUnit,
       'status': status,
     };
   }
@@ -149,6 +200,11 @@ class GastropediaData {
       category: GastropediaCategory.makanan,
       imageAsset: 'assets/images/gastropedia/capcay.jpg',
       isRecommended: true,
+      calories: 52,
+      protein: 2.8,
+      carbs: 6.5,
+      fat: 1.8,
+      servingUnit: 'per 100g',
       deskripsi:
           'Capcay adalah masakan yang terdiri dari aneka sayuran, seperti wortel, kembang kol, dan sawi, serta tambahan protein, seperti ayam, udang, atau bakso. Proses pengolahan capcay umumnya menggunakan minyak dan bumbu pelengkap, seperti saus tiram, kecap, atau kaldu.',
       manfaat: [
@@ -170,6 +226,11 @@ class GastropediaData {
       category: GastropediaCategory.makanan,
       imageAsset: 'assets/images/gastropedia/brokoli_chicken.jpg',
       isRecommended: true,
+      calories: 110,
+      protein: 18.0,
+      carbs: 4.5,
+      fat: 2.2,
+      servingUnit: 'per 100g',
       deskripsi:
           'Brokoli Chicken adalah kombinasi dada ayam panggang rendah lemak dengan brokoli kukus kaya serat. Hidangan ini sangat ideal untuk penderita asam lambung karena tidak memicu refluks dan kaya nutrisi penyembuh mukosa.',
       manfaat: [
@@ -189,6 +250,11 @@ class GastropediaData {
       name: 'Nasi Teriyaki',
       category: GastropediaCategory.makanan,
       imageAsset: 'assets/images/gastropedia/nasi_teriyaki.jpg',
+      calories: 145,
+      protein: 8.5,
+      carbs: 22.0,
+      fat: 2.5,
+      servingUnit: 'per 100g',
       deskripsi:
           'Nasi hangat pulen yang disajikan dengan irisan daging ayam tanpa lemak dan saus teriyaki ringan non-pedas. Dibuat dengan takaran bumbu ramah lambung tanpa cabai, merica berlebih, atau cuka.',
       manfaat: [
@@ -207,6 +273,11 @@ class GastropediaData {
       name: 'Salad',
       category: GastropediaCategory.makanan,
       imageAsset: 'assets/images/gastropedia/salad.jpg',
+      calories: 42,
+      protein: 1.5,
+      carbs: 6.0,
+      fat: 1.6,
+      servingUnit: 'per 100g',
       deskripsi:
           'Salad sayuran segar dengan paduan selada hijau, timun iris, jagung manis pipil, dan dressing minyak zaitun ringan. Sangat menyegarkan dan memiliki sifat alkalis alami yang menetralkan keasaman cairan lambung.',
       manfaat: [
@@ -225,6 +296,11 @@ class GastropediaData {
       name: 'Brokoli chiken roll',
       category: GastropediaCategory.makanan,
       imageAsset: 'assets/images/gastropedia/brokoli_chicken_roll.jpg',
+      calories: 125,
+      protein: 19.0,
+      carbs: 3.5,
+      fat: 3.5,
+      servingUnit: 'per 100g',
       deskripsi:
           'Gulungan dada ayam cincang yang diisi dengan kuntum brokoli kukus lembut dan wortel serut, kemudian dikukus hingga matang sempurna tanpa proses penggorengan minyak jelantah.',
       manfaat: [
@@ -243,6 +319,11 @@ class GastropediaData {
       name: 'Sop Ayam',
       category: GastropediaCategory.makanan,
       imageAsset: 'assets/images/gastropedia/sop_ayam.jpg',
+      calories: 58,
+      protein: 5.2,
+      carbs: 5.0,
+      fat: 1.8,
+      servingUnit: 'per 100g',
       deskripsi:
           'Sup bening berkaldu ayam alami dengan potongan wortel, kentang, buncis, dan seledri. Kuah hangatnya memberikan efek relaksasi yang menenangkan pada saluran lambung yang sedang sensitif.',
       manfaat: [
@@ -261,6 +342,11 @@ class GastropediaData {
       name: 'Sayur Asem',
       category: GastropediaCategory.makanan,
       imageAsset: 'assets/images/gastropedia/sayur_asem.jpg',
+      calories: 35,
+      protein: 1.4,
+      carbs: 6.8,
+      fat: 0.5,
+      servingUnit: 'per 100g',
       deskripsi:
           'Sayur bening tradisional khas nusantara berisi labu siam, jagung manis, kacang panjang, dan melinjo dengan sentuhan asam alami yang sangat lembut dan diracik tanpa cabai berlebih.',
       manfaat: [
@@ -280,10 +366,11 @@ class GastropediaData {
       category: GastropediaCategory.makanan,
       imageAsset:
           'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=200',
-      calories: 120,
-      protein: 4,
-      carbs: 14,
-      fat: 5,
+      calories: 55,
+      protein: 2.2,
+      carbs: 7.0,
+      fat: 2.1,
+      servingUnit: 'per 100g',
       deskripsi:
           'Salad Sayur Segar memadukan selada romaine renyah, timun jepang iris, tomat matang tanpa biji, dan jagung manis pipil dengan sentuhan minyak zaitun extra virgin non-asam. Sayuran hijau segar kaya serat larut dan air membantu menetralkan asam lambung serta mencegah refluks ke esofagus.',
       manfaat: [
@@ -304,10 +391,11 @@ class GastropediaData {
       category: GastropediaCategory.makanan,
       imageAsset:
           'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=200',
-      calories: 165,
-      protein: 18,
-      carbs: 12,
-      fat: 4,
+      calories: 78,
+      protein: 9.5,
+      carbs: 4.8,
+      fat: 2.4,
+      servingUnit: 'per 100g',
       deskripsi:
           'Sup Ayam Diet diracik dari potongan dada ayam rebus tanpa kulit, wortel empuk, labu siam, dan kaldu bening gurih tanpa bumbu merica tajam atau santan. Sangat lembut dan hangat di perut, menjadi pilihan terbaik untuk meredakan rasa perih saat maag kambuh atau GERD.',
       manfaat: [
@@ -331,6 +419,11 @@ class GastropediaData {
       name: 'Pisang',
       category: GastropediaCategory.buah,
       imageAsset: 'assets/images/gastropedia/pisang.jpg',
+      calories: 89,
+      protein: 1.1,
+      carbs: 22.8,
+      fat: 0.3,
+      servingUnit: 'per 100g',
       deskripsi:
           'Pisang adalah buah bertekstur lembut dan bersifat antasida alami dengan pH sekitar 5.6. Kandungan kalium dan pektinnya sangat efektif melapisi dinding lambung dari gesekan asam lambung.',
       manfaat: [
@@ -349,6 +442,11 @@ class GastropediaData {
       name: 'Pepaya',
       category: GastropediaCategory.buah,
       imageAsset: 'assets/images/gastropedia/pepaya.jpg',
+      calories: 43,
+      protein: 0.5,
+      carbs: 10.8,
+      fat: 0.2,
+      servingUnit: 'per 100g',
       deskripsi:
           'Pepaya matang mengandung enzim proteolitik alami bernama papain yang membantu memecah ikatan protein makanan secara cepat, sehingga meringankan tugas asam lambung.',
       manfaat: [
@@ -367,6 +465,11 @@ class GastropediaData {
       name: 'Apel',
       category: GastropediaCategory.buah,
       imageAsset: 'assets/images/gastropedia/apel.jpg',
+      calories: 52,
+      protein: 0.3,
+      carbs: 13.8,
+      fat: 0.2,
+      servingUnit: 'per 100g',
       deskripsi:
           'Apel manis (seperti apel fuji atau apel merah) kaya akan pektin dan serat larut yang mampu mengikat kelebihan asam lambung dan racun di saluran pencernaan.',
       manfaat: [
@@ -385,6 +488,11 @@ class GastropediaData {
       name: 'Melon',
       category: GastropediaCategory.buah,
       imageAsset: 'assets/images/gastropedia/melon.jpg',
+      calories: 34,
+      protein: 0.8,
+      carbs: 8.2,
+      fat: 0.2,
+      servingUnit: 'per 100g',
       deskripsi:
           'Melon memiliki kadar air sangat tinggi (90%+) dan memiliki pH sekitar 6.1 (mendekati netral/alkalin), menjadikannya salah satu buah paling aman dikonsumsi oleh penderita GERD berat.',
       manfaat: [
@@ -404,6 +512,11 @@ class GastropediaData {
       category: GastropediaCategory.buah,
       imageAsset: 'assets/images/gastropedia/alpukat.jpg',
       isRecommended: true,
+      calories: 160,
+      protein: 2.0,
+      carbs: 8.5,
+      fat: 14.7,
+      servingUnit: 'per 100g',
       deskripsi:
           'Alpukat kaya akan lemak tak jenuh tunggal yang sehat serta tekstur lembut yang menenangkan mukosa lambung, tidak menyebabkan refluks selama dikonsumsi dalam porsi wajar.',
       manfaat: [
@@ -423,6 +536,11 @@ class GastropediaData {
       category: GastropediaCategory.buah,
       imageAsset: 'assets/images/gastropedia/buah_naga.jpg',
       isRecommended: true,
+      calories: 60,
+      protein: 1.2,
+      carbs: 13.0,
+      fat: 0.5,
+      servingUnit: 'per 100g',
       deskripsi:
           'Buah naga manis dengan daging merah atau putih kaya akan serat larut, air, dan biji kecil yang mengandung lemak baik. Sangat efektif mendinginkan perut yang begah.',
       manfaat: [
@@ -442,10 +560,11 @@ class GastropediaData {
       category: GastropediaCategory.buah,
       imageAsset:
           'https://images.unsplash.com/photo-1496412705862-e0088f16f791?w=200',
-      calories: 145,
-      protein: 5,
-      carbs: 28,
-      fat: 2,
+      calories: 72,
+      protein: 2.1,
+      carbs: 14.5,
+      fat: 1.2,
+      servingUnit: 'per 100g',
       deskripsi:
           'Smoothie Bowl Buah Naga memadukan pure buah naga merah segar, pisang matang lembut, dan susu almond non-dairy rendah lemak. Teksturnya yang kental dan dingin alami memberikan sensasi sejuk instan pada kerongkongan serta perut bagian atas yang panas akibat refluks asam lambung.',
       manfaat: [
@@ -469,6 +588,11 @@ class GastropediaData {
       name: 'Sayur Bayam',
       category: GastropediaCategory.sayuran,
       imageAsset: 'assets/images/gastropedia/sayur_bayam.jpg',
+      calories: 23,
+      protein: 2.9,
+      carbs: 3.6,
+      fat: 0.4,
+      servingUnit: 'per 100g',
       deskripsi:
           'Sayur bayam bening tanpa santan sangat mudah dicerna dan kaya akan klorofil serta zat besi yang meregenerasi lapisan sel mukosa lambung yang teriritasi.',
       manfaat: [
@@ -487,6 +611,11 @@ class GastropediaData {
       name: 'Labu Siam',
       category: GastropediaCategory.sayuran,
       imageAsset: 'assets/images/gastropedia/labu_siam.jpg',
+      calories: 19,
+      protein: 0.8,
+      carbs: 4.5,
+      fat: 0.1,
+      servingUnit: 'per 100g',
       deskripsi:
           'Labu siam kukus atau rebus memiliki kadar air melimpah dan tekstur yang sangat lunak saat dikunyah. Salah satu sayur rekomendasi nomor satu bagi pasien gastritis dan tukak lambung.',
       manfaat: [
@@ -505,6 +634,11 @@ class GastropediaData {
       name: 'Wortel',
       category: GastropediaCategory.sayuran,
       imageAsset: 'assets/images/gastropedia/wortel.jpg',
+      calories: 35,
+      protein: 0.8,
+      carbs: 8.2,
+      fat: 0.2,
+      servingUnit: 'per 100g',
       deskripsi:
           'Wortel rebus atau kukus manis alami dan kaya akan beta-karoten yang berperan vital dalam menjaga kesehatan serta mempercepat perbaikan selaput lendir lambung.',
       manfaat: [
@@ -523,6 +657,11 @@ class GastropediaData {
       name: 'Brokoli',
       category: GastropediaCategory.sayuran,
       imageAsset: 'assets/images/gastropedia/brokoli.jpg',
+      calories: 35,
+      protein: 2.4,
+      carbs: 7.2,
+      fat: 0.4,
+      servingUnit: 'per 100g',
       deskripsi:
           'Brokoli kukus mengandung senyawa sulforaphane yang telah terbukti secara ilmiah mampu menekan kolonisasi bakteri Helicobacter pylori, bakteri utama penyebab tukak lambung kronis.',
       manfaat: [
@@ -541,6 +680,11 @@ class GastropediaData {
       name: 'Kentang',
       category: GastropediaCategory.sayuran,
       imageAsset: 'assets/images/gastropedia/kentang.jpg',
+      calories: 87,
+      protein: 1.9,
+      carbs: 20.1,
+      fat: 0.1,
+      servingUnit: 'per 100g',
       deskripsi:
           'Kentang rebus atau kukus bersifat basa (alkalis) yang sangat ampuh menyerap dan menetralkan asam lambung secara cepat, sangat disarankan sebagai pengganti karbohidrat saat maag kambuh.',
       manfaat: [
@@ -559,6 +703,11 @@ class GastropediaData {
       name: 'Kembang Kol',
       category: GastropediaCategory.sayuran,
       imageAsset: 'assets/images/gastropedia/kembang_kol.jpg',
+      calories: 25,
+      protein: 1.9,
+      carbs: 5.0,
+      fat: 0.3,
+      servingUnit: 'per 100g',
       deskripsi:
           'Kembang kol kukus yang diolah tanpa bumbu pedas kaya akan fitonutrien dan senyawa sulfur alami yang membantu menutrisi sel-sel saluran pencernaan.',
       manfaat: [

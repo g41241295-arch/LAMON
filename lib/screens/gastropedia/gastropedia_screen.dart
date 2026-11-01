@@ -1,6 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../models/gastropedia_item_model.dart';
 import '../../services/ensiklopedia_service.dart';
+import '../../services/gastropedia_recommendation_service.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/gastropedia/gastropedia_header.dart';
 import '../../widgets/gastropedia/category_item.dart';
@@ -17,6 +19,12 @@ class GastropediaScreen extends StatefulWidget {
 
 class _GastropediaScreenState extends State<GastropediaScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final GastropediaRecommendationService _recommendationService =
+      GastropediaRecommendationService();
+
+  Future<List<GastropediaItem>>? _recommendationsFuture;
+  List<GastropediaItem>? _lastAllItems;
+  String? _lastUserId;
 
   @override
   void initState() {
@@ -30,22 +38,9 @@ class _GastropediaScreenState extends State<GastropediaScreen> {
     super.dispose();
   }
 
-  // ── Data Rekomendasi: ambil 4 item rekomendasi (isRecommended=true),
-  //    fallback agar selalu terisi 4 item.
+  // ── Data Rekomendasi bawaan: fallback 4 item rekomendasi ──
   static List<GastropediaItem> _getRecommendedItems(List<GastropediaItem> items) {
-    final pool = items.isNotEmpty ? items : GastropediaData.items;
-    final recommended = pool.where((i) => i.isRecommended).toList();
-    if (recommended.isEmpty) {
-      return pool.take(4).toList();
-    }
-    if (recommended.length < 4) {
-      final existingIds = recommended.map((r) => r.id).toSet();
-      final extras = pool
-          .where((i) => !existingIds.contains(i.id))
-          .take(4 - recommended.length);
-      return [...recommended, ...extras];
-    }
-    return recommended.take(4).toList();
+    return GastropediaRecommendationService.getDefaultRecommendations(items);
   }
 
   // ── Data Makanan Populer dengan model GastropediaItem masing-masing ──
@@ -57,10 +52,11 @@ class _GastropediaScreenState extends State<GastropediaScreen> {
           category: GastropediaCategory.makanan,
           imageAsset:
               'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=200',
-          calories: 120,
-          protein: 4,
-          carbs: 14,
-          fat: 5,
+          calories: 55,
+          protein: 2.2,
+          carbs: 7.0,
+          fat: 2.1,
+          servingUnit: 'per 100g',
           deskripsi:
               'Salad Sayur Segar memadukan selada romaine renyah, timun jepang iris, tomat matang tanpa biji, dan jagung manis pipil dengan sentuhan minyak zaitun extra virgin non-asam. Sayuran hijau segar kaya serat larut dan air membantu menetralkan asam lambung serta mencegah refluks ke esofagus.',
           manfaat: [
@@ -83,10 +79,11 @@ class _GastropediaScreenState extends State<GastropediaScreen> {
           category: GastropediaCategory.makanan,
           imageAsset:
               'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=200',
-          calories: 165,
-          protein: 18,
-          carbs: 12,
-          fat: 4,
+          calories: 78,
+          protein: 9.5,
+          carbs: 4.8,
+          fat: 2.4,
+          servingUnit: 'per 100g',
           deskripsi:
               'Sup Ayam Diet diracik dari potongan dada ayam rebus tanpa kulit, wortel empuk, labu siam, dan kaldu bening gurih tanpa bumbu merica tajam atau santan. Sangat lembut dan hangat di perut, menjadi pilihan terbaik untuk meredakan rasa perih saat maag kambuh atau GERD.',
           manfaat: [
@@ -109,10 +106,11 @@ class _GastropediaScreenState extends State<GastropediaScreen> {
           category: GastropediaCategory.buah,
           imageAsset:
               'https://images.unsplash.com/photo-1496412705862-e0088f16f791?w=200',
-          calories: 145,
-          protein: 5,
-          carbs: 28,
-          fat: 2,
+          calories: 72,
+          protein: 2.1,
+          carbs: 14.5,
+          fat: 1.2,
+          servingUnit: 'per 100g',
           deskripsi:
               'Smoothie Bowl Buah Naga memadukan pure buah naga merah segar, pisang matang lembut, dan susu almond non-dairy rendah lemak. Teksturnya yang kental dan dingin alami memberikan sensasi sejuk instan pada kerongkongan serta perut bagian atas yang panas akibat refluks asam lambung.',
           manfaat: [
@@ -169,7 +167,18 @@ class _GastropediaScreenState extends State<GastropediaScreen> {
                   .toList()
               : <GastropediaItem>[];
 
-          final recommendedItems = _getRecommendedItems(allItems);
+          final currentUid = FirebaseAuth.instance.currentUser?.uid;
+          if (_recommendationsFuture == null ||
+              _lastAllItems != allItems ||
+              _lastUserId != currentUid) {
+            _lastAllItems = allItems;
+            _lastUserId = currentUid;
+            _recommendationsFuture = _recommendationService
+                .getPersonalizedRecommendations(
+                  userId: currentUid,
+                  allItems: allItems,
+                );
+          }
 
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -397,7 +406,7 @@ class _GastropediaScreenState extends State<GastropediaScreen> {
               const SizedBox(height: 28),
 
               // ═══════════════════════════════════════════
-              // 5. Section "Rekomendasi" (Scroll Horizontal 4 Item)
+              // 5. Section "Rekomendasi" (Scroll Horizontal 4 Item Dinamis)
               // ═══════════════════════════════════════════
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
@@ -406,33 +415,42 @@ class _GastropediaScreenState extends State<GastropediaScreen> {
 
               const SizedBox(height: 14),
 
-              // List horizontal yang bisa di-scroll (geser kiri-kanan) 4 item
-              SizedBox(
-                height: 165,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: recommendedItems.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(width: 14),
-                  itemBuilder: (context, index) {
-                    final item = recommendedItems[index];
-                    return SizedBox(
-                      width: 160,
-                      child: RecommendationCard(
-                        item: item,
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            AppRoutes.gastropediaDetail,
-                            arguments: item,
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
+              // List horizontal yang bisa di-scroll (geser kiri-kanan) 4 item dinamis
+              FutureBuilder<List<GastropediaItem>>(
+                future: _recommendationsFuture,
+                initialData: _getRecommendedItems(allItems),
+                builder: (context, recSnapshot) {
+                  final displayRecItems =
+                      recSnapshot.data ?? _getRecommendedItems(allItems);
+
+                  return SizedBox(
+                    height: 165,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: displayRecItems.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(width: 14),
+                      itemBuilder: (context, index) {
+                        final item = displayRecItems[index];
+                        return SizedBox(
+                          width: 160,
+                          child: RecommendationCard(
+                            item: item,
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.gastropediaDetail,
+                                arguments: item,
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
               ),
 
               const SizedBox(height: 28),

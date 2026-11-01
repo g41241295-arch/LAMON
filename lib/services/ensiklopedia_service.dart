@@ -56,7 +56,24 @@ class EnsiklopediaService {
       final docRef = _firestore.collection('encyclopedia').doc(item.id);
       try {
         final snap = await docRef.get();
-        if (snap.exists) continue; // Jangan menimpa dokumen yang sudah ada
+        if (snap.exists) {
+          final data = snap.data() ?? {};
+          final bool isOldDummy = (data['calories'] == 150 &&
+              data['protein'] == 6 &&
+              data['carbs'] == 18 &&
+              data['fat'] == 6);
+          if (data['calories'] == null || isOldDummy) {
+            await docRef.update({
+              'calories': item.calories,
+              'protein': item.protein,
+              'carbs': item.carbs,
+              'fat': item.fat,
+              'servingUnit': item.servingUnit,
+            });
+            inserted++;
+          }
+          continue;
+        }
         final data = item.toFirestore();
         data['createdBy'] = 'System';
         data['createdById'] = 'seed_script';
