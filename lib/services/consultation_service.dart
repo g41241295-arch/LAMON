@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../constants/consultation_constants.dart';
 import '../models/consultation_model.dart';
+import 'notification_relay_client.dart';
 
 /// Service untuk mengelola data konsultasi dan chat pada Firestore.
 ///
@@ -506,6 +507,12 @@ class ConsultationService {
 
     await batch.commit();
     debugPrint('[ConsultationService] Pesan $senderType berhasil dikirim via batch ke users/$effectivePatientUid/consultations/$consultationId.');
+
+    // Panggil relay notifikasi secara fire-and-forget
+    NotificationRelayClient.instance.notify(
+      patientUid: effectivePatientUid,
+      consultationId: consultationId,
+    );
 
     // Jika pengirim adalah pasien, cek apakah dokter punya akun nyata
     if (senderType == 'patient') {

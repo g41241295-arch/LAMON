@@ -9,6 +9,7 @@ import '../services/profile_photo_service.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/app_header_pill.dart';
 import '../routes/app_routes.dart';
+import '../services/fcm_service.dart';
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
@@ -24,7 +25,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String _userEmail = '';
   String? _uploadedPhotoUrl;
   String? _googlePhotoUrl;
-  String? _photoUrl;
   String? _photoBase64;
   String? _gender; // 'Pria'/'Laki-laki' atau 'Wanita'/'Perempuan'
   dynamic _rawBirthDate; // Timestamp, String, atau null
@@ -108,7 +108,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         _userEmail = email;
         _uploadedPhotoUrl = uploadedPhoto;
         _googlePhotoUrl = googlePhoto;
-        _photoUrl = (uploadedPhoto != null && uploadedPhoto.isNotEmpty) ? uploadedPhoto : googlePhoto;
         _photoBase64 = photoBase64;
         _gender = gender;
         _rawBirthDate = rawBirthDate;
@@ -256,7 +255,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               fit: BoxFit.cover,
               alignment: Alignment.topCenter,
               filterQuality: FilterQuality.high,
-              errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
+              errorBuilder: (_, _, _) => _buildDefaultAvatar(),
             );
           }
           return _buildDefaultAvatar();
@@ -643,7 +642,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
 
     if (confirmed == true && mounted) {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
       try {
+        if (uid != null) {
+          await FcmService.instance.cleanUpBeforeLogout(uid);
+        }
         await FirebaseAuth.instance.signOut();
         await GoogleSignIn.instance.signOut();
       } catch (_) {}

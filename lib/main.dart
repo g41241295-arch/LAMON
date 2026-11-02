@@ -9,6 +9,7 @@ import 'constants/app_colors.dart';
 import 'providers/app_state.dart';
 import 'routes/app_routes.dart';
 import 'pengingat_jam_makan/services/notification_service.dart';
+import 'services/fcm_service.dart';
 import 'services/notification_service.dart';
 
 void main() async {
@@ -46,6 +47,7 @@ class _LamonAppState extends State<LamonApp> {
   @override
   void initState() {
     super.initState();
+    FcmService.instance.setupNotificationClickHandlers();
     _initChatNotificationListener();
   }
 
@@ -55,6 +57,9 @@ class _LamonAppState extends State<LamonApp> {
         ChatInAppNotificationService.instance.stopListening();
         return;
       }
+
+      // Inisialisasi FCM & simpan token perangkat untuk user login (Android)
+      FcmService.instance.setupForLoggedInUser(user.uid);
 
       try {
         final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();

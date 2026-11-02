@@ -6,6 +6,7 @@ import '../../models/doctor_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/doctor_service.dart';
 import '../../services/profile_photo_service.dart';
+import '../../services/fcm_service.dart';
 import '../konsultasi/widgets/doctor_avatar.dart';
 
 /// Tab 3: Profil Dokter
@@ -28,7 +29,6 @@ class DoctorProfileTab extends StatefulWidget {
 
 class _DoctorProfileTabState extends State<DoctorProfileTab> {
   final DoctorService _doctorService = DoctorService();
-  final ImagePicker _imagePicker = ImagePicker();
   final _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _nameController;
@@ -143,7 +143,11 @@ class _DoctorProfileTabState extends State<DoctorProfileTab> {
       ),
     );
     if (confirm != true) return;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
     try {
+      if (uid != null) {
+        await FcmService.instance.cleanUpBeforeLogout(uid);
+      }
       await FirebaseAuth.instance.signOut();
     } catch (e) {
       if (mounted) {

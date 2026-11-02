@@ -1,3 +1,4 @@
+﻿import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
@@ -9,7 +10,8 @@ import '../../widgets/app_scaffold.dart';
 import 'widgets/doctor_card.dart';
 
 /// Layar Daftar Dokter — entry point fitur Konsultasi Dokter.
-/// Menampilkan dua tab: "Pilih Dokter" (semua) dan "Rekomendasi" (isRecommended: true).
+/// Menampilkan dua tab: "Pilih Dokter" dan "Rekomendasi" (spesialis lebih dulu + pengalaman).
+/// Hanya menampilkan dokter yang memiliki minimal satu slot praktik tersedia hari ini.
 class DaftarDokterScreen extends StatefulWidget {
   const DaftarDokterScreen({super.key});
 
@@ -23,15 +25,21 @@ class _DaftarDokterScreenState extends State<DaftarDokterScreen>
   final DoctorService _doctorService = DoctorService();
   final ConsultationService _consultationService = ConsultationService();
   bool _isSeeding = false;
+  Timer? _periodicTimer;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    // Segarkan otomatis tiap 1 menit agar dokter hilang tepat saat slot terakhirnya berakhir (U2.5)
+    _periodicTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
+    _periodicTimer?.cancel();
     _tabController.dispose();
     super.dispose();
   }
@@ -230,15 +238,17 @@ class _DaftarDokterScreenState extends State<DaftarDokterScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          // Tab 1: Semua dokter
+          // Tab 1: Semua dokter tersedia
           _DoctorListTab(
-            stream: _doctorService.watchAll(),
+            doctorService: _doctorService,
+            isRecommendedTab: false,
             onTapChat: _handleChatTap,
             onTapJamLainnya: _showJamLainnya,
           ),
-          // Tab 2: Rekomendasi
+          // Tab 2: Rekomendasi berdasarkan pengalaman/keprofesionalan
           _DoctorListTab(
-            stream: _doctorService.watchRecommended(),
+            doctorService: _doctorService,
+            isRecommendedTab: true,
             onTapChat: _handleChatTap,
             onTapJamLainnya: _showJamLainnya,
           ),
@@ -253,12 +263,14 @@ class _DaftarDokterScreenState extends State<DaftarDokterScreen>
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _DoctorListTab extends StatelessWidget {
-  final Stream<List<DoctorModel>> stream;
+  final DoctorService doctorService;
+  final bool isRecommendedTab;
   final void Function(DoctorModel) onTapChat;
   final void Function(BuildContext, DoctorModel) onTapJamLainnya;
 
   const _DoctorListTab({
-    required this.stream,
+    required this.doctorService,
+    required this.isRecommendedTab,
     required this.onTapChat,
     required this.onTapJamLainnya,
   });
@@ -266,7 +278,7 @@ class _DoctorListTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<DoctorModel>>(
-      stream: stream,
+      stream: doctorService.watchAll(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -295,61 +307,89 @@ class _DoctorListTab extends StatelessWidget {
           );
         }
 
-        final doctors = snapshot.data ?? [];
+        final rawDoctors = snapshot.data ?? [];
 
-        if (doctors.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.medical_services_outlined,
-                      size: 64,
-                      color: AppColors.neutralGray.withValues(alpha: 0.5)),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Belum ada dokter tersedia.',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.neutralGray,
-                    ),
-                    textAlign: TextAlign.center,
+        return FutureBuilder<List<DoctorModel>>(
+          future: doctorService.filterAvailableDoctorsToday(rawDoctors),
+          builder: (context, filterSnap) {
+            if (filterSnap.connectionState == ConnectionState.waiting &&
+                !filterSnap.hasData) {
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              );
+            }
+
+            var availableDoctors = filterSnap.data ?? [];
+
+            if (isRecommendedTab) {
+              // Rekomendasi (U3):
+              // Dokter yang lolos filter ketersediaan, diurutkan:
+              // (a) Dokter spesialis lebih dulu
+              // (b) experienceYears menurun
+              // (c) Nama menaik
+              // Tampilkan maksimal 5
+              final list = List<DoctorModel>.from(availableDoctors);
+              list.sort(DoctorService.compareDoctorRecommendation);
+              availableDoctors = list.take(5).toList();
+            }
+
+            if (availableDoctors.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.medical_services_outlined,
+                          size: 64,
+                          color: AppColors.neutralGray.withValues(alpha: 0.5)),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Belum ada dokter yang praktik saat ini. Silakan cek kembali nanti.',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.neutralGray,
+                          height: 1.4,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      if (kDebugMode) ...[
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Tap ikon upload di pojok kanan atas\nuntuk mengisi data dokter (debug only).',
+                          style: TextStyle(
+                              fontSize: 13, color: AppColors.neutralGray),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ],
                   ),
-                  if (kDebugMode) ...[
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Tap ikon upload di pojok kanan atas\nuntuk mengisi data dokter (debug only).',
-                      style: TextStyle(
-                          fontSize: 13, color: AppColors.neutralGray),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          );
-        }
+                ),
+              );
+            }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(20),
-          itemCount: doctors.length,
-          itemBuilder: (context, index) {
-            final doctor = doctors[index];
-            return DoctorCard(
-              doctor: doctor,
-              onTapCard: () {
-                Navigator.pushNamed(
-                  context,
-                  '/konsultasi/dokter/${doctor.id}',
-                  arguments: doctor,
+            return ListView.builder(
+              padding: const EdgeInsets.all(20),
+              itemCount: availableDoctors.length,
+              itemBuilder: (context, index) {
+                final doctor = availableDoctors[index];
+                return DoctorCard(
+                  doctor: doctor,
+                  isRecommended: isRecommendedTab,
+                  onTapCard: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/konsultasi/dokter/${doctor.id}',
+                      arguments: doctor,
+                    );
+                  },
+                  onTapChatButton: () => onTapChat(doctor),
+                  onTapJamLainnya: doctor.operatingHours.length > 1
+                      ? () => onTapJamLainnya(context, doctor)
+                      : null,
                 );
               },
-              onTapChatButton: () => onTapChat(doctor),
-              onTapJamLainnya: doctor.operatingHours.length > 1
-                  ? () => onTapJamLainnya(context, doctor)
-                  : null,
             );
           },
         );

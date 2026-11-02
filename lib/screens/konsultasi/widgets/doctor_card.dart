@@ -13,6 +13,7 @@ class DoctorCard extends StatelessWidget {
   final VoidCallback onTapCard;
   final VoidCallback onTapChatButton;
   final VoidCallback? onTapJamLainnya;
+  final bool isRecommended;
 
   const DoctorCard({
     super.key,
@@ -20,6 +21,7 @@ class DoctorCard extends StatelessWidget {
     required this.onTapCard,
     required this.onTapChatButton,
     this.onTapJamLainnya,
+    this.isRecommended = false,
   });
 
   @override
@@ -89,22 +91,55 @@ class DoctorCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 8),
-                        // Chip Harga
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            formatRupiah(doctor.price),
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.primary,
+                        // Baris Chip Harga & Penanda Rekomendasi
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                formatRupiah(doctor.price),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.primary,
+                                ),
+                              ),
                             ),
-                          ),
+                            if (isRecommended) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF3CD),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: const Color(0xFFFFD54F), width: 1),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.star_rounded,
+                                        size: 13, color: Color(0xFFF57F17)),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      '${doctor.experienceYears} thn exp',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFFE65100),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ),

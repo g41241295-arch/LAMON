@@ -54,6 +54,17 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
   bool _isCompleting = false;
   bool _hasLoadedConsultation = false;
   int _previousMessageCount = 0;
+  bool _showTemplates = false;
+
+  /// Template pesan cepat untuk pasien (Bagian W)
+  static const List<String> _patientTemplates = [
+    'Dokter, saya merasakan nyeri di bagian perut atas sejak beberapa hari.',
+    'Apakah gejala yang saya alami ini berbahaya?',
+    'Saya sudah minum obat yang diresepkan, tapi belum membaik.',
+    'Terima kasih dok, saya akan mengikuti sarannya.',
+    'Apakah ada pantangan makanan yang perlu saya hindari?',
+    'Kapan sebaiknya saya kembali periksa, dok?',
+  ];
 
   // Selected attachment state
   Uint8List? _attachmentBytes;
@@ -884,6 +895,10 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                 // ── Bar Pratinjau Lampiran (jika ada yang dipilih) ──
                 if (_attachmentBytes != null) _buildAttachmentPreviewBar(),
 
+                // ── Template Pesan Cepat (pasien saja, Bagian W) ──
+                if (!isCompleted && !widget.isDoctor && _showTemplates)
+                  _buildTemplateSuggestions(),
+
                 // ── Kolom Input Bar Menempel di atas Keyboard / Bar Selesai ──
                 if (isCompleted)
                   _buildCompletedBar()
@@ -1033,6 +1048,19 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
         ),
         child: Row(
           children: [
+            // Tombol Template (pasien saja, Bagian W)
+            if (!widget.isDoctor)
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
+                icon: Icon(
+                  Icons.bolt_rounded,
+                  color: _showTemplates ? AppColors.primary : AppColors.neutralGray,
+                  size: 24,
+                ),
+                onPressed: () => setState(() => _showTemplates = !_showTemplates),
+                tooltip: 'Template pesan cepat',
+              ),
             // Tombol Lampiran (+)
             IconButton(
               padding: EdgeInsets.zero,
@@ -1108,6 +1136,62 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Widget strip template pesan cepat (Bagian W)
+  Widget _buildTemplateSuggestions() {
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        border: Border(
+          top: BorderSide(color: Colors.black.withValues(alpha: 0.06)),
+        ),
+      ),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        itemCount: _patientTemplates.length,
+        itemBuilder: (context, index) {
+          final template = _patientTemplates[index];
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () {
+                _inputController.text = template;
+                _inputController.selection = TextSelection.fromPosition(
+                  TextPosition(offset: template.length),
+                );
+                setState(() => _showTemplates = false);
+                _focusNode.requestFocus();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Text(
+                  template.length > 40
+                      ? '${template.substring(0, 38)}…'
+                      : template,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

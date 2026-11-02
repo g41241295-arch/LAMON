@@ -6,6 +6,7 @@ import '../constants/app_colors.dart';
 import '../models/consultation_model.dart';
 import '../models/doctor_model.dart';
 import '../services/doctor_service.dart';
+import '../services/fcm_service.dart';
 import '../widgets/app_header_pill.dart';
 import 'dokter/doctor_home_tab.dart';
 import 'dokter/doctor_messages_tab.dart';
@@ -374,7 +375,10 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                   const SizedBox(height: 28),
                   ElevatedButton.icon(
                     onPressed: () async {
-                      // Cukup signOut — _onAuthStateChanged akan menangani navigasi ke /login
+                      final uid = FirebaseAuth.instance.currentUser?.uid;
+                      if (uid != null) {
+                        await FcmService.instance.cleanUpBeforeLogout(uid);
+                      }
                       await FirebaseAuth.instance.signOut();
                     },
                     icon: const Icon(Icons.logout_rounded),

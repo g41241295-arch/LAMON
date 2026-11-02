@@ -5,6 +5,7 @@ import '../../constants/consultation_constants.dart';
 import '../../constants/practice_slot_constants.dart';
 import '../../models/doctor_model.dart';
 import '../../services/consultation_service.dart';
+import '../../services/doctor_service.dart';
 import '../../utils/app_date_formatter.dart';
 import '../../utils/currency_formatter.dart';
 import '../../widgets/app_header_pill.dart';
@@ -41,7 +42,8 @@ class _RingkasanPembayaranScreenState
   }
 
   void _checkTodaySchedule() async {
-    final todayKey = AppDateFormatter.formatDateKey(DateTime.now());
+    final now = DateTime.now();
+    final todayKey = AppDateFormatter.formatDateKey(now);
     try {
       final doc = await FirebaseFirestore.instance
           .collection('doctors')
@@ -50,20 +52,53 @@ class _RingkasanPembayaranScreenState
           .doc(todayKey)
           .get();
       if (doc.exists && doc.data() != null) {
-        final rawSlots = doc.data()!['slots'] as List<dynamic>? ?? [];
-        if (rawSlots.isNotEmpty) {
-          final parsedSlots = PracticeSlotConstants.parseSlots(rawSlots);
-          final mapped = parsedSlots
-              .map((slot) => OperatingHour(start: slot.startTime, end: slot.endTime))
-              .toList();
-          if (mapped.isNotEmpty && mounted) {
-            setState(() {
-              _activeHours = mapped;
-              if (_selectedHourIndex >= mapped.length) {
+        final data = doc.data()!;
+        final isDayOff = data['dayOff'] == true;
+        if (!isDayOff) {
+          final rawSlots = data['slots'] as List<dynamic>? ?? [];
+          if (rawSlots.isNotEmpty) {
+            final parsedSlots = PracticeSlotConstants.parseSlots(rawSlots);
+            // U2.5: Hanya tampilkan slot yang jam selesainya lebih besar dari waktu sekarang
+            final mapped = parsedSlots
+                .where((slot) => DoctorService.isSlotAvailableNow(slot.endTime, now))
+                .map((slot) => OperatingHour(start: slot.startTime, end: slot.endTime))
+                .toList();
+            if (mounted) {
+              setState(() {
+                _activeHours = mapped.isNotEmpty ? mapped : _doctor.operatingHours
+                    .where((h) => DoctorService.isSlotAvailableNow(h.end, now))
+                    .toList();
+                if (_selectedHourIndex >= _activeHours.length) {
+                  _selectedHourIndex = 0;
+                }
+              });
+            }
+          } else {
+            // slots kosong tapi bukan dayOff — anggap libur, gunakan operatingHours default
+            if (mounted) {
+              setState(() {
+                _activeHours = _doctor.operatingHours
+                    .where((h) => DoctorService.isSlotAvailableNow(h.end, now))
+                    .toList();
                 _selectedHourIndex = 0;
-              }
-            });
+              });
+            }
           }
+        } else {
+          // dayOff = true
+          if (mounted) setState(() => _activeHours = []);
+        }
+      } else {
+        // Tidak ada dokumen jadwal hari ini — fallback ke operatingHours default
+        if (mounted) {
+          setState(() {
+            _activeHours = _doctor.operatingHours
+                .where((h) => DoctorService.isSlotAvailableNow(h.end, now))
+                .toList();
+            if (_selectedHourIndex >= _activeHours.length) {
+              _selectedHourIndex = 0;
+            }
+          });
         }
       }
     } catch (_) {}

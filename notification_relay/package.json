@@ -1,0 +1,15 @@
+{
+  "name": "lamon-notification-relay",
+  "version": "1.0.0",
+  "description": "Serverless HTTP relay for LAMON FCM chat notifications without Blaze plan",
+  "main": "api/notify.js",
+  "scripts": {
+    "start": "node api/notify.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

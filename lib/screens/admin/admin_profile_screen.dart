@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../constants/app_colors.dart';
+import '../../services/fcm_service.dart';
 import '../../widgets/gastropedia/gastropedia_header.dart';
 
 class AdminProfileScreen extends StatefulWidget {
@@ -29,7 +30,6 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
   bool _isUploadingPhoto = false;
-  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -503,6 +503,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       ),
     );
     if (confirmed == true && mounted) {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        await FcmService.instance.cleanUpBeforeLogout(uid);
+      }
       await FirebaseAuth.instance.signOut();
       if (mounted) {
         Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);

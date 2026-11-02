@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
+import '../constants/practice_slot_constants.dart';
 import '../models/consultation_model.dart';
 import '../models/doctor_model.dart';
+import '../utils/app_date_formatter.dart';
 import 'consultation_service.dart';
 
 /// Service untuk mengelola data dan operasi dokter:
@@ -238,12 +240,18 @@ class DoctorService {
 
     try {
       if (slotIds.isEmpty) {
-        await docRef.delete();
-        debugPrint('[DoctorService] Jadwal $dateKey dihapus (libur).');
+        await docRef.set({
+          'date': Timestamp.fromDate(DateTime(date.year, date.month, date.day)),
+          'slots': <dynamic>[],
+          'dayOff': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        debugPrint('[DoctorService] Jadwal $dateKey ditandai libur (dayOff=true, slots=[]).');
       } else {
         await docRef.set({
           'date': Timestamp.fromDate(DateTime(date.year, date.month, date.day)),
           'slots': slotIds,
+          'dayOff': false,
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
         debugPrint('[DoctorService] Jadwal $dateKey disimpan: $slotIds');
@@ -252,6 +260,113 @@ class DoctorService {
       debugPrint('[DoctorService] Gagal saveSchedule: $e');
       rethrow;
     }
+  }
+
+  /// Memeriksa apakah suatu slot jam masih tersedia berdasarkan waktu lokal sekarang.
+  /// Sebuah slot masih tersedia jika jam selesainya LEBIH BESAR dari waktu sekarang (waktu lokal perangkat).
+  /// Slot yang sedang berlangsung masih boleh dipilih.
+  static bool isSlotAvailableNow(String endTimeStr, [DateTime? nowTime]) {
+    final clean = endTimeStr.replaceAll(':', '.').trim();
+    final parts = clean.split('.');
+    if (parts.length >= 2) {
+      final hour = int.tryParse(parts[0]) ?? 0;
+      final minute = int.tryParse(parts[1]) ?? 0;
+      final endMinutes = hour * 60 + minute;
+
+      final now = nowTime ?? DateTime.now();
+      final currentMinutes = now.hour * 60 + now.minute;
+      return endMinutes > currentMinutes;
+    }
+    return false;
+  }
+
+  /// Memfilter daftar dokter agar hanya mengembalikan dokter yang memiliki minimal
+  /// satu slot praktik yang masih aktif/tersedia untuk hari ini.
+  ///
+  /// Aturan ketersediaan (U2):
+  /// 1. Slot hari ini = slot dari doctors/{id}/schedule/{yyyy-MM-dd} bila dokumen ada;
+  ///    bila tidak ada -> fallback ke operatingHours default (dokter belum pernah mengatur jadwal).
+  /// 2. dayOff == true (atau slots kosong pada dokumen schedule) -> dokter libur hari ini.
+  /// 3. Sebuah slot masih tersedia jika jam selesainya LEBIH BESAR dari waktu sekarang.
+  /// 4. Dokter HANYA ditampilkan jika punya minimal satu slot tersedia.
+  /// 5. Kartu dokter dan chip ringkasan pembayaran hanya menampilkan slot yang belum berakhir.
+  Future<List<DoctorModel>> filterAvailableDoctorsToday(
+    List<DoctorModel> doctors, [
+    DateTime? nowTime,
+  ]) async {
+    final now = nowTime ?? DateTime.now();
+    final todayKey = AppDateFormatter.formatDateKey(now);
+    final List<DoctorModel> availableDoctors = [];
+
+    for (final doctor in doctors) {
+      try {
+        final schedDoc = await _db
+            .collection('doctors')
+            .doc(doctor.id)
+            .collection('schedule')
+            .doc(todayKey)
+            .get();
+
+        List<OperatingHour> todayHours = [];
+
+        if (schedDoc.exists && schedDoc.data() != null) {
+          final data = schedDoc.data()!;
+          final isDayOff = data['dayOff'] == true;
+          if (isDayOff) {
+            todayHours = [];
+          } else {
+            final rawSlots = data['slots'] as List<dynamic>? ?? [];
+            if (rawSlots.isEmpty) {
+              todayHours = [];
+            } else {
+              final parsed = PracticeSlotConstants.parseSlots(rawSlots);
+              todayHours = parsed
+                  .map((s) => OperatingHour(start: s.startTime, end: s.endTime))
+                  .toList();
+            }
+          }
+        } else {
+          // Fallback ke operatingHours default dokter
+          todayHours = List<OperatingHour>.from(doctor.operatingHours);
+        }
+
+        // Filter hanya slot yang jam selesainya LEBIH BESAR dari waktu sekarang
+        final activeSlots = todayHours.where((h) => isSlotAvailableNow(h.end, now)).toList();
+
+        if (activeSlots.isNotEmpty) {
+          availableDoctors.add(doctor.copyWith(operatingHours: activeSlots));
+        }
+      } catch (e) {
+        debugPrint('[DoctorService] Gagal memeriksa jadwal dokter ${doctor.id}: $e');
+      }
+    }
+
+    return availableDoctors;
+  }
+
+  /// Kriteria urutan rekomendasi dokter berdasarkan keprofesionalan/pengalaman (U3):
+  /// (a) Dokter spesialis lebih dulu (specialty mengandung "Spesialis" atau "Sp.", case-insensitive)
+  /// (b) experienceYears menurun (pengalaman terbanyak di atas)
+  /// (c) Nama dokter menaik (A-Z)
+  static int compareDoctorRecommendation(DoctorModel a, DoctorModel b) {
+    final aSpecialty = a.specialty.toLowerCase();
+    final bSpecialty = b.specialty.toLowerCase();
+    final aIsSpecialist = aSpecialty.contains('spesialis') || aSpecialty.contains('sp.');
+    final bIsSpecialist = bSpecialty.contains('spesialis') || bSpecialty.contains('sp.');
+
+    // Kriteria (a): Spesialis lebih dulu
+    if (aIsSpecialist != bIsSpecialist) {
+      return aIsSpecialist ? -1 : 1;
+    }
+
+    // Kriteria (b): Pengalaman tahun menurun (descending)
+    final expDiff = b.experienceYears.compareTo(a.experienceYears);
+    if (expDiff != 0) {
+      return expDiff;
+    }
+
+    // Kriteria (c): Nama alfabetis menaik (ascending)
+    return a.name.toLowerCase().compareTo(b.name.toLowerCase());
   }
 
   /// Selesaikan konsultasi oleh dokter (mendelegasikan ke ConsultationService).
