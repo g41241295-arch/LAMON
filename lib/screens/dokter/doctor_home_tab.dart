@@ -9,6 +9,7 @@ import '../../utils/app_date_formatter.dart';
 import '../beranda/widgets/header_section.dart';
 import '../konsultasi/chat_dokter_screen.dart';
 import '../konsultasi/widgets/doctor_avatar.dart';
+import '../../services/profile_photo_service.dart';
 import 'widgets/doctor_calendar_card.dart';
 
 /// Tab 1: Beranda Dokter
@@ -110,12 +111,18 @@ class DoctorHomeTab extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  DoctorAvatar(
-                    photoUrl: doctor.effectivePhotoUrl,
-                    doctorId: doctor.id,
-                    doctorName: doctor.name,
+                  RealtimeHeaderAvatar(
+                    collection: 'doctors',
+                    docId: doctor.id,
                     size: 28,
                     borderRadius: 14,
+                    fallback: DoctorAvatar(
+                      photoUrl: doctor.effectivePhotoUrl,
+                      doctorId: doctor.id,
+                      doctorName: doctor.name,
+                      size: 28,
+                      borderRadius: 14,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   ConstrainedBox(

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../services/profile_photo_service.dart';
 
 class HeaderChip extends StatelessWidget {
   final String userName;
@@ -23,6 +25,20 @@ class HeaderChip extends StatelessWidget {
   }
 
   Widget _buildAvatar() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null && uid.isNotEmpty) {
+      return RealtimeHeaderAvatar(
+        collection: 'users',
+        docId: uid,
+        size: 28,
+        borderRadius: 14,
+        fallback: _buildLegacyAvatar(),
+      );
+    }
+    return _buildLegacyAvatar();
+  }
+
+  Widget _buildLegacyAvatar() {
     final cleanUrl = (photoUrl ?? '').trim();
     if (cleanUrl.isNotEmpty) {
       return ClipOval(

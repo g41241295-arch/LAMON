@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../constants/app_colors.dart';
 import '../../models/doctor_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/doctor_service.dart';
+import '../../services/profile_photo_service.dart';
 import '../konsultasi/widgets/doctor_avatar.dart';
 
 /// Tab 3: Profil Dokter
@@ -35,6 +37,7 @@ class _DoctorProfileTabState extends State<DoctorProfileTab> {
   String? _selectedGender;
   bool _isSaving = false;
   bool _isUploadingPhoto = false;
+  String? _photoBase64;
 
   @override
   void initState() {
@@ -44,6 +47,27 @@ class _DoctorProfileTabState extends State<DoctorProfileTab> {
     final userEmail = FirebaseAuth.instance.currentUser?.email ?? '';
     _emailController = TextEditingController(text: userEmail);
     _selectedGender = widget.doctor.gender ?? 'Laki-laki';
+    _loadPhoto();
+  }
+
+  Future<void> _loadPhoto() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('doctors')
+          .doc(widget.doctor.id)
+          .get();
+      if (doc.exists && mounted) {
+        final data = doc.data() ?? {};
+        final rawB64 = data['photoBase64']?.toString().trim();
+        if (rawB64 != null && rawB64.isNotEmpty) {
+          setState(() {
+            _photoBase64 = rawB64;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('[DoctorProfileTab] Gagal memuat photoBase64: $e');
+    }
   }
 
   @override
@@ -147,13 +171,33 @@ class _DoctorProfileTabState extends State<DoctorProfileTab> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: Text('Ganti Foto Profil',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primaryText)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Ganti Foto Profil',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primaryText)),
+                      if (_photoBase64 != null && _photoBase64!.trim().isNotEmpty)
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Color(0xFFD32F2F),
+                            size: 22,
+                          ),
+                          tooltip: 'Hapus Foto Profil',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _confirmAndDeletePhoto();
+                          },
+                        ),
+                    ],
+                  ),
                 ),
                 const Divider(),
                 ListTile(
@@ -200,40 +244,67 @@ class _DoctorProfileTabState extends State<DoctorProfileTab> {
     );
   }
 
-  // C3: Pilih + kompres + upload foto profil
-  Future<void> _pickAndUploadPhoto(ImageSource source) async {
-    try {
-      final picked = await _imagePicker.pickImage(
-        source: source,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 70,
-      );
-      if (picked == null) return;
-      final bytes = await picked.readAsBytes();
-      if (!mounted) return;
-      setState(() => _isUploadingPhoto = true);
-      await _doctorService.updateDoctorPhotoUrl(
-        doctorId: widget.doctor.id,
-        imageBytes: bytes,
-      );
-      // Reload profil dokter → foto baru ikut tampil di kartu pasien, chat, dsb.
-      widget.onProfileUpdated();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Foto profil berhasil diperbarui.'),
-            backgroundColor: AppColors.successGreen,
-            behavior: SnackBarBehavior.floating,
+  Future<void> _confirmAndDeletePhoto() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Hapus foto profil?',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        content: const Text(
+          'Foto profil akan dihapus dan diganti dengan foto default.',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
           ),
-        );
-      }
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD32F2F),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      setState(() => _isUploadingPhoto = true);
+      await ProfilePhotoService.deletePhoto(
+        collection: 'doctors',
+        docId: widget.doctor.id,
+      );
+      if (!mounted) return;
+      setState(() {
+        _photoBase64 = null;
+      });
+      widget.onProfileUpdated();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Foto profil dihapus'),
+          backgroundColor: AppColors.successGreen,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (e) {
+      debugPrint('[DoctorProfileTab] Gagal menghapus foto: $e');
       if (mounted) {
+        final message = e.toString().replaceAll('Exception: ', '').trim();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal mengganti foto: $e'),
-            backgroundColor: Colors.orange,
+            content: Text(message.isNotEmpty ? message : 'Gagal menghapus foto profil'),
+            backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -241,6 +312,71 @@ class _DoctorProfileTabState extends State<DoctorProfileTab> {
     } finally {
       if (mounted) setState(() => _isUploadingPhoto = false);
     }
+  }
+
+  // C3: Pilih, kompres, dan simpan Base64 foto profil dokter
+  Future<void> _pickAndUploadPhoto(ImageSource source) async {
+    try {
+      setState(() => _isUploadingPhoto = true);
+      final b64 = await ProfilePhotoService.pickAndSave(
+        collection: 'doctors',
+        docId: widget.doctor.id,
+        source: source,
+      );
+      if (b64 == null) return;
+      if (!mounted) return;
+      setState(() {
+        _photoBase64 = b64;
+      });
+      widget.onProfileUpdated();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Foto profil diperbarui'),
+          backgroundColor: AppColors.successGreen,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[DoctorProfileTab] Gagal mengganti foto: $e');
+      if (mounted) {
+        final message = e.toString().replaceAll('Exception: ', '').trim();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message.isNotEmpty ? message : 'Gagal memperbarui foto profil'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
+  }
+
+  Widget _buildDoctorAvatarImage() {
+    final imageProvider = ProfilePhotoService.provider(_photoBase64);
+    if (imageProvider != null) {
+      return Image(
+        image: imageProvider,
+        width: 96,
+        height: 96,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => DoctorAvatar(
+          photoUrl: widget.doctor.effectivePhotoUrl,
+          doctorId: widget.doctor.id,
+          doctorName: widget.doctor.name,
+          size: 96,
+          borderRadius: 48,
+        ),
+      );
+    }
+    return DoctorAvatar(
+      photoUrl: widget.doctor.effectivePhotoUrl,
+      doctorId: widget.doctor.id,
+      doctorName: widget.doctor.name,
+      size: 96,
+      borderRadius: 48,
+    );
   }
 
   @override
@@ -275,13 +411,7 @@ class _DoctorProfileTabState extends State<DoctorProfileTab> {
                                     color: AppColors.primary, strokeWidth: 2.5),
                               ),
                             )
-                          : DoctorAvatar(
-                              photoUrl: widget.doctor.effectivePhotoUrl,
-                              doctorId: widget.doctor.id,
-                              doctorName: widget.doctor.name,
-                              size: 96,
-                              borderRadius: 48,
-                            ),
+                          : _buildDoctorAvatarImage(),
                     ),
                   ),
                   if (!_isUploadingPhoto)
