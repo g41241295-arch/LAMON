@@ -276,15 +276,6 @@ class BeritaRepository {
   // API Publik (async — dibaca dari Firestore, fallback ke data statis)
   // ────────────────────────────────────────────────────────────────────────────
 
-  static Future<bool> _isSeeded() async {
-    try {
-      final doc = await _fs.collection('meta').doc('berita_seed').get();
-      return doc.exists;
-    } catch (_) {
-      return false;
-    }
-  }
-
   static void _sortArticles(List<BeritaArticle> list) {
     list.sort((a, b) {
       if (a.tanggal == null && b.tanggal == null) return 0;
