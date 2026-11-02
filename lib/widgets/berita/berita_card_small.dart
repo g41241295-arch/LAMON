@@ -90,7 +90,8 @@ class _BeritaCardSmallState extends State<BeritaCardSmall> {
                     Semantics(
                       label: 'Gambar berita: ${article.judul}',
                       child: BeritaImage(
-                        assetPath: article.gambarAsset,
+                        gambarUrl: article.gambarUrl,
+                        gambarAsset: article.gambarAsset,
                         width: 84,
                         height: 80,
                         borderRadius: 16,

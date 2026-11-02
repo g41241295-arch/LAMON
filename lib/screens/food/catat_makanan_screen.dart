@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../constants/app_colors.dart';
 import '../../models/food_entry_model.dart';
+import '../../routes/app_routes.dart';
 import '../../services/food_entry_service.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/food/meal_session_tab.dart';
@@ -221,7 +222,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
       berbaringSetelahMakan: s.berbaringSetelahMakan!,
       konsumsiSoda: s.konsumsiSoda!,
       konsumsiKopi: s.konsumsiKopi!,
-            bebanPikiran:
+      bebanPikiran:
           _activeSession == MealSession.makanMalam ? s.bebanPikiran : null,
       bebanAktivitas:
           _activeSession == MealSession.makanMalam ? s.bebanAktivitas : null,
@@ -257,13 +258,25 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
         ),
       );
 
+      // Cek apakah ketiga sesi hari ini sudah lengkap
+      final allDone = MealSession.values
+          .every((ses) => _submittedMap[ses] == true);
+
+      if (allDone && mounted) {
+        // Tunggu snack bar sebentar, lalu tampilkan dialog tanpa navigasi otomatis
+        await Future.delayed(const Duration(milliseconds: 700));
+        if (!mounted) return;
+        await _showRingkasanReadyDialog();
+        return;
+      }
+
       // Sedikit delay lalu kembali
       await Future.delayed(const Duration(milliseconds: 1200));
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -278,6 +291,132 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
       );
     }
   }
+
+  /// Bottom sheet yang ditampilkan ketika ketiga sesi hari ini sudah tersimpan.
+  Future<void> _showRingkasanReadyDialog() async {
+    if (!mounted) return;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 40,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Ringkasan hari ini sudah tersedia!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primaryText,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Kamu sudah melengkapi Sarapan, Makan Siang, dan Makan Malam hari ini. Ringkasan nutrisimu sudah bisa dilihat.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.brownSubtext,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx, 'ringkasan'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(50),
+                      ),
+                      elevation: 2,
+                      shadowColor: AppColors.primary.withValues(alpha: 0.3),
+                    ),
+                    child: const Text(
+                      'Lihat Ringkasan',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(ctx, 'nanti'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primaryText,
+                      side: BorderSide(color: Colors.grey.shade300),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(50),
+                      ),
+                    ),
+                    child: const Text(
+                      'Nanti',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (!mounted) return;
+    if (action == 'ringkasan') {
+      Navigator.pop(context); // kembali dari CatatMakanan
+      Navigator.pushNamed(context, AppRoutes.ringkasanMakanan);
+    } else {
+      Navigator.pop(context); // kembali ke halaman sebelumnya
+    }
+  }
+
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   String _formatDate(DateTime dt) {
@@ -534,7 +673,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ChipSelector(
-                  label: 'Protein apa yg Anda makan?',
+                  label: 'Protein apa yang Anda makan?',
                   options: const [
                     'Daging Ayam',
                     'Daging Sapi',
@@ -568,7 +707,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ChipSelector(
-                  label: 'Sayuran apa yg Anda makan?',
+                  label: 'Sayuran apa yang Anda makan?',
                   options: const [
                     'Bayam',
                     'Kembang Kol',
@@ -616,7 +755,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
             child: Column(
               children: [
                 DiscreteSlider(
-                  label: 'Apakah makanan Anda pedas?',
+                  label: 'Apakah makanan yang Anda makan pedas?',
                   iconEmoji: '🌶️',
                   stepLabels: const [
                     'Tidak pedas',
@@ -633,7 +772,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                 const SizedBox(height: 16),
 
                 DiscreteSlider(
-                  label: 'Apakah makanan Anda asin?',
+                  label: 'Apakah makanan yang Anda makan asin?',
                   iconEmoji: '🧂',
                   stepLabels: const [
                     'Tidak asin',
@@ -650,7 +789,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                 const SizedBox(height: 16),
 
                 DiscreteSlider(
-                  label: 'Apakah makanan Anda asam?',
+                  label: 'Apakah makanan yang Anda makan asam?',
                   customIcon: Image.asset('assets/images/asam.png', width: 22, height: 22, errorBuilder: (c,e,s) => const Text('🍋', style: TextStyle(fontSize: 22))),
                   stepLabels: const [
                     'Tidak asam',
@@ -667,7 +806,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                 const SizedBox(height: 16),
 
                 DiscreteSlider(
-                  label: 'Apakah makanan Anda manis?',
+                  label: 'Apakah makanan yang Anda makan manis?',
                   customIcon: Image.asset('assets/images/manis.png', width: 22, height: 22, errorBuilder: (c,e,s) => const Text('🍯', style: TextStyle(fontSize: 22))),
                   stepLabels: const [
                     'Tidak manis',
@@ -684,7 +823,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                 const SizedBox(height: 16),
 
                 DiscreteSlider(
-                  label: 'Apakah makanan Anda berlemak?',
+                  label: 'Apakah makanan yang Anda makan berlemak?',
                   customIcon: Image.asset('assets/images/berlemak.png', width: 22, height: 22, errorBuilder: (c,e,s) => const Text('🥩', style: TextStyle(fontSize: 22))),
                   stepLabels: const [
                     'Tidak berlemak',
@@ -718,7 +857,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                 const SizedBox(height: 16),
 
                 ToggleYesNo(
-                  label: 'Apakah Anda mengonsumsi minuman bersoda?',
+                  label: 'Apakah Anda mengonsumsi minuman yang bersoda?',
                   value: s.konsumsiSoda,
                   hasError: s.errSoda,
                   onChanged: isReadOnly ? null : (v) => setState(() => s.konsumsiSoda = v),

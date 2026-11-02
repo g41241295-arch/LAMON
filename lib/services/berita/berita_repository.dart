@@ -276,70 +276,92 @@ class BeritaRepository {
   // API Publik (async — dibaca dari Firestore, fallback ke data statis)
   // ────────────────────────────────────────────────────────────────────────────
 
-  /// Ambil semua artikel berstatus "terbit".
-  /// Membaca data sinkron dari BeritaService / Firestore, dengan fallback ke data statis.
-  static Future<List<BeritaArticle>> getAll() async {
+  static Future<bool> _isSeeded() async {
     try {
-      final snap = await _fs
-          .collection(_col)
-          .where('status', isEqualTo: 'terbit')
-          .get();
-      if (snap.docs.isNotEmpty) {
-        final List<BeritaArticle> list = [];
-        for (final doc in snap.docs) {
-          try {
-            final art = BeritaArticle.fromFirestore(doc);
-            final stat = _staticArticles.where((a) => a.id == doc.id).firstOrNull;
-            if (stat != null && (art.kontenMarkdown == null || art.kontenMarkdown!.trim().isEmpty || art.konten.isEmpty)) {
-              list.add(stat);
-            } else {
-              list.add(art);
-            }
-          } catch (docErr) {
-            debugPrint('[BeritaRepository] Dokumen rusak ${doc.id} dilewati: $docErr');
-          }
-        }
-        if (list.isNotEmpty) {
-          list.sort((a, b) {
-            if (a.tanggal == null && b.tanggal == null) return 0;
-            if (a.tanggal == null) return 1;
-            if (b.tanggal == null) return -1;
-            return b.tanggal!.compareTo(a.tanggal!);
-          });
-          return list;
-        }
-      }
-    } catch (e) {
-      debugPrint('BeritaRepository.getAll remote note: $e');
+      final doc = await _fs.collection('meta').doc('berita_seed').get();
+      return doc.exists;
+    } catch (_) {
+      return false;
     }
+  }
 
-    // Fallback: data statis lokal (sudah diurutkan terbaru dulu)
-    final sorted = List<BeritaArticle>.from(_staticArticles);
-    sorted.sort((a, b) {
+  static void _sortArticles(List<BeritaArticle> list) {
+    list.sort((a, b) {
       if (a.tanggal == null && b.tanggal == null) return 0;
       if (a.tanggal == null) return 1;
       if (b.tanggal == null) return -1;
       return b.tanggal!.compareTo(a.tanggal!);
     });
-    return sorted;
+  }
+
+  /// Ambil semua artikel berstatus "terbit".
+  /// Seluruh dokumen berita_articles diambil tanpa orderBy dan tanpa where pada status di Firestore.
+  /// Penyaringan dan pengurutan dilakukan di memori.
+  static Future<List<BeritaArticle>> getAll() async {
+    try {
+      QuerySnapshot<Map<String, dynamic>> snap;
+      try {
+        snap = await _fs.collection(_col).get();
+      } on FirebaseException catch (fe) {
+        debugPrint('[BeritaRepository] Query _col.get() gagal [${fe.code}]: ${fe.message}');
+        if (fe.code == 'permission-denied') {
+          debugPrint('[BeritaRepository] Mencoba query fallback where status == terbit...');
+          snap = await _fs.collection(_col).where('status', isEqualTo: 'terbit').get();
+        } else {
+          rethrow;
+        }
+      } catch (_) {
+        debugPrint('[BeritaRepository] Mencoba query fallback where status == terbit...');
+        snap = await _fs.collection(_col).where('status', isEqualTo: 'terbit').get();
+      }
+
+      final List<BeritaArticle> firestoreArticles = [];
+      for (final doc in snap.docs) {
+        try {
+          final art = BeritaArticle.fromFirestore(doc);
+          // Dokumen tanpa status sudah otomatis dianggap 'terbit' di model
+          if (art.status == 'terbit') {
+            firestoreArticles.add(art);
+          }
+        } catch (docErr) {
+          debugPrint('[BeritaRepository] Dokumen rusak ${doc.id} dilewati: $docErr');
+        }
+      }
+
+      // Gabungkan data statis dan Firestore (id sama dimenangkan oleh Firestore)
+      // Ini menjamin berita baru di Firestore dan berita bawaan selalu ada bersamaan
+      final Map<String, BeritaArticle> map = {};
+      for (final s in _staticArticles) {
+        if (s.status == 'terbit') {
+          map[s.id] = s;
+        }
+      }
+      for (final f in firestoreArticles) {
+        map[f.id] = f; // Dokumen Firestore selalu menang dan menambahkan artikel baru
+      }
+
+      final resultList = map.values.toList();
+      _sortArticles(resultList);
+      return resultList;
+    } catch (e) {
+      debugPrint('[BeritaRepository.getAll] Remote error: $e. Memakai data statis cadangan.');
+      final fallback = List<BeritaArticle>.from(_staticArticles.where((a) => a.status == 'terbit'));
+      _sortArticles(fallback);
+      return fallback;
+    }
   }
 
   /// Ambil artikel berdasarkan ID dari Firestore atau data lokal.
   static Future<BeritaArticle?> getById(String id) async {
-    final stat = _staticArticles.where((a) => a.id == id).firstOrNull;
     try {
       final doc = await _fs.collection(_col).doc(id).get();
       if (doc.exists) {
-        final art = BeritaArticle.fromFirestore(doc);
-        if (stat != null && (art.kontenMarkdown == null || art.kontenMarkdown!.trim().isEmpty || art.konten.isEmpty)) {
-          return stat;
-        }
-        return art;
+        return BeritaArticle.fromFirestore(doc);
       }
     } catch (e) {
-      debugPrint('BeritaRepository.getById error: $e');
+      debugPrint('[BeritaRepository.getById] error: $e');
     }
-    return stat;
+    return _staticArticles.where((a) => a.id == id).firstOrNull;
   }
 
   /// Kembalikan data statis sinkron (untuk sisi pengguna yang masih sync).

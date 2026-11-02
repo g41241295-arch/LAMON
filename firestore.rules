@@ -135,10 +135,19 @@ service cloud.firestore {
     // ── 4. Koleksi Artikel Berita ────────────────────────────────────────────
     // Path: /berita_articles/{articleId}
     match /berita_articles/{articleId} {
-      // Admin: boleh read dan write semua dokumen (terbit dan draft)
-      // Pengguna login biasa: hanya boleh read dokumen dengan status == 'terbit'
-      allow read: if isAdmin() || (isSignedIn() && resource.data.status == 'terbit');
+      // Artikel berita dapat dibaca publik (baik user login maupun pengguna umum/tamu)
+      allow read: if true;
+      // Hanya admin yang berhak menambah, mengubah, atau menghapus artikel berita
       allow create, update, delete: if isAdmin();
+    }
+
+    // ── 4b. Metadata Sistem (Penanda Seeding Berita, dsb.) ───────────────────
+    // Path: /meta/{metaId}
+    match /meta/{metaId} {
+      // Status penanda seeding dapat dibaca publik
+      allow read: if true;
+      // Hanya admin yang berhak menulis/memperbarui penanda seeding
+      allow write: if isAdmin();
     }
 
     // ── 5. Koleksi Ensiklopedia (Gastropedia) ──────────────────────────────

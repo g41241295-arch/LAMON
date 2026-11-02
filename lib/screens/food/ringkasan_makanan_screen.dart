@@ -8,8 +8,19 @@ import '../../utils/food_summary_calculator.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/primary_button.dart';
 
-/// Jumlah minimal hari unik dengan pencatatan makanan agar Ringkasan terbuka.
-const int kMinHariRingkasan = 7;
+/// Jumlah minimal hari lengkap (ketiga sesi terisi) agar Ringkasan terbuka.
+/// Aturan baru: cukup 1 hari dengan Sarapan + Makan Siang + Makan Malam.
+const int kMinHariLengkapRingkasan = 1;
+
+/// Jumlah maksimal hari lengkap yang dihitung dalam ringkasan.
+const int kMaksHariRingkasan = 7;
+
+/// Set firestoreKey sesi yang wajib ada agar sebuah hari dianggap lengkap.
+const Set<String> kSesiWajib = {
+  'sarapan',
+  'makan_siang',
+  'makan_malam',
+};
 
 /// Flag untuk mengaktifkan/menonaktifkan tombol "Lihat Contoh Tampilan".
 const bool kTampilkanContohRingkasan = true;
@@ -32,7 +43,12 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
   FoodSummaryCalculator? _calculator;
   FoodSummaryCalculator? _mockCalculator;
 
-  int _uniqueDatesCount = 0;
+  /// Jumlah hari lengkap (ketiga sesi terisi) yang ditemukan.
+  int _completeDaysCount = 0;
+
+  /// Sesi hari ini yang sudah terisi (Set firestoreKey).
+  Set<String> _todayFilledSessions = {};
+
   bool _isPreviewMode = false;
 
   @override
@@ -66,54 +82,69 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
         break;
 
       case FoodSummaryEmpty():
-        debugPrint(
-            '[RingkasanMakanan] Entri dimuat: 0, Tanggal unik: 0 (min: $kMinHariRingkasan)');
-        debugPrint('[RingkasanMakanan] Status layar: Terkunci (belum ada data)');
+        debugPrint('[RingkasanMakanan] Entri dimuat: 0 → Status: Terkunci (belum ada data)');
         setState(() {
           _isLoading = false;
-          _uniqueDatesCount = 0;
+          _completeDaysCount = 0;
+          _todayFilledSessions = {};
           _calculator = null;
         });
         break;
 
       case FoodSummarySuccess(:final entries):
-        final mapByDate = <String, List<FoodEntry>>{};
+        // Hitung sesi hari ini yang sudah terisi (untuk progres di locked view)
+        final todayStr = FoodEntryService.todayString();
+        final todaySessionKeys = entries
+            .where((e) => e.tanggal == todayStr)
+            .map((e) => e.sesi.firestoreKey)
+            .toSet();
+
+        // Kelompokkan per tanggal → Set sesi unik
+        final mapByDate = <String, Set<String>>{};
         for (final entry in entries) {
-          mapByDate.putIfAbsent(entry.tanggal, () => []).add(entry);
+          mapByDate.putIfAbsent(entry.tanggal, () => {}).add(entry.sesi.firestoreKey);
         }
 
-        final sortedDates = mapByDate.keys.toList()
-          ..sort((a, b) => b.compareTo(a));
-        final uniqueCount = sortedDates.length;
+        // Hanya hari yang ketiga sesinya lengkap yang dihitung
+        final completeDates = mapByDate.entries
+            .where((e) => e.value.containsAll(kSesiWajib))
+            .map((e) => e.key)
+            .toList()
+          ..sort((a, b) => b.compareTo(a)); // descending
 
-        if (uniqueCount >= kMinHariRingkasan) {
-          final top7Dates = sortedDates.take(kMinHariRingkasan).toSet();
+        final completeDaysCount = completeDates.length;
+
+        if (completeDaysCount >= kMinHariLengkapRingkasan) {
+          // Ambil maks 7 hari lengkap terbaru
+          final topDates = completeDates.take(kMaksHariRingkasan).toSet();
           final filteredEntries =
-              entries.where((e) => top7Dates.contains(e.tanggal)).toList();
+              entries.where((e) => topDates.contains(e.tanggal)).toList();
 
           final calc = FoodSummaryCalculator(
             entries: filteredEntries,
-            uniqueDates: top7Dates.toList()..sort(),
+            uniqueDates: topDates.toList()..sort(),
           );
 
           debugPrint(
-              '[RingkasanMakanan] Entri dimuat: ${entries.length}, Tanggal unik: $uniqueCount (min: $kMinHariRingkasan)');
+              '[RingkasanMakanan] Hari lengkap: $completeDaysCount (min: $kMinHariLengkapRingkasan)');
           debugPrint(
               '[RingkasanMakanan] Status layar: Siap (entri ringkasan: ${filteredEntries.length})');
 
           setState(() {
             _isLoading = false;
-            _uniqueDatesCount = uniqueCount;
+            _completeDaysCount = completeDaysCount;
+            _todayFilledSessions = todaySessionKeys;
             _calculator = calc;
           });
         } else {
           debugPrint(
-              '[RingkasanMakanan] Entri dimuat: ${entries.length}, Tanggal unik: $uniqueCount (min: $kMinHariRingkasan)');
+              '[RingkasanMakanan] Hari lengkap: $completeDaysCount (min: $kMinHariLengkapRingkasan)');
           debugPrint('[RingkasanMakanan] Status layar: Terkunci');
 
           setState(() {
             _isLoading = false;
-            _uniqueDatesCount = uniqueCount;
+            _completeDaysCount = completeDaysCount;
+            _todayFilledSessions = todaySessionKeys;
             _calculator = null;
           });
         }
@@ -558,7 +589,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
       );
     }
 
-    if (_uniqueDatesCount >= kMinHariRingkasan && _calculator != null) {
+    if (_completeDaysCount >= kMinHariLengkapRingkasan && _calculator != null) {
       return AppScaffold(
         body: _buildReportView(_calculator!, isPreview: false),
       );
@@ -651,7 +682,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
-                '${calc.dateRangeString}. ${calc.totalEntries} kali makan tercatat',
+                '${calc.dateRangeString} · ${calc.totalEntries} kali makan tercatat',
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -666,9 +697,19 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
     );
   }
 
-  // ─── 1. State Terkunci (< 7 Hari) ─────────────────────────────────────────
+  // ─── 1. State Terkunci (belum ada hari lengkap) ────────────────────────────
   Widget _buildLockedView() {
-    final progress = (_uniqueDatesCount / kMinHariRingkasan).clamp(0.0, 1.0);
+    // Daftar sesi wajib dengan label & ikon
+    final sessions = [
+      (key: 'sarapan', label: 'Sarapan', icon: Icons.wb_sunny_outlined),
+      (key: 'makan_siang', label: 'Makan Siang', icon: Icons.restaurant_outlined),
+      (key: 'makan_malam', label: 'Makan Malam', icon: Icons.nights_stay_outlined),
+    ];
+
+    final filledCount = sessions
+        .where((s) => _todayFilledSessions.contains(s.key))
+        .length;
+    final progress = (filledCount / 3).clamp(0.0, 1.0);
 
     return SafeArea(
       child: Column(
@@ -703,7 +744,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                   ),
                   const SizedBox(height: 24),
                   const Text(
-                    'Catat makananmu selama 7 hari\nuntuk melihat ringkasan',
+                    'Isi Sarapan, Makan Siang, dan Makan Malam\ndalam satu hari untuk melihat ringkasan',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 18,
@@ -714,7 +755,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Laporan nutrisi mingguan akan terbuka otomatis setelah kamu mencatat makanan pada 7 tanggal berbeda.',
+                    'Laporan nutrisi akan terbuka otomatis setelah kamu melengkapi ketiga sesi dalam satu hari.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
@@ -724,7 +765,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                   ),
                   const SizedBox(height: 28),
 
-                  // Progress Bar Card
+                  // Kartu Progres Sesi Hari Ini
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
@@ -743,11 +784,52 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Tiga penanda sesi
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: sessions.map((s) {
+                            final filled = _todayFilledSessions.contains(s.key);
+                            return Column(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: filled
+                                        ? AppColors.primary.withValues(alpha: 0.12)
+                                        : const Color(0xFFF0F0F0),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    filled ? Icons.check_circle_rounded : s.icon,
+                                    size: 22,
+                                    color: filled
+                                        ? AppColors.primary
+                                        : AppColors.neutralGray,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  s.label,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: filled
+                                        ? AppColors.primary
+                                        : AppColors.neutralGray,
+                                  ),
+                                ),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 16),
+                        // Label progres
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Sudah $_uniqueDatesCount dari $kMinHariRingkasan hari tercatat',
+                              'Hari ini: $filledCount dari 3 sesi terisi',
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -764,7 +846,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: LinearProgressIndicator(
@@ -775,19 +857,20 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                                 AppColors.primary),
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'Hari tidak harus berurutan. Hari yang terlewat tidak mereset progresmu.',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppColors.neutralGray,
-                            height: 1.3,
-                          ),
-                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 20),
+
+                  // Tombol Isi Catat Makananmu
+                  PrimaryButton(
+                    text: 'Isi Catat Makananmu',
+                    onPressed: () {
+                      Navigator.pushNamed(context, AppRoutes.catatMakanan)
+                          .then((_) => _loadData());
+                    },
+                  ),
+                  const SizedBox(height: 12),
 
                   // Tombol Lihat Contoh Tampilan
                   if (kTampilkanContohRingkasan) ...[
@@ -819,18 +902,9 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                     const SizedBox(height: 12),
                   ],
 
-                  // Tombol Catat Makanan Hari Ini
-                  PrimaryButton(
-                    text: 'Catat Makanan Sekarang',
-                    onPressed: () {
-                      Navigator.pushNamed(context, AppRoutes.catatMakanan)
-                          .then((_) => _loadData());
-                    },
-                  ),
-
                   // Tombol Debug Data (Hanya saat kDebugMode)
                   if (kDebugMode) ...[
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 12),
                     const Divider(),
                     const SizedBox(height: 8),
                     const Text('Development Testing:',

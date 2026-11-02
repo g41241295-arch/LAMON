@@ -154,7 +154,8 @@ class _BeritaDetailScreenState extends State<BeritaDetailScreen> {
                   Semantics(
                     label: 'Gambar berita: ${article.judul}',
                     child: BeritaImage(
-                      assetPath: article.gambarAsset,
+                      gambarUrl: article.gambarUrl,
+                      gambarAsset: article.gambarAsset,
                       width: double.infinity,
                       height: double.infinity,
                       borderRadius: 0,

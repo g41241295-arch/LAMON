@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/berita_article_model.dart';
 import '../../services/berita/berita_repository.dart';
+import '../../services/berita/berita_service.dart';
 import '../../widgets/berita/berita_header.dart';
 import '../../widgets/berita/berita_card_small.dart';
 import '../../widgets/berita/berita_image.dart';
@@ -16,25 +17,7 @@ class BeritaListScreen extends StatefulWidget {
 class _BeritaListScreenState extends State<BeritaListScreen> {
   int _currentSlide = 0;
   final PageController _pageController = PageController(viewportFraction: 0.85);
-
-  List<BeritaArticle>? _articles;
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadArticles();
-  }
-
-  Future<void> _loadArticles() async {
-    final articles = await BeritaRepository.getAll();
-    if (mounted) {
-      setState(() {
-        _articles = articles;
-        _loading = false;
-      });
-    }
-  }
+  final BeritaService _service = BeritaService();
 
   @override
   void dispose() {
@@ -63,11 +46,32 @@ class _BeritaListScreenState extends State<BeritaListScreen> {
             const BeritaHeader(),
             const SizedBox(height: 12),
             Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                  : (_articles == null || _articles!.isEmpty)
-                      ? _buildEmpty()
-                      : _buildList(context, _articles!),
+              child: StreamBuilder<List<BeritaArticle>>(
+                stream: _service.streamPublished(),
+                initialData: BeritaRepository.getStaticAll()
+                    .where((a) => a.status == 'terbit')
+                    .toList(),
+                builder: (context, snapshot) {
+                  final rawData = snapshot.data;
+                  final List<BeritaArticle> articles = (rawData != null && rawData.isNotEmpty)
+                      ? rawData
+                      : BeritaRepository.getStaticAll()
+                          .where((a) => a.status == 'terbit')
+                          .toList();
+
+                  if (articles.isEmpty) {
+                    return _buildEmpty();
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      setState(() {});
+                    },
+                    color: AppColors.primary,
+                    child: _buildList(context, articles),
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -222,7 +226,8 @@ class _BeritaListScreenState extends State<BeritaListScreen> {
                 fit: StackFit.expand,
                 children: [
                   BeritaImage(
-                    assetPath: article.gambarAsset,
+                    gambarUrl: article.gambarUrl.isNotEmpty ? article.gambarUrl : null,
+                    gambarAsset: article.gambarAsset.isNotEmpty ? article.gambarAsset : null,
                     width: double.infinity,
                     height: double.infinity,
                     alignment: article.gambarAlignment,

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../constants/app_colors.dart';
@@ -8,6 +9,7 @@ import '../../services/berita/berita_service.dart';
 import '../../utils/app_exception.dart';
 import '../../widgets/admin/admin_widgets.dart';
 import '../../widgets/app_header_pill.dart';
+import '../../widgets/berita/berita_image.dart';
 
 const List<String> _kKategori = [
   'Pencernaan',
@@ -49,6 +51,8 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
   String? _existingImageUrl; // URL atau asset gambar yang sudah ada (mode edit)
 
   bool _isSaving = false;
+  bool _isUploading = false;
+  double _uploadProgress = 0.0;
   bool get _isEditMode => widget.initialArtikel != null;
 
   // Error texts
@@ -71,7 +75,9 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
       _kategori = _kKategori.contains(a.kategori) ? a.kategori : _kKategori.first;
       _tanggal = a.tanggal;
       _bacaJuga = List<String>.from(a.bacaJuga);
-      _existingImageUrl = a.gambarAsset.isNotEmpty ? a.gambarAsset : null;
+      _existingImageUrl = a.gambarUrl.isNotEmpty
+          ? a.gambarUrl
+          : (a.gambarAsset.isNotEmpty ? a.gambarAsset : null);
     } else {
       // Default tanggal hari ini untuk artikel baru
       _tanggal = DateTime.now();
@@ -165,25 +171,42 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
   // ── Upload gambar ─────────────────────────────────────────────────────────
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1200,
-      maxHeight: 900,
-      imageQuality: 85,
-    );
-    if (picked != null && mounted) {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1080,
+        maxHeight: 1080,
+        imageQuality: 75,
+      );
+      if (picked == null || !mounted) return;
+
       final file = File(picked.path);
-      final sizeBytes = await file.length();
-      if (sizeBytes > 2 * 1024 * 1024) {
-        if (mounted) {
-          _showError('Ukuran gambar melebihi 2MB. Pilih gambar yang lebih kecil.');
-        }
+      if (!await file.exists()) {
+        _showError('Berkas gambar tidak ditemukan di penyimpanan perangkat.');
         return;
       }
+
+      final ext = file.path.split('.').last.toLowerCase();
+      const allowed = ['jpg', 'jpeg', 'png', 'webp'];
+      if (!allowed.contains(ext)) {
+        _showError('Format berkas .$ext tidak didukung. Harap pilih gambar dengan format JPG atau PNG.');
+        return;
+      }
+
+      final sizeBytes = await file.length();
+      if (sizeBytes > 2 * 1024 * 1024) {
+        final sizeMb = (sizeBytes / (1024 * 1024)).toStringAsFixed(2);
+        _showError('Ukuran gambar ($sizeMb MB) melebihi batas 2 MB. Silakan pilih gambar yang lebih kecil.');
+        return;
+      }
+
       setState(() {
         _imageFile = file;
       });
+      debugPrint('[BeritaForm] Gambar lokal dipilih: ${file.path} ($sizeBytes bytes)');
+    } catch (e) {
+      _showError('Gagal memilih gambar: $e');
     }
   }
 
@@ -192,26 +215,78 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
   Future<void> _save({required bool forPublish}) async {
     if (!_validate(forPublish: forPublish)) return;
 
-    setState(() => _isSaving = true);
+    setState(() {
+      _isSaving = true;
+      _uploadProgress = 0.0;
+    });
 
     try {
-      String imageUrl = _existingImageUrl ?? '';
+      final targetId = widget.initialArtikel?.id ??
+          FirebaseFirestore.instance.collection('berita_articles').doc().id;
 
-      // Upload gambar baru jika dipilih
+      String finalGambarUrl = '';
+      String finalGambarAsset = '';
+
       if (_imageFile != null) {
-        final tempId = DateTime.now().millisecondsSinceEpoch.toString();
-        imageUrl = await _service.uploadImage(_imageFile!, tempId);
+        setState(() => _isUploading = true);
+        try {
+          final uploadedUrl = await _service.uploadBeritaCover(
+            _imageFile!,
+            targetId,
+            onProgress: (p) => setState(() => _uploadProgress = p),
+          );
+          finalGambarUrl = uploadedUrl;
+          debugPrint('[BeritaForm] Berhasil upload gambar cover: $finalGambarUrl');
+
+          // Hapus gambar lama di Storage jika mode edit dan URL lama diganti
+          if (_isEditMode && widget.initialArtikel?.gambarUrl.isNotEmpty == true) {
+            final oldUrl = widget.initialArtikel!.gambarUrl;
+            if (oldUrl != finalGambarUrl) {
+              await _service.deleteStorageFile(oldUrl);
+            }
+          }
+        } catch (uploadErr) {
+          setState(() {
+            _isUploading = false;
+            _isSaving = false;
+          });
+          String errDetail = '$uploadErr';
+          if (uploadErr is FirebaseException) {
+            debugPrint('[BeritaForm] FirebaseException saat upload: code=${uploadErr.code}, message=${uploadErr.message}, plugin=${uploadErr.plugin}');
+            errDetail = '[${uploadErr.code}] ${uploadErr.message ?? 'Gagal upload'}';
+          } else if (uploadErr is AppException) {
+            debugPrint('[BeritaForm] AppException saat upload: ${uploadErr.message}');
+            errDetail = uploadErr.message;
+          }
+          if (mounted) {
+            _showError('Gagal mengunggah gambar ke Storage: $errDetail. Berita tidak disimpan.');
+          }
+          return;
+        } finally {
+          if (mounted) setState(() => _isUploading = false);
+        }
+      } else if (_existingImageUrl != null && _existingImageUrl!.isNotEmpty) {
+        // Pertahankan gambar lama (jangan tertimpa kosong)
+        if (_existingImageUrl!.startsWith('http://') ||
+            _existingImageUrl!.startsWith('https://') ||
+            _existingImageUrl!.startsWith('data:image')) {
+          finalGambarUrl = _existingImageUrl!;
+        } else {
+          finalGambarAsset = _existingImageUrl!;
+        }
+        debugPrint('[BeritaForm] Mempertahankan gambar lama: $_existingImageUrl');
       }
 
       final publish = forPublish;
       final now = DateTime.now();
 
       final artikel = BeritaArticle(
-        id: widget.initialArtikel?.id ?? '',
+        id: targetId,
         judul: _judulCtrl.text.trim(),
         kategori: _kategori,
         tanggal: _tanggal ?? (publish ? now : null),
-        gambarAsset: imageUrl,
+        gambarUrl: finalGambarUrl,
+        gambarAsset: finalGambarAsset,
         konten: BeritaArticle.parseMarkdown(_penjelasanCtrl.text.trim()),
         sumberNama: _sumberNamaCtrl.text.trim(),
         sumberUrl: _sumberUrlCtrl.text.trim(),
@@ -223,10 +298,12 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
             : null,
       );
 
+      debugPrint('[BeritaForm] Menyimpan artikel (ID: $targetId, status: ${artikel.status}, gambarUrl: $finalGambarUrl, gambarAsset: $finalGambarAsset)');
+
       if (_isEditMode) {
         final wasPublished = widget.initialArtikel!.status == 'terbit';
         await _service.updateArtikel(
-          artikelId: widget.initialArtikel!.id,
+          artikelId: targetId,
           artikel: artikel,
           adminName: widget.adminName,
           adminId: widget.adminId,
@@ -456,73 +533,109 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
   // ── Upload gambar sampul ──────────────────────────────────────────────────
 
   Widget _buildImagePicker() {
-    return GestureDetector(
-      onTap: _isSaving ? null : _pickImage,
-      child: Container(
-        height: 140,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.inputBorder, width: 1.4),
-        ),
-        child: _imageFile != null
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(15),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.file(_imageFile!, fit: BoxFit.cover),
-                    Positioned(
-                      top: 8, right: 8,
-                      child: GestureDetector(
-                        onTap: () => setState(() => _imageFile = null),
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.black54,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.close, color: Colors.white, size: 18),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            : _existingImageUrl != null && _existingImageUrl!.isNotEmpty
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(15),
-                    child: Stack(
-                      fit: StackFit.expand,
+    final bool hasImage = _imageFile != null || (_existingImageUrl != null && _existingImageUrl!.isNotEmpty);
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.inputBorder, width: 1.4),
+      ),
+      child: Column(
+        children: [
+          Container(
+            height: 160,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: _isUploading
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _existingImageUrl!.startsWith('http')
-                            ? Image.network(
-                                _existingImageUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => _buildUploadPlaceholder(),
-                              )
-                            : Image.asset(
-                                _existingImageUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => _buildUploadPlaceholder(),
-                              ),
-                        Positioned(
-                          bottom: 0, left: 0, right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            color: Colors.black45,
-                            child: Text(
-                              'Ketuk untuk ganti gambar',
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.poppins(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
-                            ),
+                        SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: CircularProgressIndicator(
+                            value: _uploadProgress > 0 ? _uploadProgress : null,
+                            strokeWidth: 3,
+                            color: const Color(0xFF134563),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Mengunggah gambar... ${(_uploadProgress * 100).toInt()}%',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF134563),
                           ),
                         ),
                       ],
                     ),
                   )
-                : _buildUploadPlaceholder(),
+                : _imageFile != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
+                        child: Image.file(_imageFile!, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
+                      )
+                    : (_existingImageUrl != null && _existingImageUrl!.isNotEmpty)
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(15),
+                            child: BeritaImage(
+                              gambarUrl: (_existingImageUrl!.startsWith('http') || _existingImageUrl!.startsWith('data:image'))
+                                  ? _existingImageUrl
+                                  : null,
+                              gambarAsset: _existingImageUrl!.startsWith('assets/') ? _existingImageUrl : null,
+                              width: double.infinity,
+                              height: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : InkWell(
+                            borderRadius: BorderRadius.circular(15),
+                            onTap: _isSaving || _isUploading ? null : _pickImage,
+                            child: _buildUploadPlaceholder(),
+                          ),
+          ),
+          if (hasImage && !_isUploading) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: _isSaving ? null : _pickImage,
+                    icon: const Icon(Icons.photo_library_outlined, size: 16, color: Color(0xFF134563)),
+                    label: Text(
+                      'Ganti Gambar',
+                      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF134563)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: _isSaving
+                        ? null
+                        : () {
+                            setState(() {
+                              _imageFile = null;
+                              _existingImageUrl = null;
+                            });
+                          },
+                    icon: const Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.adminRed),
+                    label: Text(
+                      'Hapus Gambar',
+                      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.adminRed),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -727,6 +840,8 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
   // ── Tombol Aksi ───────────────────────────────────────────────────────────
 
   Widget _buildActionButtons(String publishLabel) {
+    final bool isBusy = _isSaving || _isUploading;
+
     return Row(
       children: [
         // Tombol Simpan Draft
@@ -734,7 +849,7 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
           child: SizedBox(
             height: 50,
             child: OutlinedButton(
-              onPressed: _isSaving ? null : () => _save(forPublish: false),
+              onPressed: isBusy ? null : () => _save(forPublish: false),
               style: OutlinedButton.styleFrom(
                 backgroundColor: const Color(0xFFFFF9DB),
                 side: const BorderSide(color: Color(0xFF134563), width: 1.4),
@@ -757,14 +872,14 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
           child: SizedBox(
             height: 50,
             child: ElevatedButton(
-              onPressed: _isSaving ? null : () => _save(forPublish: true),
+              onPressed: isBusy ? null : () => _save(forPublish: true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF134563),
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              child: _isSaving
+              child: isBusy
                   ? const SizedBox(
                       width: 20,
                       height: 20,

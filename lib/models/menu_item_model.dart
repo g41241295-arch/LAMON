@@ -79,7 +79,7 @@ class AppMenus {
       shortTitle: 'Ringkasan Makanan',
       route: '/ringkasan-makanan',
       assetPath: AppAssets.menuRingkasan,
-      description: 'Laporan mingguan dan evaluasi nutrisi ramah lambung.',
+      description: 'Laporan dan evaluasi nutrisi makanan ramah lambung.',
     ),
   ];
 

@@ -336,38 +336,44 @@ class FoodEntryService {
     for (int i = 0; i < 7; i++) {
       final date = now.subtract(Duration(days: i));
       final dateString = _formatDate(date);
-      
-      // Pilih sesi secara random, tapi pastikan ada beberapa makan malam agar Beban Harian terisi
-      final sesi = (i % 3 == 0) ? MealSession.makanMalam : MealSession.makanSiang;
 
-      final isJunk = (i % 2 == 0); // Selang seling junkfood dan homemade
+      for (final sesi in MealSession.values) {
+        final isJunk = ((i + sesi.index) % 2 == 0);
+        final entryTime = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          sesi == MealSession.sarapan ? 7 : (sesi == MealSession.makanSiang ? 12 : 19),
+          30,
+        );
 
-      final entry = FoodEntry(
-        id: 'dummy_${generateEntryId(uid, sesi, dateString)}',
-        userId: uid,
-        tanggal: dateString,
-        waktuPengisian: date,
-        sesi: sesi,
-        jenisMakanan: isJunk ? junkFoods : homemades,
-        sumberKarbohidrat: [karbo[i % karbo.length]],
-        protein: [proteins[i % proteins.length]],
-        sayuran: [sayurans[i % sayurans.length]],
-        levelPedas: (i * 2) % 5,     // 0-4
-        levelAsin: (i * 3) % 5,
-        levelAsam: (i + 1) % 5,
-        levelManis: (i * 4) % 5,
-        levelBerlemak: (i + 2) % 5,
-        berbaringSetelahMakan: i % 2 == 0,
-        konsumsiKopi: i % 3 == 0,
-        konsumsiSoda: isJunk && (i % 2 == 0),
-        bebanPikiran: sesi == MealSession.makanMalam ? (i % 5) : null,
-        bebanAktivitas: sesi == MealSession.makanMalam ? ((i + 2) % 5) : null,
-      );
+        final entry = FoodEntry(
+          id: 'dummy_${generateEntryId(uid, sesi, dateString)}',
+          userId: uid,
+          tanggal: dateString,
+          waktuPengisian: entryTime,
+          sesi: sesi,
+          jenisMakanan: isJunk ? junkFoods : homemades,
+          sumberKarbohidrat: [karbo[(i + sesi.index) % karbo.length]],
+          protein: [proteins[(i + sesi.index) % proteins.length]],
+          sayuran: [sayurans[(i + sesi.index) % sayurans.length]],
+          levelPedas: (i * 2 + sesi.index) % 5,     // 0-4
+          levelAsin: (i * 3 + sesi.index) % 5,
+          levelAsam: (i + sesi.index + 1) % 5,
+          levelManis: (i * 4 + sesi.index) % 5,
+          levelBerlemak: (i + sesi.index + 2) % 5,
+          berbaringSetelahMakan: (i + sesi.index) % 2 == 0,
+          konsumsiKopi: (i + sesi.index) % 3 == 0,
+          konsumsiSoda: isJunk && ((i + sesi.index) % 2 == 0),
+          bebanPikiran: sesi == MealSession.makanMalam ? (i % 5) : null,
+          bebanAktivitas: sesi == MealSession.makanMalam ? ((i + 2) % 5) : null,
+        );
 
-      await ref.doc(entry.id).set({
-        ...entry.toJson(),
-        'is_dummy': true, // penanda agar mudah dihapus
-      });
+        await ref.doc(entry.id).set({
+          ...entry.toJson(),
+          'is_dummy': true, // penanda agar mudah dihapus
+        });
+      }
     }
   }
 

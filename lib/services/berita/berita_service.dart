@@ -1,44 +1,179 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../../models/berita_article_model.dart';
 import '../../models/activity_log_model.dart';
+import '../../utils/app_exception.dart';
 import 'berita_repository.dart';
 
-/// Service CRUD artikel berita ke Firestore collection `berita_articles`.
-/// Menggunakan arsitektur hybrid (offline-first & resilient) sehingga:
-/// 1. 9 artikel bawaan selalu muncul instan di UI admin & pengguna.
-/// 2. Operasi CRUD (tambah, edit, simpan draft, terbitkan, hapus) langsung berhasil.
-/// 3. Data disinkronkan ke Cloud Firestore di latar belakang secara aman.
+/// Service CRUD artikel berita ke Firestore collection `berita_articles`
+/// dan Firebase Storage path `berita/`.
 class BeritaService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
   static const String _collection = 'berita_articles';
+  static const String _metaCollection = 'meta';
+  static const String _seedDoc = 'berita_seed';
 
-  // ── Memory Store & Reactive Controller ─────────────────────────────────────
-  static final List<BeritaArticle> _memoryArticles = [];
-  static final StreamController<List<BeritaArticle>> _controller =
-      StreamController<List<BeritaArticle>>.broadcast();
-  static bool _initialized = false;
-  static StreamSubscription? _remoteSub;
+  // ── Penanda Seeding ────────────────────────────────────────────────────────
 
-  static void _ensureInitialized() {
-    if (_initialized && _memoryArticles.isNotEmpty) return;
-    _initialized = true;
-    _memoryArticles.clear();
-    _memoryArticles.addAll(BeritaRepository.getStaticAll());
-  }
-
-  static void _notify() {
-    if (!_controller.isClosed) {
-      _controller.add(_sortedList(List.from(_memoryArticles)));
+  /// Cek apakah proses seeding awal sudah pernah dilakukan
+  Future<bool> hasSeeded() async {
+    try {
+      final doc = await _firestore.collection(_metaCollection).doc(_seedDoc).get();
+      return doc.exists;
+    } catch (e) {
+      debugPrint('[BeritaService] Cek hasSeeded error: $e');
+      return false;
     }
   }
 
-  static List<BeritaArticle> _sortedList(List<BeritaArticle> list) {
+  /// Tandai bahwa seeding sudah selesai dilakukan
+  Future<void> markSeeded() async {
+    try {
+      await _firestore.collection(_metaCollection).doc(_seedDoc).set({
+        'seededAt': FieldValue.serverTimestamp(),
+        'version': 1,
+        'itemCount': 9,
+      }, SetOptions(merge: true));
+      debugPrint('[BeritaService] Penanda meta/berita_seed berhasil disimpan.');
+    } catch (e) {
+      debugPrint('[BeritaService] Gagal menulis penanda seeding: $e');
+    }
+  }
+
+  // ── Seeding Otomatis & Pemulihan Berita Bawaan ──────────────────────────────
+
+  /// Jalankan seeding otomatis hanya jika penanda meta/berita_seed belum ada.
+  /// Hanya menambahkan dokumen yang belum ada (tidak menimpa artikel yang sudah ada).
+  Future<void> ensureAutoSeeded() async {
+    try {
+      final alreadySeeded = await hasSeeded();
+      if (alreadySeeded) {
+        debugPrint('[BeritaService] Seeding dilewati: meta/berita_seed sudah ada.');
+        return;
+      }
+      debugPrint('[BeritaService] Menjalankan seeding awal 9 berita bawaan...');
+      await _seedArticlesInternal(isRestore: false);
+      await markSeeded();
+    } catch (e) {
+      debugPrint('[BeritaService] ensureAutoSeeded gagal: $e');
+    }
+  }
+
+  /// Pulihkan 9 berita bawaan yang belum ada di Firestore (cek per ID).
+  /// Tidak pernah menimpa artikel yang sudah ada atau menghapus artikel lain.
+  Future<({int restored, int alreadyExist})> restoreStaticArticles() async {
+    return await _seedArticlesInternal(isRestore: true);
+  }
+
+  Future<({int restored, int alreadyExist})> _seedArticlesInternal({
+    required bool isRestore,
+  }) async {
+    final seedItems = _buildSeedData();
+    int addedCount = 0;
+    int existingCount = 0;
+
+    for (final item in seedItems) {
+      final docId = item['id'] as String;
+      final ref = _firestore.collection(_collection).doc(docId);
+
+      try {
+        final snap = await ref.get();
+        if (snap.exists) {
+          existingCount++;
+          debugPrint('[BeritaService] Dokumen $docId sudah ada, tidak ditimpa.');
+          continue;
+        }
+
+        final Map<String, dynamic> data = Map.from(item);
+        data.remove('id');
+        data['createdBy'] = 'system';
+        data['createdById'] = 'seed_script';
+        data['createdAt'] = FieldValue.serverTimestamp();
+        data['updatedAt'] = FieldValue.serverTimestamp();
+
+        await ref.set(data);
+        addedCount++;
+        debugPrint('[BeritaService] Berita bawaan $docId berhasil dibuat.');
+      } catch (e) {
+        debugPrint('[BeritaService] Gagal memproses seed doc $docId: $e');
+      }
+    }
+
+    if (!isRestore) {
+      await markSeeded();
+    }
+
+    return (restored: addedCount, alreadyExist: existingCount);
+  }
+
+  // ── Streams Firestore (Tanpa orderBy dan Tanpa where pada status) ──────────
+
+  /// Stream seluruh artikel untuk admin (Semua status: terbit & draft).
+  /// Mengambil data mentah tanpa orderBy di Firestore, lalu diurutkan di memori.
+  Stream<List<BeritaArticle>> streamAll() {
+    return _firestore.collection(_collection).snapshots().map((snap) {
+      final List<BeritaArticle> list = [];
+      for (final doc in snap.docs) {
+        try {
+          final article = BeritaArticle.fromFirestore(doc);
+          list.add(article);
+        } catch (e) {
+          debugPrint('[BeritaService] Gagal parsing dokumen ${doc.id}: $e. Dokumen dilewati.');
+        }
+      }
+
+      // Pengurutan in-memory: tanggal terbaru lebih dulu, tanggal null di paling akhir
+      return _sortArticles(list);
+    });
+  }
+
+  /// Stream artikel berstatus 'terbit' untuk sisi pengguna.
+  /// Menggunakan query where('status', isEqualTo: 'terbit') agar mematuhi aturan keamanan Firestore di server,
+  /// serta menggabungkan data statis bawaan dan dokumen Firestore (Firestore selalu menang).
+  Stream<List<BeritaArticle>> streamPublished() {
+    return _firestore
+        .collection(_collection)
+        .where('status', isEqualTo: 'terbit')
+        .snapshots()
+        .map((snap) {
+          final List<BeritaArticle> list = [];
+          for (final doc in snap.docs) {
+            try {
+              final article = BeritaArticle.fromFirestore(doc);
+              list.add(article);
+            } catch (e) {
+              debugPrint('[BeritaService] Gagal parsing dokumen terbit ${doc.id}: $e');
+            }
+          }
+
+          // Gabungkan berita statis bawaan dan artikel Firestore (ID sama dimenangkan Firestore)
+          final Map<String, BeritaArticle> map = {};
+          for (final s in BeritaRepository.getStaticAll()) {
+            if (s.status == 'terbit') {
+              map[s.id] = s;
+            }
+          }
+          for (final p in list) {
+            map[p.id] = p; // Dokumen Firestore menambahkan artikel baru & memperbarui artikel lama
+          }
+
+          return _sortArticles(map.values.toList());
+        })
+        .handleError((error) {
+          debugPrint('[BeritaService.streamPublished] Error stream: $error. Menggunakan fallback data statis.');
+          return _sortArticles(
+            BeritaRepository.getStaticAll().where((a) => a.status == 'terbit').toList(),
+          );
+        });
+  }
+
+  static List<BeritaArticle> _sortArticles(List<BeritaArticle> list) {
     list.sort((a, b) {
       if (a.tanggal == null && b.tanggal == null) {
         return a.judul.toLowerCase().compareTo(b.judul.toLowerCase());
@@ -50,186 +185,208 @@ class BeritaService {
     return list;
   }
 
-  void _startRemoteListener() {
-    if (_remoteSub != null) return;
-    try {
-      _remoteSub = _firestore.collection(_collection).snapshots().listen(
-        (snap) {
-          bool changed = false;
-          for (final doc in snap.docs) {
-            try {
-              final remoteArticle = BeritaArticle.fromFirestore(doc);
-              final idx = _memoryArticles.indexWhere((a) => a.id == remoteArticle.id);
-              if (idx >= 0) {
-                _memoryArticles[idx] = remoteArticle;
-              } else {
-                _memoryArticles.add(remoteArticle);
-              }
-              changed = true;
-            } catch (e) {
-              debugPrint('[BeritaService] Remote doc parse error ${doc.id}: $e');
-            }
-          }
-          if (changed) _notify();
-        },
-        onError: (err) {
-          debugPrint('[BeritaService] Remote Firestore stream error ($err). Menggunakan data lokal.');
-        },
-      );
-    } catch (e) {
-      debugPrint('[BeritaService] Failed to start remote listener: $e');
-    }
-  }
-
-  // ── Public Streams ─────────────────────────────────────────────────────────
-
-  /// Stream semua artikel (terbit & draft) untuk admin
-  Stream<List<BeritaArticle>> streamAll() async* {
-    _ensureInitialized();
-    _startRemoteListener();
-    yield _sortedList(List.from(_memoryArticles));
-    yield* _controller.stream;
-  }
-
-  /// Stream artikel berstatus terbit untuk sisi pengguna
-  Stream<List<BeritaArticle>> streamPublished() async* {
-    _ensureInitialized();
-    _startRemoteListener();
-    yield _sortedList(List.from(_memoryArticles))
-        .where((a) => a.status == 'terbit')
-        .toList();
-    await for (final list in _controller.stream) {
-      yield list.where((a) => a.status == 'terbit').toList();
-    }
-  }
-
-  // ── Getters untuk Sinkronisasi Sisi Pengguna ────────────────────────────────
-
-  static List<BeritaArticle> get currentArticles {
-    _ensureInitialized();
-    return _sortedList(List.from(_memoryArticles));
-  }
-
-  static List<BeritaArticle> get currentPublishedArticles {
-    _ensureInitialized();
-    return _sortedList(List.from(_memoryArticles))
-        .where((a) => a.status == 'terbit')
-        .toList();
-  }
-
-  // ── Cek Keberadaan Data ───────────────────────────────────────────────────
-
-  Future<bool> hasArticles() async {
-    _ensureInitialized();
-    return _memoryArticles.isNotEmpty;
-  }
+  // ── Mengambil 1 Dokumen Berita ─────────────────────────────────────────────
 
   Future<BeritaArticle?> getById(String id) async {
-    _ensureInitialized();
-    final local = _memoryArticles.where((a) => a.id == id).firstOrNull;
-    if (local != null) return local;
-
     try {
       final doc = await _firestore.collection(_collection).doc(id).get();
       if (doc.exists) {
         return BeritaArticle.fromFirestore(doc);
       }
     } catch (e) {
-      debugPrint('[BeritaService] Error getById from remote: $e');
+      debugPrint('[BeritaService] Error getById($id): $e');
     }
     return null;
   }
 
-  // ── Upload Gambar ──────────────────────────────────────────────────────────
+  // ── Upload & Kelola Gambar ke Firebase Storage ──────────────────────────────
 
-  Future<String> uploadImage(File imageFile, String articleId) async {
+  /// Mengunggah gambar cover ke path `berita_articles/{articleId}/cover_{timestamp}.{ext}`.
+  /// Memvalidasi berkas ada, ukuran <= 2MB, format JPG/PNG/WEBP.
+  /// Menunggu hingga unggahan selesai (await) lalu mengambil getDownloadURL() dari snapshot.ref.
+  Future<String> uploadBeritaCover(
+    File imageFile,
+    String articleId, {
+    void Function(double progress)? onProgress,
+  }) async {
+    // 1. Validasi keberadaan file di penyimpanan lokal
+    if (!await imageFile.exists()) {
+      debugPrint('[BeritaService] File gambar lokal tidak ditemukan: ${imageFile.path}');
+      throw AppException('Berkas gambar tidak ditemukan di penyimpanan perangkat.');
+    }
+
+    // 2. Baca bytes dan validasi ukuran berkas (maks 2MB)
+    final bytes = await imageFile.readAsBytes();
+    final length = bytes.length;
+    if (length > 2 * 1024 * 1024) {
+      final sizeMb = (length / (1024 * 1024)).toStringAsFixed(2);
+      debugPrint('[BeritaService] Ukuran gambar melebihi batas: $sizeMb MB');
+      throw AppException('Ukuran gambar ($sizeMb MB) melebihi batas maksimal 2 MB.');
+    }
+
+    // 3. Validasi format file dan penentuan contentType
+    final ext = imageFile.path.split('.').last.toLowerCase();
+    const allowed = ['jpg', 'jpeg', 'png', 'webp'];
+    if (!allowed.contains(ext)) {
+      debugPrint('[BeritaService] Format gambar tidak didukung: .$ext');
+      throw AppException('Format gambar .$ext tidak didukung. Harap gunakan format JPG atau PNG.');
+    }
+    final contentType = (ext == 'png') ? 'image/png' : (ext == 'webp' ? 'image/webp' : 'image/jpeg');
+
+    // 4. Susun path sesuai rekomendasi: berita_articles/{idArtikel}/cover_{timestamp}.{ext}
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final storagePath = 'berita_articles/$articleId/cover_$timestamp.$ext';
+    debugPrint('[BeritaService] Memulai upload: path=$storagePath, size=$length bytes, contentType=$contentType, bucket=${_storage.bucket}');
+
+    final metadata = SettableMetadata(
+      contentType: contentType,
+      customMetadata: {
+        'articleId': articleId,
+        'uploadedAt': DateTime.now().toIso8601String(),
+      },
+    );
+
+    // 5. Eksekusi upload aman ke Firebase Storage
     try {
-      final ext = imageFile.path.split('.').last.toLowerCase();
-      final ref = _storage.ref().child('berita_images/$articleId.$ext');
-      final uploadTask = await ref.putFile(imageFile);
-      return await uploadTask.ref.getDownloadURL();
-    } catch (e) {
-      debugPrint('[BeritaService] uploadImage remote failed: $e. Fallback path lokal.');
-      return imageFile.path;
+      return await _performUpload(
+        storage: _storage,
+        storagePath: storagePath,
+        bytes: bytes,
+        metadata: metadata,
+        onProgress: onProgress,
+      );
+    } catch (primaryErr) {
+      debugPrint('[BeritaService] Upload bucket utama gagal ($primaryErr). Mencoba alternatif bucket...');
+
+      // Coba bucket alternatif lamon-a720b.appspot.com
+      const fallbackBucket = 'lamon-a720b.appspot.com';
+      if (_storage.bucket != fallbackBucket) {
+        try {
+          final fallbackStorage = FirebaseStorage.instanceFor(bucket: fallbackBucket);
+          final url = await _performUpload(
+            storage: fallbackStorage,
+            storagePath: storagePath,
+            bytes: bytes,
+            metadata: metadata,
+            onProgress: onProgress,
+          );
+          debugPrint('[BeritaService] Upload berhasil via fallback bucket: $url');
+          return url;
+        } catch (altErr) {
+          debugPrint('[BeritaService] Fallback bucket juga gagal: $altErr');
+        }
+      }
+
+      // 6. Graceful Fallback: Simpan langsung sebagai Base64 Data URI
+      // Mirip dengan strategi pada doctor_service.dart saat Cloud Storage belum aktif.
+      // Dokumen Firestore berkapasitas 1 MiB, gambar terkompresi (< 600 KB) aman disimpan langsung.
+      if (length <= 600 * 1024) {
+        debugPrint('[BeritaService] Menggunakan fallback Base64 Data URI ke Firestore (${bytes.length} bytes).');
+        onProgress?.call(1.0);
+        final base64String = base64Encode(bytes);
+        return 'data:$contentType;base64,$base64String';
+      } else {
+        // Jika file terlalu besar untuk base64 (> 600 KB) dan Storage gagal
+        throw AppException(
+          'Firebase Storage belum aktif di Firebase Console dan ukuran gambar (${(length / 1024).toStringAsFixed(0)} KB) terlalu besar untuk penyimpanan langsung. '
+          'Pilih gambar berukuran lebih kecil (< 500 KB) atau aktifkan Cloud Storage di Firebase Console.',
+        );
+      }
     }
   }
 
-  // ── Create Artikel ────────────────────────────────────────────────────────
+  /// Helper eksekusi upload menggunakan putData untuk konsistensi cross-platform
+  Future<String> _performUpload({
+    required FirebaseStorage storage,
+    required String storagePath,
+    required Uint8List bytes,
+    required SettableMetadata metadata,
+    void Function(double progress)? onProgress,
+  }) async {
+    final ref = storage.ref().child(storagePath);
+    final uploadTask = ref.putData(bytes, metadata);
+
+    StreamSubscription? sub;
+    if (onProgress != null) {
+      sub = uploadTask.snapshotEvents.listen((event) {
+        if (event.totalBytes > 0) {
+          final progress = event.bytesTransferred / event.totalBytes;
+          onProgress(progress);
+        }
+      });
+    }
+
+    try {
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      debugPrint('[BeritaService] Upload berhasil ke ${snapshot.ref.fullPath}! URL: $downloadUrl');
+      return downloadUrl;
+    } finally {
+      await sub?.cancel();
+    }
+  }
+
+  /// Menghapus file gambar lama di Storage dengan upaya terbaik (try/catch aman).
+  Future<void> deleteStorageFile(String fileUrl) async {
+    if (fileUrl.isEmpty) return;
+    if (!fileUrl.startsWith('http://') && !fileUrl.startsWith('https://')) return;
+
+    try {
+      final ref = _storage.refFromURL(fileUrl);
+      await ref.delete();
+      debugPrint('[BeritaService] Berkas lama Storage berhasil dihapus: $fileUrl');
+    } catch (e) {
+      try {
+        final fallbackStorage = FirebaseStorage.instanceFor(bucket: 'lamon-a720b.appspot.com');
+        final ref = fallbackStorage.refFromURL(fileUrl);
+        await ref.delete();
+        debugPrint('[BeritaService] Berkas lama Storage berhasil dihapus dari fallback bucket: $fileUrl');
+      } catch (_) {
+        debugPrint('[BeritaService] Menghapus berkas Storage lama diabaikan: $e');
+      }
+    }
+  }
+
+  // ── Create Artikel (Hanya set pada dokumen itu) ───────────────────────────
 
   Future<String> createArtikel({
     required BeritaArticle artikel,
     required String adminName,
     required String adminId,
   }) async {
-    _ensureInitialized();
+    // Pastikan seeding awal sudah berjalan jika ini instalasi baru
+    await ensureAutoSeeded();
 
-    String newId = artikel.id;
-    if (newId.isEmpty) {
-      try {
-        newId = _firestore.collection(_collection).doc().id;
-      } catch (_) {
-        newId = 'art_${DateTime.now().millisecondsSinceEpoch}';
-      }
-    }
+    final docRef = _firestore.collection(_collection).doc();
+    final newId = docRef.id;
+    debugPrint('[BeritaService] Membuat artikel baru dengan ID Firestore: $newId');
 
-    final articleWithId = BeritaArticle(
-      id: newId,
+    final docData = artikel.toFirestore();
+    docData['createdBy'] = adminName;
+    dataWithTimestamps(docData, isCreate: true, adminName: adminName, adminId: adminId);
+
+    final batch = _firestore.batch();
+    batch.set(docRef, docData);
+
+    // Activity log
+    final logRef = _firestore.collection('activity_log').doc();
+    final log = ActivityLogModel(
+      id: logRef.id,
+      aksi: artikel.status == 'terbit' ? 'terbit' : 'tambah',
+      modul: 'berita',
       judul: artikel.judul,
-      kategori: artikel.kategori,
-      tanggal: artikel.status == 'terbit'
-          ? (artikel.tanggal ?? DateTime.now())
-          : artikel.tanggal,
-      gambarAsset: artikel.gambarAsset,
-      gambarAlignment: artikel.gambarAlignment,
-      konten: artikel.konten,
-      bacaJuga: artikel.bacaJuga,
-      sumberNama: artikel.sumberNama,
-      sumberUrl: artikel.sumberUrl,
-      ringkasanSingkat: artikel.ringkasanSingkat,
-      status: artikel.status,
-      kontenMarkdown: artikel.kontenMarkdown,
+      oleh: adminName,
+      olehId: adminId,
+      createdAt: null,
     );
+    batch.set(logRef, log.toFirestore());
 
-    // 1. Simpan ke memory seketika
-    _memoryArticles.removeWhere((a) => a.id == newId);
-    _memoryArticles.add(articleWithId);
-    _notify();
-
-    // 2. Sinkronkan ke Cloud Firestore di latar belakang
-    try {
-      final docRef = _firestore.collection(_collection).doc(newId);
-      final logRef = _firestore.collection('activity_log').doc();
-
-      final data = articleWithId.toFirestore();
-      data['createdBy'] = adminName;
-      data['createdById'] = adminId;
-      data['createdAt'] = FieldValue.serverTimestamp();
-      data['updatedAt'] = FieldValue.serverTimestamp();
-
-      final batch = _firestore.batch();
-      batch.set(docRef, data);
-
-      final aksiText = artikel.status == 'terbit' ? 'terbit' : 'tambah';
-      final log = ActivityLogModel(
-        id: logRef.id,
-        aksi: aksiText,
-        modul: 'berita',
-        judul: artikel.judul,
-        oleh: adminName,
-        olehId: adminId,
-        createdAt: null,
-      );
-      batch.set(logRef, log.toFirestore());
-
-      await batch.commit();
-    } catch (e) {
-      debugPrint('[BeritaService] createArtikel remote sync note: $e');
-    }
-
+    await batch.commit();
+    debugPrint('[BeritaService] Artikel $newId berhasil disimpan.');
     return newId;
   }
 
-  // ── Update Artikel ────────────────────────────────────────────────────────
+  // ── Update Artikel (Hanya update dokumen yang bersangkutan) ───────────────
 
   Future<void> updateArtikel({
     required String artikelId,
@@ -238,170 +395,96 @@ class BeritaService {
     required String adminId,
     bool wasPublished = false,
   }) async {
-    _ensureInitialized();
+    if (artikelId.isEmpty) {
+      throw Exception('ID artikel tidak boleh kosong saat memperbarui.');
+    }
 
-    final updatedArticle = BeritaArticle(
-      id: artikelId,
+    final docRef = _firestore.collection(_collection).doc(artikelId);
+    debugPrint('[BeritaService] Memperbarui artikel: $artikelId');
+
+    final docData = artikel.toFirestore();
+    dataWithTimestamps(docData, isCreate: false, adminName: adminName, adminId: adminId);
+
+    final batch = _firestore.batch();
+    batch.set(docRef, docData, SetOptions(merge: true));
+
+    final logRef = _firestore.collection('activity_log').doc();
+    String aksiText = 'ubah';
+    if (artikel.status == 'terbit' && !wasPublished) {
+      aksiText = 'terbit';
+    }
+
+    final log = ActivityLogModel(
+      id: logRef.id,
+      aksi: aksiText,
+      modul: 'berita',
       judul: artikel.judul,
-      kategori: artikel.kategori,
-      tanggal: artikel.status == 'terbit' && !wasPublished && artikel.tanggal == null
-          ? DateTime.now()
-          : (artikel.tanggal ?? DateTime.now()),
-      gambarAsset: artikel.gambarAsset,
-      gambarAlignment: artikel.gambarAlignment,
-      konten: artikel.konten,
-      bacaJuga: artikel.bacaJuga,
-      sumberNama: artikel.sumberNama,
-      sumberUrl: artikel.sumberUrl,
-      ringkasanSingkat: artikel.ringkasanSingkat,
-      status: artikel.status,
-      kontenMarkdown: artikel.kontenMarkdown,
+      oleh: adminName,
+      olehId: adminId,
+      createdAt: null,
     );
+    batch.set(logRef, log.toFirestore());
 
-    final idx = _memoryArticles.indexWhere((a) => a.id == artikelId);
-    if (idx >= 0) {
-      _memoryArticles[idx] = updatedArticle;
-    } else {
-      _memoryArticles.add(updatedArticle);
-    }
-    _notify();
-
-    // Sinkronkan ke Cloud Firestore di latar belakang
-    try {
-      final docRef = _firestore.collection(_collection).doc(artikelId);
-      final logRef = _firestore.collection('activity_log').doc();
-
-      final data = updatedArticle.toFirestore();
-      data['updatedBy'] = adminName;
-      data['updatedById'] = adminId;
-      data['updatedAt'] = FieldValue.serverTimestamp();
-
-      final batch = _firestore.batch();
-      batch.set(docRef, data, SetOptions(merge: true));
-
-      String aksiText = 'ubah';
-      if (artikel.status == 'terbit' && !wasPublished) {
-        aksiText = 'terbit';
-      }
-
-      final log = ActivityLogModel(
-        id: logRef.id,
-        aksi: aksiText,
-        modul: 'berita',
-        judul: artikel.judul,
-        oleh: adminName,
-        olehId: adminId,
-        createdAt: null,
-      );
-      batch.set(logRef, log.toFirestore());
-
-      await batch.commit();
-    } catch (e) {
-      debugPrint('[BeritaService] updateArtikel remote sync note: $e');
-    }
+    await batch.commit();
+    debugPrint('[BeritaService] Perubahan artikel $artikelId berhasil disimpan.');
   }
 
-  // ── Delete Artikel ────────────────────────────────────────────────────────
+  // ── Delete Artikel (Hanya hapus dokumen yang dipilih) ─────────────────────
 
   Future<void> deleteArtikel({
     required String artikelId,
     required String judul,
     required String adminName,
     required String adminId,
+    String? gambarUrl,
   }) async {
-    _ensureInitialized();
-    _memoryArticles.removeWhere((a) => a.id == artikelId);
-    _notify();
+    if (artikelId.isEmpty) return;
 
-    // Sinkronkan ke Cloud Firestore di latar belakang
-    try {
-      final docRef = _firestore.collection(_collection).doc(artikelId);
-      final logRef = _firestore.collection('activity_log').doc();
+    debugPrint('[BeritaService] Menghapus artikel: $artikelId');
+    final docRef = _firestore.collection(_collection).doc(artikelId);
+    final logRef = _firestore.collection('activity_log').doc();
 
-      final batch = _firestore.batch();
-      batch.delete(docRef);
+    final batch = _firestore.batch();
+    batch.delete(docRef);
 
-      final log = ActivityLogModel(
-        id: logRef.id,
-        aksi: 'hapus',
-        modul: 'berita',
-        judul: judul,
-        oleh: adminName,
-        olehId: adminId,
-        createdAt: null,
-      );
-      batch.set(logRef, log.toFirestore());
+    final log = ActivityLogModel(
+      id: logRef.id,
+      aksi: 'hapus',
+      modul: 'berita',
+      judul: judul,
+      oleh: adminName,
+      olehId: adminId,
+      createdAt: null,
+    );
+    batch.set(logRef, log.toFirestore());
 
-      await batch.commit();
-    } catch (e) {
-      debugPrint('[BeritaService] deleteArtikel remote sync note: $e');
+    await batch.commit();
+
+    // Hapus file Storage jika ada (best-effort)
+    if (gambarUrl != null && gambarUrl.isNotEmpty) {
+      await deleteStorageFile(gambarUrl);
     }
+
+    debugPrint('[BeritaService] Artikel $artikelId berhasil dihapus.');
   }
 
-  // ── Seeding 9 Artikel Statis (Upsert Bawaan Pengguna) ─────────────────────
-
-  Future<SeedResult> seedStaticArticles() async {
-    _ensureInitialized();
-
-    final statics = BeritaRepository.getStaticAll();
-    for (final s in statics) {
-      final idx = _memoryArticles.indexWhere((a) => a.id == s.id);
-      if (idx == -1) {
-        _memoryArticles.add(s);
-      } else {
-        _memoryArticles[idx] = s;
-      }
+  void dataWithTimestamps(
+    Map<String, dynamic> data, {
+    required bool isCreate,
+    required String adminName,
+    required String adminId,
+  }) {
+    if (isCreate) {
+      data['createdAt'] = FieldValue.serverTimestamp();
+      data['createdBy'] = adminName;
+      data['createdById'] = adminId;
     }
-    _notify();
-
-    int inserted = 0;
-    int updated = 0;
-    int skipped = 0;
-
-    final articles = _buildSeedData();
-    try {
-      for (final article in articles) {
-        final docId = article['id'] as String;
-        final ref = _firestore.collection(_collection).doc(docId);
-        bool isNew = true;
-        try {
-          final snap = await ref.get();
-          if (snap.exists) {
-            isNew = false;
-            final existingData = snap.data();
-            final updatedById = existingData?['updatedById'];
-            // Kebijakan: Jika artikel bawaan sudah diedit manual oleh admin,
-            // JANGAN timpa (skip agar hasil edit admin tetap aman).
-            if (updatedById != null && updatedById != 'seed_script') {
-              skipped++;
-              continue;
-            }
-          }
-        } catch (_) {}
-
-        final Map<String, dynamic> data = Map.from(article);
-        data.remove('id');
-        data['createdBy'] = 'system';
-        data['createdById'] = 'seed_script';
-        if (isNew) {
-          data['createdAt'] = FieldValue.serverTimestamp();
-        }
-        data['updatedAt'] = FieldValue.serverTimestamp();
-
-        await ref.set(data, SetOptions(merge: true));
-        if (isNew) {
-          inserted++;
-        } else {
-          updated++;
-        }
-      }
-    } catch (e) {
-      debugPrint('[BeritaService] seedStaticArticles remote push error: $e');
-      rethrow;
-    }
-
-    return SeedResult(inserted: inserted + updated, skipped: skipped);
+    data['updatedAt'] = FieldValue.serverTimestamp();
+    data['updatedBy'] = adminName;
+    data['updatedById'] = adminId;
   }
+
+  // ── 9 Data Bawaan Lengkap untuk Seeding ───────────────────────────────────
 
   List<Map<String, dynamic>> _buildSeedData() {
     return [
@@ -411,7 +494,8 @@ class BeritaService {
         'judulLower': 'kenapa gen z sering sakit lambung? ini 4 penyebabnya',
         'kategori': 'Gaya Hidup',
         'tanggal': Timestamp.fromDate(DateTime(2026, 9, 18)),
-        'gambarUrl': 'assets/images/berita/berita_1.png',
+        'gambarUrl': '',
+        'gambarAsset': 'assets/images/berita/berita_1.png',
         'sumberNama': 'ANTARA News',
         'sumberUrl': 'https://www.antaranews.com/berita/5747829/kenapa-gen-z-sering-sakit-lambung-ini-4-penyebabnya',
         'ringkasanSingkat': 'Sakit lambung adalah gejala gangguan pada saluran pencernaan bagian atas. Tren kesehatan mencatat sekitar 36 persen kasus asam lambung saat ini ditemukan di kalangan anak muda.',
@@ -425,7 +509,8 @@ class BeritaService {
         'judulLower': 'mengenal gerd dan pentingnya penanganan yang tepat sejak dini',
         'kategori': 'Pencernaan',
         'tanggal': Timestamp.fromDate(DateTime(2026, 9, 19)),
-        'gambarUrl': 'assets/images/berita/berita_2.png',
+        'gambarUrl': '',
+        'gambarAsset': 'assets/images/berita/berita_2.png',
         'sumberNama': 'Indozone.id (Gema Trisna Yudha)',
         'sumberUrl': 'https://life.indozone.id/health/2486734267/mengenal-gerd-dan-pentingnya-penanganan-yang-tepat-sejak-dini',
         'ringkasanSingkat': 'GERD adalah gangguan saluran cerna yang cukup banyak ditemukan di Indonesia. Kondisi ini terjadi ketika isi lambung, termasuk asam lambung, naik kembali ke kerongkongan.',
@@ -439,7 +524,8 @@ class BeritaService {
         'judulLower': 'gerd dapat sembuh dengan kurangi faktor risiko dan pengobatan tuntas',
         'kategori': 'Pencernaan',
         'tanggal': Timestamp.fromDate(DateTime(2026, 3, 6)),
-        'gambarUrl': 'assets/images/berita/berita_3.png',
+        'gambarUrl': '',
+        'gambarAsset': 'assets/images/berita/berita_3.png',
         'sumberNama': 'ANTARA News',
         'sumberUrl': 'https://www.antaranews.com/berita/5456227/gerd-dapat-sembuh-dengan-kurangi-faktor-risiko-dan-pengobatan-tuntas',
         'ringkasanSingkat': 'GERD dapat sembuh apabila faktor risikonya dikurangi dan pengobatan dijalankan sampai tuntas, menurut Guru Besar FK UI RSCM Prof. Dr. dr. Ari Fahrial Syam.',
@@ -453,7 +539,8 @@ class BeritaService {
         'judulLower': 'sering begadang bikin asam lambung naik, ini alasannya',
         'kategori': 'Gaya Hidup',
         'tanggal': Timestamp.fromDate(DateTime(2026, 9, 27)),
-        'gambarUrl': 'assets/images/berita/berita_4.png',
+        'gambarUrl': '',
+        'gambarAsset': 'assets/images/berita/berita_4.png',
         'sumberNama': 'ANTARA News',
         'sumberUrl': 'https://www.antaranews.com/berita/5760544/sering-begadang-bikin-asam-lambung-naik-ini-alasannya',
         'ringkasanSingkat': 'Begadang tidak hanya membuat tubuh lelah. Kebiasaan tidur larut juga berkaitan dengan meningkatnya keluhan asam lambung, terutama pada orang yang sudah memiliki GERD.',
@@ -467,7 +554,8 @@ class BeritaService {
         'judulLower': 'makanan untuk penderita maag: ini yang aman dan harus dihindari',
         'kategori': 'Gizi',
         'tanggal': Timestamp.fromDate(DateTime(2026, 9, 18)),
-        'gambarUrl': 'assets/images/berita/berita_makanan_maag.png',
+        'gambarUrl': '',
+        'gambarAsset': 'assets/images/berita/berita_makanan_maag.png',
         'sumberNama': 'ANTARA News',
         'sumberUrl': 'https://www.antaranews.com/berita/5747915/makanan-untuk-penderita-maag-ini-yang-aman-dan-harus-dihindari',
         'ringkasanSingkat': 'Sakit maag umumnya dipicu pola makan tidak teratur, stres, infeksi bakteri H. pylori, atau efek samping obat. Pilihan makanan yang tepat sangat membantu proses pemulihan.',
@@ -481,7 +569,8 @@ class BeritaService {
         'judulLower': 'asam lambung naik? terapkan 7 langkah pertolongan pertama ini',
         'kategori': 'Gaya Hidup',
         'tanggal': Timestamp.fromDate(DateTime(2025, 7, 6)),
-        'gambarUrl': 'assets/images/berita/berita_6.png',
+        'gambarUrl': '',
+        'gambarAsset': 'assets/images/berita/berita_6.png',
         'sumberNama': 'ANTARA News',
         'sumberUrl': 'https://www.antaranews.com/berita/4947537/asam-lambung-naik-terapkan-7-langkah-pertolongan-pertama-ini',
         'ringkasanSingkat': 'Asam lambung naik sering muncul saat melewatkan waktu makan, stres, atau setelah makanan pemicu. Ada 7 langkah pertolongan pertama yang bisa dilakukan.',
@@ -495,7 +584,8 @@ class BeritaService {
         'judulLower': 'apa bedanya maag dan gerd? kenali gejala dan penyebabnya',
         'kategori': 'Pencernaan',
         'tanggal': Timestamp.fromDate(DateTime(2026, 9, 18)),
-        'gambarUrl': 'assets/images/berita/berita_7.png',
+        'gambarUrl': '',
+        'gambarAsset': 'assets/images/berita/berita_7.png',
         'sumberNama': 'ANTARA News',
         'sumberUrl': 'https://www.antaranews.com/berita/5747907/apa-bedanya-maag-dan-gerd-kenali-gejala-dan-penyebabnya',
         'ringkasanSingkat': 'Maag adalah peradangan dinding lambung, sedangkan GERD adalah kondisi kronis ketika asam lambung naik ke kerongkongan akibat melemahnya katup sfingter esofagus bawah.',
@@ -509,7 +599,8 @@ class BeritaService {
         'judulLower': 'sering dianggap mirip, ini bedanya sakit jantung dan asam lambung',
         'kategori': 'Kesehatan Umum',
         'tanggal': Timestamp.fromDate(DateTime(2026, 9, 20)),
-        'gambarUrl': 'assets/images/berita/berita_8.png',
+        'gambarUrl': '',
+        'gambarAsset': 'assets/images/berita/berita_8.png',
         'sumberNama': 'ANTARA News',
         'sumberUrl': 'https://www.antaranews.com/berita/5731188/sering-dianggap-mirip-ini-bedanya-sakit-jantung-dan-asam-lambung',
         'ringkasanSingkat': 'Nyeri dada sering dikaitkan dengan asam lambung, padahal gangguan jantung bisa menimbulkan keluhan serupa. Penting untuk mengenali perbedaannya.',
@@ -523,7 +614,8 @@ class BeritaService {
         'judulLower': 'pola makan yang baik bagi penderita asam lambung',
         'kategori': 'Gizi',
         'tanggal': Timestamp.fromDate(DateTime(2025, 7, 29)),
-        'gambarUrl': 'assets/images/berita/berita_9.png',
+        'gambarUrl': '',
+        'gambarAsset': 'assets/images/berita/berita_9.png',
         'sumberNama': 'ANTARA News',
         'sumberUrl': 'https://www.antaranews.com/berita/4998689/pola-makan-yang-baik-bagi-penderita-asam-lambung',
         'ringkasanSingkat': 'Pola makan tepat adalah kunci mengendalikan gejala GERD. Makan dalam porsi kecil tapi sering dan menghindari makanan pemicu adalah langkah utamanya.',
@@ -533,10 +625,4 @@ class BeritaService {
       },
     ];
   }
-}
-
-class SeedResult {
-  final int inserted;
-  final int skipped;
-  const SeedResult({required this.inserted, required this.skipped});
 }

@@ -63,7 +63,9 @@ class BeritaArticle {
   final String judul;
   final String kategori;
   final DateTime? tanggal;
-  /// Path asset lokal (artikel lama) atau URL Firebase Storage (artikel baru)
+  /// URL unduhan Firebase Storage atau internet (artikel baru/diunggah)
+  final String gambarUrl;
+  /// Path asset lokal bawaan (misal 'assets/images/berita/berita_1.png')
   final String gambarAsset;
   final Alignment gambarAlignment;
   final List<BeritaBlock> konten;
@@ -83,7 +85,8 @@ class BeritaArticle {
     required this.judul,
     required this.kategori,
     this.tanggal,
-    required this.gambarAsset,
+    this.gambarUrl = '',
+    this.gambarAsset = '',
     this.gambarAlignment = Alignment.center,
     required this.konten,
     this.bacaJuga = const [],
@@ -131,19 +134,47 @@ class BeritaArticle {
           .toList();
     }
 
+    // Resolusi gambar: prioritaskan URL jaringan / data URI ke gambarUrl, dan path lokal ke gambarAsset
+    final rawGambarUrl = data['gambarUrl']?.toString().trim() ?? '';
+    final rawGambarAsset = data['gambarAsset']?.toString().trim() ?? '';
+    String resolvedUrl = '';
+    String resolvedAsset = '';
+
+    if (rawGambarUrl.startsWith('http://') ||
+        rawGambarUrl.startsWith('https://') ||
+        rawGambarUrl.startsWith('data:image')) {
+      resolvedUrl = rawGambarUrl;
+    } else if (rawGambarUrl.startsWith('assets/')) {
+      resolvedAsset = rawGambarUrl;
+    }
+
+    if (rawGambarAsset.startsWith('assets/')) {
+      resolvedAsset = rawGambarAsset;
+    } else if ((rawGambarAsset.startsWith('http://') ||
+            rawGambarAsset.startsWith('https://') ||
+            rawGambarAsset.startsWith('data:image')) &&
+        resolvedUrl.isEmpty) {
+      resolvedUrl = rawGambarAsset;
+    }
+
+    // Status: dokumen tanpa status dianggap 'terbit'
+    final rawStatus = data['status']?.toString().trim();
+    final status = (rawStatus == null || rawStatus.isEmpty) ? 'terbit' : rawStatus;
+
     return BeritaArticle(
       id: doc.id,
       judul: data['judul']?.toString() ?? '',
       kategori: data['kategori']?.toString() ?? '',
       tanggal: tanggal,
-      gambarAsset: data['gambarUrl']?.toString() ?? data['gambarAsset']?.toString() ?? '',
+      gambarUrl: resolvedUrl,
+      gambarAsset: resolvedAsset,
       gambarAlignment: Alignment.center,
       konten: konten,
       bacaJuga: bacaJuga,
       sumberNama: data['sumberNama']?.toString() ?? '',
       sumberUrl: data['sumberUrl']?.toString() ?? '',
       ringkasanSingkat: ringkasanSingkat,
-      status: data['status']?.toString() ?? 'terbit',
+      status: status,
       kontenMarkdown: kontenMarkdown.isEmpty ? null : kontenMarkdown,
     );
   }
@@ -186,7 +217,8 @@ class BeritaArticle {
       'judulLower': judul.toLowerCase(),
       'kategori': kategori,
       'tanggal': tanggal != null ? Timestamp.fromDate(tanggal!) : null,
-      'gambarUrl': gambarAsset,
+      'gambarUrl': gambarUrl,
+      'gambarAsset': gambarAsset,
       'bacaJuga': bacaJuga,
       'sumberNama': sumberNama,
       'sumberUrl': sumberUrl,

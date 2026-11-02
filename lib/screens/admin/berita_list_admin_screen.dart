@@ -6,6 +6,7 @@ import '../../models/berita_article_model.dart';
 import '../../services/berita/berita_service.dart';
 import '../../widgets/admin/admin_widgets.dart';
 import '../../widgets/app_header_pill.dart';
+import '../../widgets/berita/berita_image.dart';
 import 'berita_form_screen.dart';
 
 class BeritaListAdminScreen extends StatefulWidget {
@@ -31,7 +32,20 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
   String _deletingId = '';
 
   bool _isSeeding = false;
-  bool _hasCheckedAutoSeed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAndAutoSeed();
+  }
+
+  Future<void> _checkAndAutoSeed() async {
+    try {
+      await _service.ensureAutoSeeded();
+    } catch (e) {
+      debugPrint('[KelolaBerita] Auto-seeding check error: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -39,50 +53,65 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
     super.dispose();
   }
 
-  // ── Auto-seeding jika collection kosong ────────────────────────────────────
+  // ── Pemulihan Berita Bawaan ────────────────────────────────────────────────
 
-  void _triggerAutoSeedIfEmpty(List<BeritaArticle> articles) {
-    if (_hasCheckedAutoSeed) return;
-    _hasCheckedAutoSeed = true;
+  Future<void> _onRestoreArticles() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Pulihkan Berita Bawaan?',
+          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF134563)),
+        ),
+        content: Text(
+          'Tindakan ini akan membuat kembali artikel dari 9 berita bawaan yang belum ada di Firestore tanpa menimpa atau menghapus artikel lain.',
+          style: GoogleFonts.poppins(fontSize: 13, color: AppColors.primaryText, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Batal', style: GoogleFonts.poppins(color: AppColors.neutralGray, fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF134563),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text('Pulihkan', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
 
-    if (articles.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _onSeedArticles(isSilent: true);
-      });
-    }
-  }
+    if (confirmed != true || !mounted) return;
 
-  Future<void> _onSeedArticles({bool isSilent = false}) async {
     setState(() => _isSeeding = true);
     try {
-      final res = await _service.seedStaticArticles();
+      final res = await _service.restoreStaticArticles();
       if (!mounted) return;
-      if (!isSilent || res.inserted > 0) {
-        final String successText = res.inserted > 0
-            ? '${res.inserted} artikel berhasil disinkronkan'
-            : '9 artikel bawaan sudah mutakhir di Firestore';
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-            successText,
-            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-          backgroundColor: AppColors.successGreen,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(16),
-        ));
-      }
+      final msg = '${res.restored} berita dipulihkan, ${res.alreadyExist} sudah ada.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(child: Text(msg, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600))),
+          ],
+        ),
+        backgroundColor: AppColors.successGreen,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 4),
+      ));
     } catch (e) {
-      if (e is FirebaseException) {
-        debugPrint('[KelolaBerita] seedStaticArticles FirebaseException code: ${e.code}, message: ${e.message}');
-      } else {
-        debugPrint('[KelolaBerita] Gagal seed artikel: $e');
-      }
-      if (!mounted) return;
-      if (!isSilent) {
-        final errorMsg = e is FirebaseException ? '[${e.code}] ${e.message ?? e.toString()}' : '$e';
+      debugPrint('[KelolaBerita] Gagal pulihkan artikel: $e');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Gagal memuat artikel: $errorMsg', style: GoogleFonts.poppins(fontSize: 13)),
+          content: Text('Gagal memulihkan berita: $e', style: GoogleFonts.poppins(fontSize: 13)),
           backgroundColor: AppColors.adminRed,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -143,6 +172,7 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
         judul: artikel.judul,
         adminName: widget.adminName,
         adminId: widget.adminId,
+        gambarUrl: artikel.gambarUrl,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -196,32 +226,50 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
 
   // ── Build ──────────────────────────────────────────────────────────────────
 
+  Widget _buildHeaderMenu() {
+    return PopupMenuButton<String>(
+      icon: _isSeeding
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF134563)),
+            )
+          : const Icon(Icons.more_vert_rounded, color: Color(0xFF134563), size: 22),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onSelected: (val) {
+        if (val == 'restore') {
+          _onRestoreArticles();
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'restore',
+          child: Row(
+            children: [
+              const Icon(Icons.restore_page_outlined, color: Color(0xFF134563), size: 18),
+              const SizedBox(width: 10),
+              Text(
+                'Pulihkan berita bawaan',
+                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AdminScaffold(
       header: AppHeaderPill(
         title: 'Kelola Berita',
-        rightAction: IconButton(
-          icon: _isSeeding
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF134563)),
-                )
-              : const Icon(Icons.cloud_download_outlined, color: Color(0xFF134563), size: 22),
-          tooltip: 'Muat 9 Artikel Bawaan',
-          onPressed: _isSeeding ? null : () => _onSeedArticles(isSilent: false),
-        ),
+        rightAction: _buildHeaderMenu(),
       ),
       body: StreamBuilder<List<BeritaArticle>>(
         stream: _service.streamAll(),
         builder: (context, snapshot) {
           final all = snapshot.data ?? [];
-
-          // Pemicu auto-seeding jika koleksi pertama kali dibuka dan kosong
-          if (snapshot.hasData) {
-            _triggerAutoSeedIfEmpty(all);
-          }
 
           final totalCount = all.length;
           final terbitCount = all.where((a) => a.status == 'terbit').length;
@@ -379,16 +427,16 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
         title: 'Belum ada artikel berita',
         subtitle: 'Koleksi berita masih kosong. Muat 9 artikel bawaan atau buat baru.',
         action: ElevatedButton.icon(
-          onPressed: _isSeeding ? null : () => _onSeedArticles(isSilent: false),
+          onPressed: _isSeeding ? null : _onRestoreArticles,
           icon: _isSeeding
               ? const SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                 )
-              : const Icon(Icons.cloud_download_outlined, size: 18),
+              : const Icon(Icons.restore_page_outlined, size: 18),
           label: Text(
-            _isSeeding ? 'Memuat...' : 'Muat 9 Artikel Bawaan',
+            _isSeeding ? 'Memulihkan...' : 'Pulihkan 9 Berita Bawaan',
             style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
           ),
           style: ElevatedButton.styleFrom(
@@ -477,9 +525,9 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
-                  onPressed: _isSeeding ? null : () => _onSeedArticles(isSilent: false),
-                  icon: const Icon(Icons.cloud_download_outlined, size: 18),
-                  label: Text('Muat Bawaan', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                  onPressed: _isSeeding ? null : _onRestoreArticles,
+                  icon: const Icon(Icons.restore_page_outlined, size: 18),
+                  label: Text('Pulihkan Bawaan', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF134563),
                     foregroundColor: Colors.white,
@@ -644,60 +692,17 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
   // ── Thumbnail Kotak 64x64 ──────────────────────────────────────────────────
 
   Widget _buildThumbnail(BeritaArticle artikel, bool isDraft) {
-    final bool hasImage = artikel.gambarAsset.trim().isNotEmpty;
-
-    if (!hasImage) {
-      return Container(
+    return SizedBox(
+      width: 64,
+      height: 64,
+      child: BeritaImage(
+        gambarUrl: artikel.gambarUrl.isNotEmpty ? artikel.gambarUrl : null,
+        gambarAsset: artikel.gambarAsset.isNotEmpty ? artikel.gambarAsset : null,
+        borderRadius: 10,
         width: 64,
         height: 64,
-        decoration: BoxDecoration(
-          color: isDraft ? const Color(0xFFFEF3C7) : const Color(0xFFE8F4FB),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Center(
-          child: Icon(
-            Icons.image_outlined,
-            size: 28,
-            color: isDraft ? const Color(0xFFD97706) : const Color(0xFF134563),
-          ),
-        ),
-      );
-    }
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: SizedBox(
-        width: 64,
-        height: 64,
-        child: artikel.gambarAsset.startsWith('http')
-            ? Image.network(
-                artikel.gambarAsset,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: isDraft ? const Color(0xFFFEF3C7) : const Color(0xFFE8F4FB),
-                  child: Center(
-                    child: Icon(
-                      Icons.broken_image_outlined,
-                      size: 26,
-                      color: isDraft ? const Color(0xFFD97706) : const Color(0xFF134563),
-                    ),
-                  ),
-                ),
-              )
-            : Image.asset(
-                artikel.gambarAsset,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: isDraft ? const Color(0xFFFEF3C7) : const Color(0xFFE8F4FB),
-                  child: Center(
-                    child: Icon(
-                      Icons.image_outlined,
-                      size: 26,
-                      color: isDraft ? const Color(0xFFD97706) : const Color(0xFF134563),
-                    ),
-                  ),
-                ),
-              ),
+        alignment: artikel.gambarAlignment,
+        fit: BoxFit.cover,
       ),
     );
   }
