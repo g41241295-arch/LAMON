@@ -11,6 +11,7 @@ import '../services/berita/berita_service.dart';
 import '../widgets/admin/activity_item.dart';
 import '../widgets/admin/admin_widgets.dart';
 import '../widgets/admin/content_menu_tile.dart';
+import '../services/profile_photo_service.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -118,6 +119,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildAvatar() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null && uid.isNotEmpty) {
+      return RealtimeHeaderAvatar(
+        collection: 'users',
+        docId: uid,
+        size: 28,
+        borderRadius: 14,
+        fallback: _buildLegacyAvatar(),
+      );
+    }
+    return _buildLegacyAvatar();
+  }
+
+  Widget _buildLegacyAvatar() {
     final assetPath = _resolvePhotoAsset();
 
     Widget? imageContent;

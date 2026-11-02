@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import '../constants/app_colors.dart';
+import '../services/profile_photo_service.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/app_header_pill.dart';
 import '../routes/app_routes.dart';
@@ -19,8 +18,6 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  final ImagePicker _imagePicker = ImagePicker();
-
   bool _isLoading = true;
   bool _isUploadingPhoto = false;
   String _userName = '';
@@ -28,6 +25,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String? _uploadedPhotoUrl;
   String? _googlePhotoUrl;
   String? _photoUrl;
+  String? _photoBase64;
   String? _gender; // 'Pria'/'Laki-laki' atau 'Wanita'/'Perempuan'
   dynamic _rawBirthDate; // Timestamp, String, atau null
   dynamic _rawHistory; // bool, String, List, atau null
@@ -49,6 +47,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     String email = user.email ?? '';
     String? googlePhoto = user.photoURL;
     String? uploadedPhoto;
+    String? photoBase64;
     String? gender;
     dynamic rawBirthDate;
     dynamic history;
@@ -66,6 +65,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
         final rawPhoto = (data['photo_url'] ?? data['photoUrl'] ?? '').toString().trim();
         if (rawPhoto.isNotEmpty) uploadedPhoto = rawPhoto;
+
+        final rawPhotoBase64 = data['photoBase64']?.toString().trim();
+        if (rawPhotoBase64 != null && rawPhotoBase64.isNotEmpty) {
+          photoBase64 = rawPhotoBase64;
+        }
 
         // Jenis Kelamin: prioritas root 'jenis_kelamin', lalu 'screeningData' -> 'gender'
         final rawGender = data['jenis_kelamin'] ?? data['screeningData']?['gender'];
@@ -105,6 +109,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         _uploadedPhotoUrl = uploadedPhoto;
         _googlePhotoUrl = googlePhoto;
         _photoUrl = (uploadedPhoto != null && uploadedPhoto.isNotEmpty) ? uploadedPhoto : googlePhoto;
+        _photoBase64 = photoBase64;
         _gender = gender;
         _rawBirthDate = rawBirthDate;
         _rawHistory = history;
@@ -146,11 +151,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       }
       dt = DateTime.tryParse(trimmed);
       if (dt == null) {
-        // Coba pola DD-MM-YYYY atau YYYY/MM/DD
         final parts = trimmed.split(RegExp(r'[-/]'));
         if (parts.length == 3) {
           if (parts[0].length == 4) {
-            // YYYY-MM-DD
             final y = int.tryParse(parts[0]);
             final m = int.tryParse(parts[1]);
             final d = int.tryParse(parts[2]);
@@ -158,7 +161,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               dt = DateTime(y, m, d);
             }
           } else if (parts[2].length == 4) {
-            // DD-MM-YYYY
             final d = int.tryParse(parts[0]);
             final m = int.tryParse(parts[1]);
             final y = int.tryParse(parts[2]);
@@ -212,10 +214,21 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildAvatarImage() {
-    // Prioritas: (1) URL foto yang diunggah di Firestore, (2) foto Google user.photoURL, (3) default icon
+    // 1. Prioritas utama: Base64 dari dokumen pemilik
+    final imageProvider = ProfilePhotoService.provider(_photoBase64);
+    if (imageProvider != null) {
+      return Image(
+        image: imageProvider,
+        width: 96,
+        height: 96,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _buildDefaultAvatar(),
+      );
+    }
+
+    // 2. Fallback jika Base64 belum ada: URL foto lama atau foto Google
     final cleanUploaded = (_uploadedPhotoUrl ?? '').trim();
     final cleanGoogle = (_googlePhotoUrl ?? '').trim();
-
     final targetUrl = cleanUploaded.isNotEmpty ? cleanUploaded : cleanGoogle;
 
     if (targetUrl.isNotEmpty) {
@@ -235,7 +248,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           );
         },
         errorBuilder: (context, error, stackTrace) {
-          // Jika foto unggahan gagal dimuat dan ada foto Google, coba fallback ke foto Google
           if (cleanUploaded.isNotEmpty && cleanGoogle.isNotEmpty && targetUrl != cleanGoogle) {
             return Image.network(
               cleanGoogle,
@@ -251,6 +263,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         },
       );
     }
+
+    // 3. Ikon orang default jika belum ada foto
     return _buildDefaultAvatar();
   }
 
@@ -269,15 +283,35 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: Text(
-                    'Ganti Foto Profil',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primaryText,
-                    ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Ganti Foto Profil',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primaryText,
+                        ),
+                      ),
+                      if (_photoBase64 != null && _photoBase64!.trim().isNotEmpty)
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Color(0xFFD32F2F),
+                            size: 22,
+                          ),
+                          tooltip: 'Hapus Foto Profil',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _confirmAndDeletePhoto();
+                          },
+                        ),
+                    ],
                   ),
                 ),
                 const Divider(),
@@ -339,113 +373,103 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  // Pilih + kompres + upload foto profil (mengikuti ukuran dan kompresi Profil Dokter)
-  Future<void> _pickAndUploadPhoto(ImageSource source) async {
-    try {
-      final picked = await _imagePicker.pickImage(
-        source: source,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 70,
-      );
-      if (picked == null) return;
-
-      final ext = picked.path.split('.').last.toLowerCase();
-      if (ext != 'jpg' && ext != 'jpeg' && ext != 'png') {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Format gambar harus JPG atau PNG.'),
-              backgroundColor: Colors.orange,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-        return;
-      }
-
-      final Uint8List imageBytes = await picked.readAsBytes();
-      if (!mounted) return;
-
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Pengguna tidak terautentikasi.'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-        return;
-      }
-
-      setState(() => _isUploadingPhoto = true);
-
-      String downloadUrl;
-      try {
-        final storageRef = FirebaseStorage.instance
-            .ref()
-            .child('users/${user.uid}/profile.jpg');
-
-        final metadata = SettableMetadata(
-          contentType: 'image/jpeg',
-          customMetadata: {'uid': user.uid},
-        );
-
-        final task = await storageRef.putData(imageBytes, metadata);
-        downloadUrl = await task.ref.getDownloadURL();
-      } catch (storageError) {
-        debugPrint('[UserProfileScreen] Firebase Storage gagal: $storageError');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Gagal mengunggah foto ke Storage: $storageError'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-        return;
-      }
-
-      // Simpan URL ke Firestore di koleksi 'users', field 'photo_url'
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'photo_url': downloadUrl,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-
-      if (mounted) {
-        setState(() {
-          _uploadedPhotoUrl = downloadUrl;
-          _photoUrl = downloadUrl;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Foto profil berhasil diperbarui.'),
-            backgroundColor: AppColors.successGreen,
-            behavior: SnackBarBehavior.floating,
+  Future<void> _confirmAndDeletePhoto() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Hapus foto profil?',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        content: const Text(
+          'Foto profil akan dihapus dan diganti dengan foto default.',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
           ),
-        );
-      }
-    } on PlatformException catch (e) {
-      debugPrint('[UserProfileScreen] Izin akses ditolak atau dibatalkan: $e');
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD32F2F),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      setState(() => _isUploadingPhoto = true);
+      await ProfilePhotoService.deletePhoto(
+        collection: 'users',
+      );
+      if (!mounted) return;
+      setState(() {
+        _photoBase64 = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Foto profil dihapus'),
+          backgroundColor: AppColors.successGreen,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[UserProfileScreen] Gagal menghapus foto: $e');
       if (mounted) {
+        final message = e.toString().replaceAll('Exception: ', '').trim();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Izin akses ditolak atau dibatalkan: ${e.message ?? e.code}'),
-            backgroundColor: Colors.orange,
+            content: Text(message.isNotEmpty ? message : 'Gagal menghapus foto profil'),
+            backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingPhoto = false);
+      }
+    }
+  }
+
+  // Pilih + kompres + simpan Base64 ke Firestore tanpa Storage
+  Future<void> _pickAndUploadPhoto(ImageSource source) async {
+    try {
+      setState(() => _isUploadingPhoto = true);
+      final b64 = await ProfilePhotoService.pickAndSave(
+        collection: 'users',
+        source: source,
+      );
+      if (b64 == null) return;
+      if (!mounted) return;
+      setState(() {
+        _photoBase64 = b64;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Foto profil diperbarui'),
+          backgroundColor: AppColors.successGreen,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (e) {
       debugPrint('[UserProfileScreen] Gagal mengganti foto: $e');
       if (mounted) {
+        final message = e.toString().replaceAll('Exception: ', '').trim();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal mengganti foto: $e'),
+            content: Text(message.isNotEmpty ? message : 'Gagal memperbarui foto profil'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -464,7 +488,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     required bool isSelected,
     required bool isFemale,
   }) {
-    // Nilai warna persis dari doctor_profile_tab.dart
     final selectedColor = isFemale ? const Color(0xFFD63384) : AppColors.primary;
     final selectedBgColor = isFemale
         ? const Color(0xFFFCE4EF)
@@ -643,7 +666,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Avatar Bulat Pengguna dengan tombol kamera di pojok kanan bawah (persis gaya Profil Dokter)
+                  // Avatar Bulat Pengguna dengan tombol kamera di pojok kanan bawah
                   Center(
                     child: GestureDetector(
                       onTap: _isUploadingPhoto ? null : _showPhotoSourceSheet,
@@ -750,7 +773,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Judul Form "PROFIL" (sesuai ukuran dokter/admin: 19 w900)
+                        // Judul Form "PROFIL"
                         Center(
                           child: Text(
                             'PROFIL',

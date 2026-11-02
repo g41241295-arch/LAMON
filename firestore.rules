@@ -178,9 +178,14 @@ service cloud.firestore {
 
       // Dokter hanya dapat mengupdate profil dirinya sendiri dan field tertentu saja
       allow update: if isDoctor() 
-                    && myDoctorId() == doctorId 
+                    && (
+                      (myDoctorId() != '' && myDoctorId() == doctorId) ||
+                      (doctorId == request.auth.uid) ||
+                      (('uid' in resource.data) && resource.data.uid == request.auth.uid)
+                    )
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                         'name', 'strNumber', 'gender', 'updatedAt', 'photoUrl'
+                         'name', 'strNumber', 'gender', 'updatedAt', 'photoUrl',
+                         'photoBase64', 'photoUpdatedAt'
                        ]);
 
       allow create, delete: if false;
