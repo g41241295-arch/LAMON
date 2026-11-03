@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/gastropedia_item_model.dart';
@@ -80,19 +81,30 @@ class PopularFoodCard extends StatelessWidget {
                     child: SizedBox(
                       width: 64,
                       height: 64,
-                      child: item.imageAsset.startsWith('http')
-                          ? Image.network(
-                              item.imageAsset,
+                      child: (() {
+                        try {
+                          final b64 = item.gastropediaItem.imageBase64;
+                          if (b64.isNotEmpty) {
+                            return Image.memory(
+                              base64Decode(b64),
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  _fallbackIcon(),
-                            )
-                          : Image.asset(
-                              item.imageAsset,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  _fallbackIcon(),
-                            ),
+                              gaplessPlayback: true,
+                            );
+                          }
+                        } catch (_) {}
+                        if (item.imageAsset.startsWith('http')) {
+                          return Image.network(
+                            item.imageAsset,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => _fallbackIcon(),
+                          );
+                        }
+                        return Image.asset(
+                          item.imageAsset,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => _fallbackIcon(),
+                        );
+                      })(),
                     ),
                   ),
 

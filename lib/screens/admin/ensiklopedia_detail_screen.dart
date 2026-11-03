@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -208,25 +209,42 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
             ),
           ],
 
-          if (entry.imageAsset != null && entry.imageAsset!.isNotEmpty) ...[
+          if ((entry.imageBase64 != null && entry.imageBase64!.isNotEmpty) ||
+              (entry.imageAsset != null && entry.imageAsset!.isNotEmpty)) ...[
             const SizedBox(height: 12),
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: entry.imageAsset!.startsWith('http')
-                  ? Image.network(
-                      entry.imageAsset!,
+              child: (() {
+                try {
+                  final b64 = entry.imageBase64;
+                  if (b64 != null && b64.isNotEmpty) {
+                    return Image.memory(
+                      base64Decode(b64),
                       height: 160,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                    )
-                  : Image.asset(
-                      entry.imageAsset!,
-                      height: 160,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                    ),
+                      gaplessPlayback: true,
+                    );
+                  }
+                } catch (_) {}
+                final url = entry.imageAsset ?? '';
+                if (url.startsWith('http')) {
+                  return Image.network(
+                    url,
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  );
+                }
+                return Image.asset(
+                  url,
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                );
+              })(),
             ),
           ],
 

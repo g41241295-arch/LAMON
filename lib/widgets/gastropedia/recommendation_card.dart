@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/gastropedia_item_model.dart';
@@ -94,12 +95,24 @@ class _RecommendationCardState extends State<RecommendationCard>
                 // ─── Foto Makanan Mengisi Bagian Atas ───
                 SizedBox(
                   height: 105,
-                  child: widget.item.imageAsset.startsWith('http')
-                      ? Image.network(
-                          widget.item.imageAsset,
+                  child: (() {
+                    try {
+                      final b64 = widget.item.imageBase64;
+                      if (b64.isNotEmpty) {
+                        return Image.memory(
+                          base64Decode(b64),
                           fit: BoxFit.cover,
                           width: double.infinity,
-                          errorBuilder: (_, _, _) => Container(
+                          gaplessPlayback: true,
+                        );
+                      }
+                    } catch (_) {}
+                    if (widget.item.imageAsset.startsWith('http')) {
+                      return Image.network(
+                        widget.item.imageAsset,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorBuilder: (_, _, _) => Container(
                             color: const Color(0xFFEBF3F8),
                             child: const Icon(
                               Icons.image_outlined,
@@ -107,12 +120,13 @@ class _RecommendationCardState extends State<RecommendationCard>
                               color: Color(0xFF639BC6),
                             ),
                           ),
-                        )
-                      : Image.asset(
-                          widget.item.imageAsset,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          errorBuilder: (_, _, _) => Container(
+                      );
+                    }
+                    return Image.asset(
+                      widget.item.imageAsset,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorBuilder: (_, _, _) => Container(
                             color: const Color(0xFFEBF3F8),
                             child: const Icon(
                               Icons.image_outlined,
@@ -120,7 +134,8 @@ class _RecommendationCardState extends State<RecommendationCard>
                               color: Color(0xFF639BC6),
                             ),
                           ),
-                        ),
+                    );
+                  })(),
                 ),
 
                 // ─── Baris Bawah: Judul Makanan + Chevron Bulat Akses ───

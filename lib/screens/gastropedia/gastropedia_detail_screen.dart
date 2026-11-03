@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/gastropedia_item_model.dart';
@@ -86,31 +87,45 @@ class GastropediaDetailScreen extends StatelessWidget {
                     // Gambar Utama
                     SizedBox(
                       height: 220,
-                      child: item.imageAsset.startsWith('http')
-                          ? Image.network(
-                              item.imageAsset,
+                      child: (() {
+                        try {
+                          final b64 = item.imageBase64;
+                          if (b64.isNotEmpty) {
+                            return Image.memory(
+                              base64Decode(b64),
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Container(
-                                color: const Color(0xFFEBF3F8),
-                                child: const Icon(
-                                  Icons.restaurant_rounded,
-                                  size: 48,
-                                  color: Color(0xFF639BC6),
-                                ),
-                              ),
-                            )
-                          : Image.asset(
-                              item.imageAsset,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Container(
-                                color: const Color(0xFFEBF3F8),
-                                child: const Icon(
-                                  Icons.restaurant_rounded,
-                                  size: 48,
-                                  color: Color(0xFF639BC6),
-                                ),
+                              width: double.infinity,
+                              gaplessPlayback: true,
+                            );
+                          }
+                        } catch (_) {}
+                        if (item.imageAsset.startsWith('http')) {
+                          return Image.network(
+                            item.imageAsset,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: const Color(0xFFEBF3F8),
+                              child: const Icon(
+                                Icons.restaurant_rounded,
+                                size: 48,
+                                color: Color(0xFF639BC6),
                               ),
                             ),
+                          );
+                        }
+                        return Image.asset(
+                          item.imageAsset,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                              color: const Color(0xFFEBF3F8),
+                              child: const Icon(
+                                Icons.restaurant_rounded,
+                                size: 48,
+                                color: Color(0xFF639BC6),
+                              ),
+                            ),
+                        );
+                      })(),
                     ),
                     // Nama Item di bawah gambar (rata tengah)
                     Padding(

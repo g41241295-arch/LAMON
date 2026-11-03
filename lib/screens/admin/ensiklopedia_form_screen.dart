@@ -1,6 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -47,7 +47,9 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
   bool _isRecommended = false;
 
   File? _imageFile;
+  String? _imageBase64Pending; // Base64 dari gambar baru yang dipilih
   String? _existingImageUrl;
+  String? _existingImageBase64; // Base64 yang sudah tersimpan di Firestore
 
   String? _namaMakananError;
   String? _kategoriError;
@@ -81,6 +83,7 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
     }
 
     _existingImageUrl = (e?.imageAsset != null && e!.imageAsset!.isNotEmpty) ? e.imageAsset : null;
+    _existingImageBase64 = (e?.imageBase64 != null && e!.imageBase64!.isNotEmpty) ? e.imageBase64 : null;
     _isRecommended = e?.isRecommended ?? false;
 
     _caloriesCtrl = TextEditingController(text: (e?.calories != null && e!.calories > 0) ? '${e.calories}' : '');
@@ -114,9 +117,9 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
     try {
       final picked = await ImagePicker().pickImage(
         source: ImageSource.gallery,
-        maxWidth: 1200,
-        maxHeight: 1200,
-        imageQuality: 85,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 70,
       );
       if (picked == null || !mounted) return;
 
@@ -127,14 +130,21 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
       }
 
       final file = File(picked.path);
-      final sizeBytes = await file.length();
-      if (sizeBytes > 2 * 1024 * 1024) {
-        _showError('Ukuran gambar melebihi 2MB. Silakan pilih gambar yang lebih kecil.');
+      final bytes = await file.readAsBytes();
+      final b64 = base64Encode(bytes);
+
+      // Tolak jika hasil Base64 > 500 KB
+      if (b64.length > 500 * 1024) {
+        _showError(
+          'Gambar terlalu besar setelah diproses (${(b64.length / 1024).toStringAsFixed(0)} KB). '
+          'Silakan pilih gambar lain yang lebih kecil.',
+        );
         return;
       }
 
       setState(() {
         _imageFile = file;
+        _imageBase64Pending = b64;
         _imageError = null;
       });
     } catch (e) {
@@ -142,38 +152,9 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
     }
   }
 
-  Future<String> _uploadImageToStorage(File file, String docId) async {
-    try {
-      final ext = file.path.split('.').last.toLowerCase();
-      final filename = '${DateTime.now().millisecondsSinceEpoch}_$docId.$ext';
-      final ref = FirebaseStorage.instance.ref().child('gastropedia_images/$filename');
-      final uploadTask = await ref.putFile(
-        file,
-        SettableMetadata(contentType: 'image/$ext'),
-      );
-      return await uploadTask.ref.getDownloadURL();
-    } on FirebaseException catch (e) {
-      debugPrint('[EnsiklopediaForm] Firebase Storage error: ${e.code} - ${e.message}');
-      throw AppException(
-        'Gagal mengunggah gambar ke Firebase Storage (${e.code}): ${e.message ?? 'Layanan belum aktif'}.\n\n'
-        'Langkah perbaikan di Firebase Console:\n'
-        '1. Buka Firebase Console > Build > Storage > klik "Get Started".\n'
-        '2. Pada tab "Rules", pastikan aturan mengizinkan admin untuk menulis, contoh:\n'
-        'rules_version = \'2\';\n'
-        'service firebase.storage {\n'
-        '  match /b/{bucket}/o {\n'
-        '    match /{allPaths=**} {\n'
-        '      allow read: if request.auth != null;\n'
-        '      allow write: if request.auth != null;\n'
-        '    }\n'
-        '  }\n'
-        '}'
-      );
-    } catch (e) {
-      debugPrint('[EnsiklopediaForm] Upload image error: $e');
-      throw AppException('Gagal mengunggah gambar: $e');
-    }
-  }
+  // Konversi file gambar ke Base64 string (sudah dilakukan di _pickImage)
+  // Method ini dipertahankan sebagai helper jika diperlukan di masa depan.
+  String? _getPendingBase64() => _imageBase64Pending;
 
   bool _validate() {
     bool ok = true;
@@ -199,7 +180,9 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
       ok = false;
     }
 
-    final hasImage = _imageFile != null || (_existingImageUrl != null && _existingImageUrl!.isNotEmpty);
+    final hasImage = _imageFile != null ||
+        (_existingImageUrl != null && _existingImageUrl!.isNotEmpty) ||
+        (_existingImageBase64 != null && _existingImageBase64!.isNotEmpty);
     if (!hasImage) {
       _imageError = 'Gambar wajib diunggah.';
       ok = false;
@@ -272,13 +255,10 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
 
     try {
       String imageUrl = _existingImageUrl ?? '';
-      if (_imageFile != null) {
-        setState(() => _isUploadingImage = true);
-        try {
-          imageUrl = await _uploadImageToStorage(_imageFile!, docId);
-        } finally {
-          if (mounted) setState(() => _isUploadingImage = false);
-        }
+      String imageBase64 = _existingImageBase64 ?? '';
+      if (_imageBase64Pending != null && _imageBase64Pending!.isNotEmpty) {
+        imageBase64 = _imageBase64Pending!;
+        imageUrl = ''; // hapus URL lama jika ada gambar baru
       }
 
       final manfaatList = _manfaatCtrl.text
@@ -319,6 +299,7 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
           updatedAt: now,
           status: widget.initialEntry?.status ?? 'terbit',
           imageAsset: imageUrl,
+          imageBase64: imageBase64.isNotEmpty ? imageBase64 : null,
           manfaat: manfaatList,
           kandungan: kandunganList,
           isRecommended: _isRecommended,
@@ -342,6 +323,7 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
           'definisiSingkat': deskripsiText,
           'penjelasanLengkap': deskripsiText,
           'imageAsset': imageUrl,
+          'imageBase64': imageBase64,
         }, SetOptions(merge: true));
 
         if (mounted) {
@@ -382,6 +364,7 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
           'definisiSingkat': deskripsiText,
           'penjelasanLengkap': deskripsiText,
           'imageAsset': imageUrl,
+          'imageBase64': imageBase64,
         }, SetOptions(merge: true));
 
         if (mounted) {
@@ -444,7 +427,9 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
       );
 
   Widget _buildImagePicker() {
-    final hasImage = _imageFile != null || (_existingImageUrl != null && _existingImageUrl!.isNotEmpty);
+    final hasImage = _imageFile != null ||
+        (_existingImageBase64 != null && _existingImageBase64!.isNotEmpty) ||
+        (_existingImageUrl != null && _existingImageUrl!.isNotEmpty);
 
     return GestureDetector(
       onTap: (_isSaving || _isUploadingImage) ? null : _pickImage,
@@ -471,7 +456,7 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Mengunggah gambar...',
+                      'Memproses gambar...',
                       style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.adminBlue),
                     ),
                   ],
@@ -484,19 +469,23 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                       fit: StackFit.expand,
                       children: [
                         if (_imageFile != null)
-                          Image.file(_imageFile!, fit: BoxFit.cover)
-                        else if (_existingImageUrl!.startsWith('http'))
+                          Image.file(_imageFile!, fit: BoxFit.cover, gaplessPlayback: true)
+                        else if (_existingImageBase64 != null && _existingImageBase64!.isNotEmpty)
+                          _buildBase64Image(_existingImageBase64!, BoxFit.cover)
+                        else if (_existingImageUrl != null && _existingImageUrl!.startsWith('http'))
                           Image.network(
                             _existingImageUrl!,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) => _buildUploadPlaceholder(),
                           )
-                        else
+                        else if (_existingImageUrl != null && _existingImageUrl!.isNotEmpty)
                           Image.asset(
                             _existingImageUrl!,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) => _buildUploadPlaceholder(),
-                          ),
+                          )
+                        else
+                          _buildUploadPlaceholder(),
                         // Tombol hapus di pojok kanan atas
                         Positioned(
                           top: 8,
@@ -507,7 +496,9 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                                 : () {
                                     setState(() {
                                       _imageFile = null;
+                                      _imageBase64Pending = null;
                                       _existingImageUrl = null;
+                                      _existingImageBase64 = null;
                                     });
                                   },
                             child: Container(
@@ -553,6 +544,15 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
     );
   }
 
+  Widget _buildBase64Image(String b64, BoxFit fit) {
+    try {
+      final bytes = base64Decode(b64);
+      return Image.memory(bytes, fit: fit, gaplessPlayback: true);
+    } catch (_) {
+      return _buildUploadPlaceholder();
+    }
+  }
+
   Widget _buildUploadPlaceholder() {
     return Center(
       child: Column(
@@ -574,7 +574,7 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
           ),
           const SizedBox(height: 2),
           Text(
-            'Format JPG/PNG, maks. 2MB',
+            'Format JPG/PNG, maks. ukuran 800×800 px',
             style: GoogleFonts.poppins(
               fontSize: 11,
               color: AppColors.neutralGray,

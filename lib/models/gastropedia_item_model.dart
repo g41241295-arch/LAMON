@@ -39,6 +39,7 @@ class GastropediaItem {
   final String name;
   final GastropediaCategory category;
   final String imageAsset;
+  final String imageBase64;
   final String deskripsi;
   final List<String> manfaat;
   final List<String> kandungan;
@@ -55,6 +56,7 @@ class GastropediaItem {
     required this.name,
     required this.category,
     required this.imageAsset,
+    this.imageBase64 = '',
     required this.deskripsi,
     required this.manfaat,
     required this.kandungan,
@@ -152,6 +154,7 @@ class GastropediaItem {
       name: data['istilah']?.toString() ?? data['name']?.toString() ?? '',
       category: cat,
       imageAsset: img,
+      imageBase64: data['imageBase64']?.toString() ?? '',
       deskripsi: desc,
       manfaat: parseList(data['manfaat']),
       kandungan: parseList(data['kandungan']),

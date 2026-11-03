@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -405,12 +406,24 @@ class _EntryCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   color: AppColors.adminBlueDark,
-                  child: entry.imageAsset != null && entry.imageAsset!.isNotEmpty
-                      ? (entry.imageAsset!.startsWith('http')
-                          ? Image.network(
-                              entry.imageAsset!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Center(
+                  child: (() {
+                    try {
+                      final b64 = entry.imageBase64;
+                      if (b64 != null && b64.isNotEmpty) {
+                        return Image.memory(
+                          base64Decode(b64),
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                        );
+                      }
+                    } catch (_) {}
+                    final url = entry.imageAsset;
+                    if (url != null && url.isNotEmpty) {
+                      if (url.startsWith('http')) {
+                        return Image.network(
+                          url,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Center(
                                 child: Text(
                                   firstLetter,
                                   style: GoogleFonts.poppins(
@@ -420,11 +433,12 @@ class _EntryCard extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                            )
-                          : Image.asset(
-                              entry.imageAsset!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Center(
+                        );
+                      }
+                      return Image.asset(
+                        url,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Center(
                                 child: Text(
                                   firstLetter,
                                   style: GoogleFonts.poppins(
@@ -434,17 +448,19 @@ class _EntryCard extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                            ))
-                      : Center(
-                          child: Text(
-                            firstLetter,
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
+                      );
+                    }
+                    return Center(
+                      child: Text(
+                        firstLetter,
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
                         ),
+                      ),
+                    );
+                  })(),
                 ),
               ),
               const SizedBox(width: 12),

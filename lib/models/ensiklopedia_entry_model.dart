@@ -22,6 +22,7 @@ class EnsiklopediaEntry {
   // Field baru untuk integrasi Gastropedia pengguna
   final String status; // 'terbit' | 'draft'
   final String? imageAsset;
+  final String? imageBase64;
   final List<String> manfaat;
   final List<String> kandungan;
   final bool isRecommended;
@@ -49,6 +50,7 @@ class EnsiklopediaEntry {
     this.updatedAt,
     this.status = 'terbit',
     this.imageAsset,
+    this.imageBase64,
     this.manfaat = const [],
     this.kandungan = const [],
     this.isRecommended = false,
@@ -90,6 +92,7 @@ class EnsiklopediaEntry {
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
       status: data['status']?.toString() ?? 'terbit',
       imageAsset: data['imageAsset']?.toString() ?? data['imageUrl']?.toString(),
+      imageBase64: data['imageBase64']?.toString(),
       manfaat: parseStringList(data['manfaat']),
       kandungan: parseStringList(data['kandungan']),
       isRecommended: data['isRecommended'] == true,
@@ -119,6 +122,7 @@ class EnsiklopediaEntry {
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
       'status': status,
       'imageAsset': imageAsset ?? '',
+      'imageBase64': imageBase64 ?? '',
       'manfaat': manfaat,
       'kandungan': kandungan,
       'isRecommended': isRecommended,
