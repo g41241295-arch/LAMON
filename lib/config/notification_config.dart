@@ -8,7 +8,7 @@ class NotificationConfig {
 
   /// URL endpoint serverless function relay Vercel.
   /// Contoh: 'https://lamon-notification-relay.vercel.app/api/notify'
-  static const String relayEndpoint = '';
+  static const String relayEndpoint = 'https://notificationrelay.vercel.app/api/notify';
 
   /// Apakah relay endpoint sudah dikonfigurasi secara valid.
   static bool get isConfigured {
