@@ -13,8 +13,11 @@ class ConsultationConstants {
   /// payment gateway sesungguhnya.
   static const String vaPrefix = '88099';
 
-  /// Durasi batas waktu pembayaran (24 jam).
-  static const Duration paymentDeadlineDuration = Duration(hours: 24);
+  /// Durasi batas waktu pembayaran (1 jam).
+  static const Duration kPaymentWindow = Duration(hours: 1);
+
+  /// Durasi batas waktu pembayaran (kompatibilitas backward).
+  static const Duration paymentDeadlineDuration = kPaymentWindow;
 
   /// Delay simulasi balasan dokter (3 detik setelah pasien kirim pesan).
   /// TODO(chat-realtime): Hapus simulasi ini dan ganti dengan sistem

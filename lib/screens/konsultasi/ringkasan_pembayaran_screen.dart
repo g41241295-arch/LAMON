@@ -139,6 +139,26 @@ class _RingkasanPembayaranScreenState
 
                   // ── Rincian biaya ──
                   _buildFeeSection(),
+                  const SizedBox(height: 10),
+
+                  // Catatan batas waktu pembayaran (A.4)
+                  Row(
+                    children: const [
+                      Icon(Icons.info_outline_rounded,
+                          size: 14, color: AppColors.neutralGray),
+                      SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Batas waktu pembayaran 1 jam setelah Virtual Account dibuat.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.neutralGray,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 20),
 
                   // ── Metode pembayaran ──
@@ -424,6 +444,8 @@ class _RingkasanPembayaranScreenState
     final nav = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
+      final now = DateTime.now();
+      final scheduledDate = DateTime(now.year, now.month, now.day);
       final consultationId = await _consultationService.createConsultation(
         doctorId: _doctor.id,
         doctorName: _doctor.name,
@@ -432,6 +454,7 @@ class _RingkasanPembayaranScreenState
         sessionFee: _doctor.price,
         paymentMethod: _selectedMethodId!,
         paymentMethodName: _selectedMethodName!,
+        scheduledDate: scheduledDate,
       );
       if (mounted) {
         nav.pushNamed(

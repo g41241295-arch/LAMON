@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../constants/app_colors.dart';
@@ -19,39 +20,142 @@ class VirtualAccountScreen extends StatefulWidget {
   State<VirtualAccountScreen> createState() => _VirtualAccountScreenState();
 }
 
-class _VirtualAccountScreenState extends State<VirtualAccountScreen> {
+class _VirtualAccountScreenState extends State<VirtualAccountScreen>
+    with WidgetsBindingObserver {
   final ConsultationService _consultationService = ConsultationService();
   ConsultationModel? _consultation;
   bool _isLoading = true;
   bool _isConfirming = false;
 
+  Timer? _countdownTimer;
+  Duration _remaining = Duration.zero;
+  bool _isExpired = false;
+  bool _hasMarkedExpired = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadConsultation();
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _recalculateRemaining();
+    }
+  }
+
   Future<void> _loadConsultation() async {
-    final data =
-        await _consultationService.fetchById(widget.consultationId);
+    final data = await _consultationService.fetchById(widget.consultationId);
     if (mounted) {
       setState(() {
         _consultation = data;
         _isLoading = false;
       });
+      _startCountdownTimer();
     }
+  }
+
+  void _startCountdownTimer() {
+    _countdownTimer?.cancel();
+    _recalculateRemaining();
+    if (!_isExpired) {
+      _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        _recalculateRemaining();
+      });
+    }
+  }
+
+  void _recalculateRemaining() {
+    if (_consultation == null) return;
+
+    if (_consultation!.isExpired) {
+      _countdownTimer?.cancel();
+      if (!_isExpired && mounted) {
+        setState(() {
+          _isExpired = true;
+          _remaining = Duration.zero;
+        });
+      }
+      return;
+    }
+
+    final expiresAt = _consultation!.effectivePaymentExpiresAt;
+    final now = DateTime.now();
+    final diff = expiresAt.difference(now);
+
+    if (diff.isNegative || diff == Duration.zero) {
+      _countdownTimer?.cancel();
+      if (!_isExpired && mounted) {
+        setState(() {
+          _remaining = Duration.zero;
+          _isExpired = true;
+        });
+      }
+      _handleTimeExpired();
+    } else {
+      if (mounted) {
+        setState(() {
+          _remaining = diff;
+          _isExpired = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleTimeExpired() async {
+    if (_hasMarkedExpired) return;
+    _hasMarkedExpired = true;
+    try {
+      await _consultationService.markAsExpired(widget.consultationId);
+    } catch (e) {
+      debugPrint('[VirtualAccountScreen] Error markAsExpired: $e');
+    }
+  }
+
+  void _onBuatPesananBaru(BuildContext context) {
+    // Kembali ke daftar dokter
+    Navigator.of(context).popUntil((route) =>
+        route.isFirst ||
+        route.settings.name == '/konsultasi' ||
+        route.settings.name == '/beranda');
   }
 
   Future<void> _onMengerti(BuildContext context) async {
     if (_isConfirming) return;
+
+    // Guard (A.6): Periksa lagi batas waktu pembayaran
+    if (_consultation != null) {
+      final now = DateTime.now();
+      if (_consultation!.effectivePaymentExpiresAt.isBefore(now)) {
+        setState(() {
+          _isExpired = true;
+          _remaining = Duration.zero;
+        });
+        _handleTimeExpired();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Waktu pembayaran telah habis. Silakan buat pesanan baru.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() => _isConfirming = true);
-    // Capture navigator dan messenger sebelum async gap
     final nav = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      // SIMULASI: tandai pembayaran sebagai lunas
-      // TODO(payment-gateway): Hapus ini. Status paid seharusnya di-set
-      // melalui webhook dari payment gateway (Midtrans/Xendit), bukan dari client.
       await _consultationService.markAsPaid(widget.consultationId);
       if (mounted) {
         nav.pushNamed(
@@ -95,13 +199,31 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen> {
               children: [
                 const SizedBox(height: 8),
 
-                // ── Ikon sukses (sama persis dengan alur Skrining / Prediksi) ──
-                const GreenCheckmark3DBadge(size: 90),
+                // ── Ikon status ──
+                _isExpired
+                    ? Container(
+                        width: 90,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFEBEE),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: const Color(0xFFFFCDD2), width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.timer_off_rounded,
+                          color: Color(0xFFD32F2F),
+                          size: 48,
+                        ),
+                      )
+                    : const GreenCheckmark3DBadge(size: 90),
                 const SizedBox(height: 16),
 
-                const Text(
-                  'Virtual Account Berhasil Dibuat!',
-                  style: TextStyle(
+                Text(
+                  _isExpired
+                      ? 'Waktu Pembayaran Habis'
+                      : 'Virtual Account Berhasil Dibuat!',
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
                     color: AppColors.primaryText,
@@ -109,16 +231,22 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'Salin nomor VA di bawah dan selesaikan pembayaran',
-                  style: TextStyle(
+                Text(
+                  _isExpired
+                      ? 'Batas waktu 1 jam telah terlewati. Silakan buat pesanan baru.'
+                      : 'Salin nomor VA di bawah dan selesaikan pembayaran',
+                  style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.neutralGray,
                     fontWeight: FontWeight.w500,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
+
+                // ── Kartu Hitung Mundur Batas Waktu Pembayaran (A.3) ──
+                _buildCountdownCard(),
+                const SizedBox(height: 16),
 
                 // ── Kartu Nomor VA ──
                 _buildVACard(context, c.virtualAccountNumber, c.paymentMethodName),
@@ -132,7 +260,7 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen> {
           ),
         ),
 
-        // ── Tombol Saya Mengerti ──
+        // ── Tombol Bawah (Saya Mengerti / Buat Pesanan Baru) ──
         Container(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
           decoration: BoxDecoration(
@@ -148,16 +276,21 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen> {
           child: SafeArea(
             top: false,
             child: Semantics(
-              label: 'Saya Mengerti dan lanjutkan',
+              label: _isExpired ? 'Buat Pesanan Baru' : 'Saya Mengerti dan lanjutkan',
               button: true,
               child: SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed:
-                      _isConfirming ? null : () => _onMengerti(context),
+                  onPressed: _isConfirming
+                      ? null
+                      : (_isExpired
+                          ? () => _onBuatPesananBaru(context)
+                          : () => _onMengerti(context)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: _isExpired
+                        ? AppColors.primary
+                        : AppColors.primary,
                     foregroundColor: Colors.white,
                     disabledBackgroundColor:
                         AppColors.primary.withValues(alpha: 0.5),
@@ -176,9 +309,9 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen> {
                                 AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : const Text(
-                          'Saya Mengerti',
-                          style: TextStyle(
+                      : Text(
+                          _isExpired ? 'Buat Pesanan Baru' : 'Saya Mengerti',
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
@@ -189,6 +322,102 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Kartu hitung mundur (A.3 & A.5)
+  Widget _buildCountdownCard() {
+    if (_isExpired) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFEBEE),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFFFCDD2), width: 1.2),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.warning_amber_rounded,
+                color: Color(0xFFD32F2F), size: 22),
+            SizedBox(width: 8),
+            Text(
+              'Waktu pembayaran habis',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFFD32F2F),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final isUrgent = _remaining < const Duration(minutes: 10);
+    final minutes = _remaining.inMinutes;
+    final seconds = _remaining.inSeconds % 60;
+    final timeStr =
+        '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+
+    final bgColor = isUrgent ? const Color(0xFFFFF3E0) : const Color(0xFFE8F4F8);
+    final borderColor =
+        isUrgent ? const Color(0xFFFFB74D) : const Color(0xFFBCE0F0);
+    final textColor =
+        isUrgent ? const Color(0xFFE65100) : AppColors.primary;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.timer_outlined, color: textColor, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Selesaikan pembayaran dalam',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryText,
+                ),
+              ),
+            ],
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: isUrgent ? const Color(0xFFFFE0B2) : Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: borderColor, width: 1),
+            ),
+            child: Text(
+              timeStr,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: textColor,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -284,7 +513,7 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen> {
   }
 
   Widget _buildDetailCard(ConsultationModel c) {
-    final deadlineStr = AppDateFormatter.formatPaymentDeadline(c.paymentDeadline);
+    final deadlineStr = AppDateFormatter.formatPaymentDeadline(c.effectivePaymentExpiresAt);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),

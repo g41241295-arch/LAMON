@@ -80,16 +80,40 @@ class DoctorCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 3),
-                        Text(
-                          doctor.specialtyDisplay,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.neutralGray,
-                            fontWeight: FontWeight.w500,
+                        if (isRecommended) ...[
+                          Text(
+                            doctor.specialty,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.neutralGray,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${doctor.consultationsHandled} konsultasi ditangani • ${doctor.experienceYears} tahun pengalaman',
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ] else ...[
+                          Text(
+                            doctor.specialtyDisplay,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.neutralGray,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                         const SizedBox(height: 8),
                         // Baris Chip Harga & Penanda Rekomendasi
                         Row(
@@ -123,13 +147,13 @@ class DoctorCard extends StatelessWidget {
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.star_rounded,
+                                  children: const [
+                                    Icon(Icons.star_rounded,
                                         size: 13, color: Color(0xFFF57F17)),
-                                    const SizedBox(width: 3),
+                                    SizedBox(width: 3),
                                     Text(
-                                      '${doctor.experienceYears} thn exp',
-                                      style: const TextStyle(
+                                      'Rekomendasi',
+                                      style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w800,
                                         color: Color(0xFFE65100),

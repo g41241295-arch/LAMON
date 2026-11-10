@@ -44,6 +44,7 @@ class DoctorModel {
   final String name;
   final String specialty;
   final int experienceYears;
+  final int consultationsHandled;
   final String photoUrl;
   final int price;
   final List<OperatingHour> operatingHours;
@@ -60,6 +61,7 @@ class DoctorModel {
     required this.name,
     required this.specialty,
     required this.experienceYears,
+    this.consultationsHandled = 0,
     required this.photoUrl,
     required this.price,
     required this.operatingHours,
@@ -74,6 +76,10 @@ class DoctorModel {
 
   /// Formatted specialty + experience string untuk tampilan kartu.
   String get specialtyDisplay => '$specialty • $experienceYears tahun';
+
+  /// Formatted subtitle profil dokter: "Dokter Umum • 10 tahun • N konsultasi ditangani".
+  String get profileSubtitle =>
+      '$specialty • $experienceYears tahun • $consultationsHandled konsultasi ditangani';
 
   /// Jam operasional pertama untuk ditampilkan di kartu.
   OperatingHour? get primaryHour =>
@@ -111,6 +117,7 @@ class DoctorModel {
     String? name,
     String? specialty,
     int? experienceYears,
+    int? consultationsHandled,
     String? photoUrl,
     int? price,
     List<OperatingHour>? operatingHours,
@@ -127,6 +134,7 @@ class DoctorModel {
       name: name ?? this.name,
       specialty: specialty ?? this.specialty,
       experienceYears: experienceYears ?? this.experienceYears,
+      consultationsHandled: consultationsHandled ?? this.consultationsHandled,
       photoUrl: photoUrl ?? this.photoUrl,
       price: price ?? this.price,
       operatingHours: operatingHours ?? this.operatingHours,
@@ -148,6 +156,7 @@ class DoctorModel {
       name: data['name'] as String? ?? '',
       specialty: data['specialty'] as String? ?? '',
       experienceYears: (data['experienceYears'] as num?)?.toInt() ?? 0,
+      consultationsHandled: (data['consultationsHandled'] as num?)?.toInt() ?? 0,
       photoUrl: data['photoUrl'] as String? ?? '',
       price: (data['price'] as num?)?.toInt() ?? 0,
       operatingHours: rawHours
@@ -167,6 +176,7 @@ class DoctorModel {
         'name': name,
         'specialty': specialty,
         'experienceYears': experienceYears,
+        'consultationsHandled': consultationsHandled,
         'photoUrl': photoUrl,
         'price': price,
         'operatingHours': operatingHours.map((h) => h.toMap()).toList(),

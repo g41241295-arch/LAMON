@@ -93,7 +93,7 @@ service cloud.firestore {
                            'status', 'doctorConfirmedAt', 'lastMessageText', 
                            'lastMessageAt', 'lastMessageSenderType', 
                            'unreadForDoctor', 'unreadForPatient', 'lastReadByDoctorAt',
-                           'completedAt'
+                           'completedAt', 'doctorRecommendation'
                          ])
                       && (
                         !('status' in request.resource.data.diff(resource.data).affectedKeys()) ||
@@ -177,16 +177,19 @@ service cloud.firestore {
       allow read: if isSignedIn();
 
       // Dokter hanya dapat mengupdate profil dirinya sendiri dan field tertentu saja
-      allow update: if isDoctor() 
-                    && (
-                      (myDoctorId() != '' && myDoctorId() == doctorId) ||
-                      (doctorId == request.auth.uid) ||
-                      (('uid' in resource.data) && resource.data.uid == request.auth.uid)
-                    )
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                         'name', 'strNumber', 'gender', 'updatedAt', 'photoUrl',
-                         'photoBase64', 'photoUpdatedAt'
-                       ]);
+      allow update: if (isAdmin()) ||
+                    (
+                      isDoctor() 
+                      && (
+                        (myDoctorId() != '' && myDoctorId() == doctorId) ||
+                        (doctorId == request.auth.uid) ||
+                        (('uid' in resource.data) && resource.data.uid == request.auth.uid)
+                      )
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                           'name', 'strNumber', 'gender', 'updatedAt', 'photoUrl',
+                           'photoBase64', 'photoUpdatedAt', 'consultationsHandled', 'experienceYears'
+                         ])
+                    );
 
       allow create, delete: if false;
 

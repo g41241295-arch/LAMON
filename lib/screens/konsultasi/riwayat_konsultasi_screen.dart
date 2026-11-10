@@ -492,14 +492,19 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                               color: AppColors.primary,
                             ),
                             const SizedBox(width: 5),
-                            Text(
-                              item.scheduledTime.isNotEmpty
-                                  ? item.scheduledTime
-                                  : 'Sesuai Jadwal',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
+                            Expanded(
+                              child: Text(
+                                AppDateFormatter.formatScheduledDateTime(
+                                  item.effectiveScheduledDate,
+                                  item.scheduledTime,
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -739,14 +744,19 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                           color: AppColors.primary,
                         ),
                         const SizedBox(width: 5),
-                        Text(
-                          item.scheduledTime.isNotEmpty
-                              ? item.scheduledTime
-                              : 'Sesuai Jadwal',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
+                        Expanded(
+                          child: Text(
+                            AppDateFormatter.formatScheduledDateTime(
+                              item.effectiveScheduledDate,
+                              item.scheduledTime,
+                            ),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -756,6 +766,103 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
               ),
             ],
           ),
+
+          // Cuplikan Rekomendasi Dokter (D.6 & D.7)
+          if (item.doctorRecommendation != null &&
+              item.doctorRecommendation!.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18)),
+                    title: const Row(
+                      children: [
+                        Icon(Icons.assignment_turned_in_rounded,
+                            color: AppColors.successGreen, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Rekomendasi Dokter',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryText,
+                          ),
+                        ),
+                      ],
+                    ),
+                    content: SingleChildScrollView(
+                      child: Text(
+                        item.doctorRecommendation!,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          height: 1.5,
+                          color: AppColors.primaryText,
+                        ),
+                      ),
+                    ),
+                    actions: [
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Tutup'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.assignment_turned_in_rounded,
+                            size: 13, color: AppColors.successGreen),
+                        SizedBox(width: 5),
+                        Text(
+                          'Rekomendasi Dokter',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF166534),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      item.doctorRecommendation!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF15803D),
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
 
           const SizedBox(height: 12),
           const Divider(height: 1, color: Color(0xFFEEF3F6)),

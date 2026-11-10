@@ -28,9 +28,74 @@ class ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final timeStr = _formatTime(message.sentAt);
+
+    // Kartu Rekomendasi Dokter khusus (D.4)
+    if (message.type == 'consultation_summary') {
+      return Center(
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0FDF4),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF86EFAC), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: const [
+                  Icon(Icons.medical_information_rounded,
+                      color: Color(0xFF15803D), size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Rekomendasi Dokter',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF15803D),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message.text,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.primaryText,
+                  height: 1.45,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Align(
+                alignment: Alignment.bottomRight,
+                child: Text(
+                  timeStr,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.neutralGray,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final isMe = (currentUserRole == 'doctor' && message.isDoctor) ||
         (currentUserRole == 'patient' && message.isPatient);
-    final timeStr = _formatTime(message.sentAt);
 
     // Cek apakah pesan sudah dibaca lawan bicara
     final isRead = lastReadByPeerAt != null &&

@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
@@ -31,6 +31,10 @@ class _DaftarDokterScreenState extends State<DaftarDokterScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    // Best-effort (A.8): Bersihkan konsultasi pending yang sudah lewat batas waktu
+    _consultationService.expirePastPendingConsultations();
+    // Sinkronisasi tahun pengalaman dokter (B.4)
+    _doctorService.syncDoctorExperienceYears();
     // Segarkan otomatis tiap 1 menit agar dokter hilang tepat saat slot terakhirnya berakhir (U2.5)
     _periodicTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) setState(() {});

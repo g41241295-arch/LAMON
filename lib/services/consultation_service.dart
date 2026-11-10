@@ -67,6 +67,7 @@ class ConsultationService {
     required int sessionFee,
     required String paymentMethod,
     required String paymentMethodName,
+    DateTime? scheduledDate,
   }) async {
     final uid = _uid;
     final ref = _consultationsRef;
@@ -75,9 +76,10 @@ class ConsultationService {
     }
 
     final now = DateTime.now();
+    final effectiveScheduledDate = scheduledDate ?? DateTime(now.year, now.month, now.day);
     final orderId = _generateOrderId(now);
     final vaNumber = _generateVA(now);
-    final deadline = now.add(ConsultationConstants.paymentDeadlineDuration);
+    final expiresAt = now.add(ConsultationConstants.kPaymentWindow);
     final totalFee = sessionFee + ConsultationConstants.serviceFee;
 
     // Ambil data pasien dari users/{uid} untuk snapshot data konsultasi
@@ -148,7 +150,9 @@ class ConsultationService {
       virtualAccountNumber: vaNumber,
       orderId: orderId,
       paymentStatus: PaymentStatus.pending,
-      paymentDeadline: deadline,
+      paymentDeadline: expiresAt,
+      paymentExpiresAt: expiresAt,
+      scheduledDate: effectiveScheduledDate,
       createdAt: now,
       patientUid: uid,
       patientName: patientName,
@@ -239,11 +243,26 @@ class ConsultationService {
   }
 
   /// Menandai status pembayaran menjadi "paid" dan status "waiting".
-  Future<void> markAsPaid(String consultationId) async {
+  /// Guard (A.6): Memeriksa batas waktu pembayaran. Jika waktu habis,
+  /// status di-set ke 'expired' dan pembayaran ditolak.
+  Future<void> markAsPaid(String consultationId, {String? patientUid}) async {
     try {
-      final ref = _consultationsRef;
-      if (ref == null) throw Exception('User belum login.');
-      await ref.doc(consultationId).update({
+      final docRef = _consultationDocRef(consultationId, patientUid);
+      if (docRef == null) throw Exception('User belum login atau referensi tidak valid.');
+
+      final docSnap = await docRef.get();
+      if (!docSnap.exists || docSnap.data() == null) {
+        throw Exception('Data konsultasi tidak ditemukan.');
+      }
+
+      final data = docSnap.data()!;
+      final expiresTimestamp = data['paymentExpiresAt'] as Timestamp?;
+      if (expiresTimestamp != null && expiresTimestamp.toDate().isBefore(DateTime.now())) {
+        await docRef.update({'paymentStatus': PaymentStatus.expired.value});
+        throw Exception('Waktu pembayaran telah habis.');
+      }
+
+      await docRef.update({
         'paymentStatus': PaymentStatus.paid.value,
         'status': 'waiting',
       });
@@ -251,6 +270,58 @@ class ConsultationService {
     } catch (e) {
       debugPrint('[ConsultationService] Gagal markAsPaid: $e');
       rethrow;
+    }
+  }
+
+  /// Menandai konsultasi menjadi "expired" (idempoten).
+  Future<void> markAsExpired(String consultationId, {String? patientUid}) async {
+    try {
+      final docRef = _consultationDocRef(consultationId, patientUid);
+      if (docRef == null) return;
+      await docRef.update({
+        'paymentStatus': PaymentStatus.expired.value,
+      });
+      debugPrint('[ConsultationService] Konsultasi $consultationId ditandai expired.');
+    } catch (e) {
+      debugPrint('[ConsultationService] Gagal markAsExpired: $e');
+    }
+  }
+
+  /// Best-effort (A.8): Memeriksa dan menandai konsultasi berstatus pending milik pasien
+  /// yang sudah lewat paymentExpiresAt menjadi 'expired'.
+  Future<void> expirePastPendingConsultations({String? patientUid}) async {
+    final uid = patientUid ?? _uid;
+    if (uid == null || uid.isEmpty) return;
+
+    try {
+      final snap = await _db
+          .collection('users')
+          .doc(uid)
+          .collection('consultations')
+          .where('paymentStatus', isEqualTo: 'pending')
+          .limit(20)
+          .get();
+
+      final now = DateTime.now();
+      final batch = _db.batch();
+      bool hasUpdates = false;
+
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        final expTs = data['paymentExpiresAt'] as Timestamp?;
+        // A.9: Data lama tanpa paymentExpiresAt dianggap tanpa batas waktu (jangan diubah)
+        if (expTs != null && expTs.toDate().isBefore(now)) {
+          batch.update(doc.reference, {'paymentStatus': PaymentStatus.expired.value});
+          hasUpdates = true;
+        }
+      }
+
+      if (hasUpdates) {
+        await batch.commit();
+        debugPrint('[ConsultationService] Batch expire pending consultations selesai.');
+      }
+    } catch (e) {
+      debugPrint('[ConsultationService] expirePastPendingConsultations error (silent): $e');
     }
   }
 
@@ -308,6 +379,100 @@ class ConsultationService {
     }
   }
 
+  /// Pop-up dan transaksi penyelesaian konsultasi oleh dokter (D.2):
+  /// - Baca consultation; jika sudah completed -> batalkan transaksi ("Konsultasi sudah selesai").
+  /// - Update consultation (status 'completed', completedAt serverTimestamp, doctorRecommendation,
+  ///   lastMessageText "Konsultasi selesai", lastMessageAt serverTimestamp, lastMessageSenderType 'doctor',
+  ///   unreadForPatient +1).
+  /// - Tulis dokumen pesan ringkasan di sub-koleksi messages (senderType 'doctor', type 'consultation_summary', text = rekomendasi).
+  /// - Increment doctors/{doctorId}.consultationsHandled sebesar 1 DALAM transaksi yang sama.
+  Future<void> completeConsultationWithRecommendation({
+    required String consultationId,
+    required String recommendation,
+    required String doctorId,
+    String? patientUid,
+  }) async {
+    String pUid = (patientUid ?? '').trim();
+    if (pUid.isEmpty) {
+      final consult = await fetchById(consultationId);
+      pUid = consult?.patientUid ?? '';
+    }
+    if (pUid.isEmpty) {
+      throw Exception('patientUid tidak ditemukan untuk konsultasi $consultationId');
+    }
+
+    final consultationDocRef = _consultationDocRef(consultationId, pUid);
+    if (consultationDocRef == null) {
+      throw Exception('Referensi konsultasi tidak valid.');
+    }
+
+    final doctorDocRef = _db.collection('doctors').doc(doctorId);
+    final messagesColRef = consultationDocRef.collection('messages');
+    final newMessageDocRef = messagesColRef.doc();
+
+    await _db.runTransaction((transaction) async {
+      final consultSnap = await transaction.get(consultationDocRef);
+      if (!consultSnap.exists) {
+        throw Exception('Data konsultasi tidak ditemukan.');
+      }
+      final consultData = consultSnap.data() ?? {};
+      final currentStatus = consultData['status'] as String?;
+      if (currentStatus == 'completed') {
+        throw Exception('Konsultasi sudah selesai.');
+      }
+
+      // 1. Update consultation
+      transaction.update(consultationDocRef, {
+        'status': 'completed',
+        'completedAt': FieldValue.serverTimestamp(),
+        'doctorRecommendation': recommendation.trim(),
+        'lastMessageText': 'Konsultasi selesai',
+        'lastMessageAt': FieldValue.serverTimestamp(),
+        'lastMessageSenderType': 'doctor',
+        'unreadForPatient': FieldValue.increment(1),
+      });
+
+      // 2. Write consultation_summary message
+      transaction.set(newMessageDocRef, {
+        'senderType': 'doctor',
+        'type': 'consultation_summary',
+        'text': recommendation.trim(),
+        'sentAt': FieldValue.serverTimestamp(),
+      });
+
+      // 3. Increment doctor consultationsHandled
+      final doctorSnap = await transaction.get(doctorDocRef);
+      if (doctorSnap.exists) {
+        transaction.update(doctorDocRef, {
+          'consultationsHandled': FieldValue.increment(1),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+    });
+
+    debugPrint('[ConsultationService] Transaksi penyelesaian konsultasi $consultationId sukses.');
+
+    // Relay notifikasi
+    NotificationRelayClient.instance.notify(
+      patientUid: pUid,
+      consultationId: consultationId,
+    );
+  }
+
+  /// Menandai pop-up rekomendasi selesai telah dilihat oleh pasien (D.5).
+  Future<void> markCompletionSeenByPatient({
+    required String consultationId,
+    String? patientUid,
+  }) async {
+    final docRef = _consultationDocRef(consultationId, patientUid);
+    if (docRef == null) return;
+    try {
+      await docRef.update({'completionSeenByPatient': true});
+    } catch (e) {
+      debugPrint('[ConsultationService] Gagal markCompletionSeenByPatient: $e');
+    }
+  }
+
   /// Stream seluruh konsultasi milik pasien (baik active, waiting, maupun completed),
   /// tanpa filter server-side agar tidak memerlukan composite index dan live real-time.
   Stream<List<ConsultationModel>> watchAllPatientConsultations({String? patientUid}) {
@@ -324,6 +489,7 @@ class ConsultationService {
         .map((snap) {
       return snap.docs
           .map((doc) => ConsultationModel.fromFirestore(doc))
+          .where((c) => c.paymentStatus != PaymentStatus.expired)
           .toList();
     });
   }

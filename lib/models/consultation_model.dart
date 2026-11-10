@@ -3,9 +3,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// Status pembayaran konsultasi.
 enum PaymentStatus {
   pending,
-  paid;
+  paid,
+  expired;
 
-  String get value => name; // "pending" / "paid"
+  String get value => name; // "pending" / "paid" / "expired"
 
   static PaymentStatus fromString(String? s) {
     return PaymentStatus.values.firstWhere(
@@ -66,6 +67,10 @@ class ConsultationModel {
   final PaymentStatus paymentStatus;
   final DateTime paymentDeadline;
   final DateTime createdAt;
+  final DateTime? paymentExpiresAt;
+  final DateTime? scheduledDate;
+  final String? doctorRecommendation;
+  final bool completionSeenByPatient;
 
   // Field Hak Akses Dokter (Null-safe / backwards compatible)
   final String patientUid;
@@ -101,6 +106,10 @@ class ConsultationModel {
     required this.paymentStatus,
     required this.paymentDeadline,
     required this.createdAt,
+    this.paymentExpiresAt,
+    this.scheduledDate,
+    this.doctorRecommendation,
+    this.completionSeenByPatient = false,
     this.patientUid = '',
     this.patientName = '',
     this.patientGender,
@@ -118,6 +127,15 @@ class ConsultationModel {
     this.lastReadByDoctorAt,
     this.lastReadByPatientAt,
   });
+
+  /// Konsultasi sudah expired batas waktu pembayaran.
+  bool get isExpired => paymentStatus == PaymentStatus.expired;
+
+  /// Batas waktu pembayaran yang efektif (fallback ke paymentDeadline jika paymentExpiresAt null).
+  DateTime get effectivePaymentExpiresAt => paymentExpiresAt ?? paymentDeadline;
+
+  /// Tanggal konsultasi yang efektif (fallback ke createdAt jika scheduledDate null).
+  DateTime get effectiveScheduledDate => scheduledDate ?? createdAt;
 
   /// Konsultasi sedang menunggu konfirmasi dokter.
   bool get isWaiting => status == 'waiting';
@@ -187,6 +205,10 @@ class ConsultationModel {
     PaymentStatus? paymentStatus,
     DateTime? paymentDeadline,
     DateTime? createdAt,
+    DateTime? paymentExpiresAt,
+    DateTime? scheduledDate,
+    String? doctorRecommendation,
+    bool? completionSeenByPatient,
     String? patientUid,
     String? patientName,
     String? patientGender,
@@ -220,6 +242,11 @@ class ConsultationModel {
       paymentStatus: paymentStatus ?? this.paymentStatus,
       paymentDeadline: paymentDeadline ?? this.paymentDeadline,
       createdAt: createdAt ?? this.createdAt,
+      paymentExpiresAt: paymentExpiresAt ?? this.paymentExpiresAt,
+      scheduledDate: scheduledDate ?? this.scheduledDate,
+      doctorRecommendation: doctorRecommendation ?? this.doctorRecommendation,
+      completionSeenByPatient:
+          completionSeenByPatient ?? this.completionSeenByPatient,
       patientUid: patientUid ?? this.patientUid,
       patientName: patientName ?? this.patientName,
       patientGender: patientGender ?? this.patientGender,
@@ -271,6 +298,11 @@ class ConsultationModel {
       paymentDeadline: (data['paymentDeadline'] as Timestamp?)?.toDate() ??
           DateTime.now().add(const Duration(hours: 24)),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      paymentExpiresAt: (data['paymentExpiresAt'] as Timestamp?)?.toDate(),
+      scheduledDate: (data['scheduledDate'] as Timestamp?)?.toDate(),
+      doctorRecommendation: data['doctorRecommendation'] as String?,
+      completionSeenByPatient:
+          data['completionSeenByPatient'] as bool? ?? false,
       patientUid: derivedPatientUid,
       patientName: data['patientName'] as String? ?? '',
       patientGender: data['patientGender'] as String?,
@@ -305,6 +337,13 @@ class ConsultationModel {
         'orderId': orderId,
         'paymentStatus': paymentStatus.value,
         'paymentDeadline': Timestamp.fromDate(paymentDeadline),
+        if (paymentExpiresAt != null)
+          'paymentExpiresAt': Timestamp.fromDate(paymentExpiresAt!),
+        if (scheduledDate != null)
+          'scheduledDate': Timestamp.fromDate(scheduledDate!),
+        if (doctorRecommendation != null)
+          'doctorRecommendation': doctorRecommendation,
+        'completionSeenByPatient': completionSeenByPatient,
         'createdAt': FieldValue.serverTimestamp(),
         'patientUid': patientUid,
         'patientName': patientName,
@@ -361,6 +400,7 @@ class ChatMessage {
   bool get hasAttachment => attachmentUrl != null && attachmentUrl!.isNotEmpty;
   bool get isImage => type == 'image';
   bool get isFile => type == 'file';
+  DateTime get createdAt => sentAt;
 
   factory ChatMessage.fromFirestore(
       DocumentSnapshot<Map<String, dynamic>> doc) {

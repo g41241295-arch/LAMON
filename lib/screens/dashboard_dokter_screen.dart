@@ -282,7 +282,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
         builder: (_) => Scaffold(
           backgroundColor: AppColors.bgGradientMiddle,
           body: SafeArea(
-            bottom: false,
+            bottom: true,
             child: Column(
               children: [
                 AppHeaderPill(
@@ -401,12 +401,14 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
       );
     }
 
-    // Hitung total pesan unread untuk badge kartu Pesan di Beranda
+    // Hitung total pesan unread untuk badge kartu Pesan di Beranda (E.2: mengecualikan completed)
     final totalUnread = _consultations.fold<int>(
       0,
       (total, c) =>
           total +
-          (c.paymentStatus == PaymentStatus.paid ? c.unreadForDoctor : 0),
+          ((c.paymentStatus == PaymentStatus.paid && !c.isCompleted)
+              ? c.unreadForDoctor
+              : 0),
     );
 
     return Scaffold(

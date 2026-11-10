@@ -28,13 +28,15 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
   final DoctorService _doctorService = DoctorService();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
-  int _selectedTabIndex = 0; // 0: Sudah Dibalas, 1: Belum Dibalas
+  int _selectedTabIndex = 0; // 0: Sudah Dibalas, 1: Belum Dibalas, 2: Selesai
 
   @override
   void initState() {
     super.initState();
-    final hasBelumDibalas = widget.consultations.any(
-        (c) => c.paymentStatus == PaymentStatus.paid && c.lastMessageSenderType != 'doctor');
+    final hasBelumDibalas = widget.consultations.any((c) =>
+        c.paymentStatus == PaymentStatus.paid &&
+        !c.isCompleted &&
+        c.lastMessageSenderType != 'doctor');
     if (widget.initialBelumDibalas || hasBelumDibalas) {
       _selectedTabIndex = 1;
     }
@@ -77,34 +79,51 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
         .where((c) => c.paymentStatus == PaymentStatus.paid)
         .toList();
 
-    // Filter per tab
-    // Sudah Dibalas = pesan terakhir dari dokter
-    // Belum Dibalas = pesan terakhir dari pasien atau belum ada pesan
+    // Filter per tab (E.2):
+    // "Sudah Dibalas" dan "Belum Dibalas" TIDAK lagi memuat consultation completed.
     final sudahDibalas = paidConsultations.where((c) {
-      return c.lastMessageSenderType == 'doctor';
+      return !c.isCompleted && c.lastMessageSenderType == 'doctor';
     }).toList();
 
     final belumDibalas = paidConsultations.where((c) {
-      return c.lastMessageSenderType != 'doctor';
+      return !c.isCompleted && c.lastMessageSenderType != 'doctor';
     }).toList();
 
+    final selesai = paidConsultations.where((c) {
+      return c.isCompleted;
+    }).toList();
+    selesai.sort((a, b) {
+      final timeA = a.completedAt ?? a.createdAt;
+      final timeB = b.completedAt ?? b.createdAt;
+      return timeB.compareTo(timeA);
+    });
+
     // Filter nama sesuai search query
-    final activeList = _selectedTabIndex == 0 ? sudahDibalas : belumDibalas;
+    final List<ConsultationModel> activeList;
+    if (_selectedTabIndex == 0) {
+      activeList = sudahDibalas;
+    } else if (_selectedTabIndex == 1) {
+      activeList = belumDibalas;
+    } else {
+      activeList = selesai;
+    }
+
     final filteredList = activeList.where((c) {
       if (query.isEmpty) return true;
       return c.displayPatientName.toLowerCase().contains(query);
     }).toList();
 
+    final bottomPadding = MediaQuery.viewPaddingOf(context).bottom + 24;
+
     return Column(
       children: [
-        // ── Search Bar (Judul "Pesan" di atas search bar telah dihapus karena sudah diwakili oleh header pill) ──
+        // ── Search Bar & Tab Pills ──
         Container(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
           color: Colors.transparent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               // Kolom Cari Pasien
               Container(
                 decoration: BoxDecoration(
@@ -152,33 +171,43 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
               ),
               const SizedBox(height: 14),
 
-              // ── Tab Pill (Sudah Dibalas / Belum Dibalas) ──
-              Row(
-                children: [
-                  _buildTabPill(
-                    index: 0,
-                    title: 'Sudah Dibalas',
-                    count: sudahDibalas.length,
-                  ),
-                  const SizedBox(width: 10),
-                  _buildTabPill(
-                    index: 1,
-                    title: 'Belum Dibalas',
-                    count: belumDibalas.length,
-                    isAlert: belumDibalas.any((c) => c.unreadForDoctor > 0),
-                  ),
-                ],
+              // ── Tab Pill (Sudah Dibalas | Belum Dibalas | Selesai) (E.1) ──
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: [
+                    _buildTabPill(
+                      index: 0,
+                      title: 'Sudah Dibalas',
+                      count: sudahDibalas.length,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildTabPill(
+                      index: 1,
+                      title: 'Belum Dibalas',
+                      count: belumDibalas.length,
+                      isAlert: belumDibalas.any((c) => c.unreadForDoctor > 0),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildTabPill(
+                      index: 2,
+                      title: 'Selesai',
+                      count: selesai.length,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
 
-        // ── List Percakapan Pasien ──
+        // ── List Percakapan Pasien (F.1: Satu area scroll per layar, F.2: padding viewPadding + 24) ──
         Expanded(
           child: filteredList.isEmpty
               ? _buildEmptyState()
               : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 20),
+                  padding: EdgeInsets.fromLTRB(20, 6, 20, bottomPadding),
                   itemCount: filteredList.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
@@ -203,7 +232,7 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
       onTap: () => setState(() => _selectedTabIndex = index),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -258,11 +287,31 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
   }
 
   Widget _buildConversationTile(BuildContext context, ConsultationModel item) {
-    final time = item.lastMessageAt ?? item.createdAt;
-    final timeStr = AppDateFormatter.formatTime(time);
-    final previewText = item.lastMessageText ??
-        (item.isWaiting ? 'Menunggu konfirmasi konsultasi' : 'Belum ada pesan');
-    final hasUnread = item.unreadForDoctor > 0;
+    // Tanggal/waktu di sisi kanan (C.3): hari ini -> jam; kemarin -> Kemarin; tahun sama -> 3 Nov; beda tahun -> 3 Nov 2025
+    final time = item.isCompleted
+        ? (item.completedAt ?? item.lastMessageAt ?? item.createdAt)
+        : (item.lastMessageAt ?? item.createdAt);
+    final timeStr = AppDateFormatter.formatConversationListTimestamp(time);
+
+    // Pratinjau pesan (E.3: baris tab Selesai menampilkan cuplikan rekomendasi 1 baris atau "Konsultasi selesai")
+    final String previewText;
+    if (item.isCompleted) {
+      if (item.doctorRecommendation != null &&
+          item.doctorRecommendation!.trim().isNotEmpty) {
+        previewText = item.doctorRecommendation!.trim();
+      } else {
+        previewText = 'Konsultasi selesai';
+      }
+    } else {
+      previewText = item.lastMessageText ??
+          (item.isWaiting ? 'Menunggu konfirmasi konsultasi' : 'Belum ada pesan');
+    }
+
+    final hasUnread = !item.isCompleted && item.unreadForDoctor > 0;
+    final schedStr = AppDateFormatter.formatScheduledDateTime(
+      item.effectiveScheduledDate,
+      item.scheduledTime,
+    );
 
     return Container(
       decoration: BoxDecoration(
@@ -291,6 +340,7 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
                 isDoctor: true,
                 patientUid: item.patientUid,
                 initialConsultation: item,
+                readOnly: item.isCompleted, // E.3: Selesai -> read-only
               ),
             ),
           );
@@ -332,6 +382,7 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            const SizedBox(width: 8),
             Text(
               timeStr,
               style: TextStyle(
@@ -344,40 +395,69 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  previewText,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: hasUnread
-                        ? AppColors.primaryText
-                        : AppColors.summaryCardSubtext,
-                    fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
+              // C.2: Tanggal + Jam konsultasi
+              Row(
+                children: [
+                  const Icon(
+                    Icons.access_time_rounded,
+                    size: 11,
+                    color: AppColors.neutralGray,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (hasUnread) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFD32F2F),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    '${item.unreadForDoctor}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      schedStr,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.neutralGray,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
+              const SizedBox(height: 3),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      previewText,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: hasUnread
+                            ? AppColors.primaryText
+                            : AppColors.summaryCardSubtext,
+                        fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (hasUnread) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFD32F2F),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${item.unreadForDoctor}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
         ),
@@ -386,6 +466,15 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
   }
 
   Widget _buildEmptyState() {
+    final String emptyMessage;
+    if (_selectedTabIndex == 0) {
+      emptyMessage = 'Belum ada percakapan yang sudah dibalas';
+    } else if (_selectedTabIndex == 1) {
+      emptyMessage = 'Tidak ada pesan yang menunggu balasan';
+    } else {
+      emptyMessage = 'Belum ada konsultasi yang selesai';
+    }
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -393,15 +482,15 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.chat_bubble_outline_rounded,
+              _selectedTabIndex == 2
+                  ? Icons.check_circle_outline_rounded
+                  : Icons.chat_bubble_outline_rounded,
               size: 56,
               color: AppColors.neutralGray.withValues(alpha: 0.35),
             ),
             const SizedBox(height: 12),
             Text(
-              _selectedTabIndex == 0
-                  ? 'Belum ada percakapan yang sudah dibalas'
-                  : 'Tidak ada pesan yang menunggu balasan',
+              emptyMessage,
               style: const TextStyle(
                 fontSize: 14,
                 color: AppColors.neutralGray,

@@ -8,6 +8,7 @@ import '../../constants/app_colors.dart';
 import '../../models/consultation_model.dart';
 import '../../services/consultation_service.dart';
 import '../../services/notification_service.dart';
+import '../../utils/app_date_formatter.dart';
 import 'widgets/chat_bubble.dart';
 import 'widgets/doctor_avatar.dart';
 
@@ -55,6 +56,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
   bool _hasLoadedConsultation = false;
   int _previousMessageCount = 0;
   bool _showTemplates = false;
+  bool _hasShownPatientPopup = false;
 
   /// Template pesan cepat untuk pasien (Bagian W)
   static const List<String> _patientTemplates = [
@@ -97,6 +99,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     _consultation = widget.initialConsultation;
     if (_consultation != null) {
       _hasLoadedConsultation = true;
+      _checkAndShowPatientCompletionPopup(_consultation!);
     }
 
     _initMessagesStream();
@@ -158,6 +161,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
         });
         _listenConsultation();
         _markRead();
+        _checkAndShowPatientCompletionPopup(data);
       }
     }
   }
@@ -177,6 +181,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
           _hasLoadedConsultation = true;
           _initMessagesStream();
         });
+        _checkAndShowPatientCompletionPopup(c);
       }
     }, onError: (e) {
       debugPrint('[ChatDokterScreen] watchConsultation error: $e');
@@ -439,53 +444,173 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
 
   Future<void> _showSelesaikanKonsultasiDialog() async {
     if (_isCompleting) return;
+    setState(() => _isCompleting = true);
+    final patientName = _consultation?.displayPatientName ?? 'Pasien';
+    final doctorId =
+        _consultation?.doctorId ?? _consultationService.currentUid ?? '';
 
-    final shouldComplete = await showDialog<bool>(
+    final success = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _SelesaikanKonsultasiDialog(
+        patientName: patientName,
+        onConfirm: (recommendation) async {
+          await _consultationService.completeConsultationWithRecommendation(
+            consultationId: widget.consultationId,
+            recommendation: recommendation,
+            doctorId: doctorId,
+            patientUid: _effectivePatientUid,
+          );
+        },
+      ),
+    );
+
+    if (mounted) {
+      setState(() => _isCompleting = false);
+    }
+
+    if (success == true && mounted) {
+      _showAppSnackBar('Konsultasi diselesaikan', isSuccess: true);
+      // D.3: Setelah sukses: tutup pop-up, snackbar, kembali ke daftar Pesan (pindah ke tab Selesai)
+      Navigator.pop(context);
+    }
+  }
+
+  void _checkAndShowPatientCompletionPopup(ConsultationModel c) {
+    if (widget.isDoctor) return;
+    if (!c.isCompleted) return;
+    if (c.completionSeenByPatient) return;
+    if (_hasShownPatientPopup) return;
+
+    _hasShownPatientPopup = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showPatientCompletionPopup(c);
+    });
+  }
+
+  Future<void> _showPatientCompletionPopup(ConsultationModel c) async {
+    final rec = c.doctorRecommendation?.trim() ?? '';
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text('Selesaikan Konsultasi?',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: const Text(
-          'Apakah Anda yakin ingin menyelesaikan sesi konsultasi ini? Setelah diselesaikan, percakapan akan ditutup dan masuk ke riwayat konsultasi pasien.',
-          style: TextStyle(fontSize: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded,
+                color: AppColors.successGreen, size: 24),
+            SizedBox(width: 8),
+            Text(
+              'Konsultasi Selesai',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Dokter telah menyelesaikan sesi konsultasi ini.',
+              style: TextStyle(fontSize: 13, color: AppColors.primaryText),
+            ),
+            if (rec.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.assignment_turned_in_rounded,
+                            size: 14, color: AppColors.successGreen),
+                        SizedBox(width: 6),
+                        Text(
+                          'Rekomendasi Dokter',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF166534),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      rec,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF15803D),
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
-          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.successGreen,
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Ya, Selesaikan'),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tutup'),
           ),
         ],
       ),
     );
 
-    if (shouldComplete == true) {
-      if (_isCompleting) return;
-      setState(() => _isCompleting = true);
-      try {
-        await _consultationService.completeConsultation(
-          consultationId: widget.consultationId,
-          patientUid: _effectivePatientUid,
-        );
-        _showAppSnackBar('Sesi konsultasi telah diselesaikan.', isSuccess: true);
-      } catch (e) {
-        debugPrint('[ChatDokterScreen] Gagal menyelesaikan konsultasi: $e');
-        _showAppSnackBar('Gagal menyelesaikan konsultasi. Coba lagi.', isError: true);
-      } finally {
-        if (mounted) {
-          setState(() => _isCompleting = false);
-        }
-      }
-    }
+    _consultationService.markCompletionSeenByPatient(
+      consultationId: widget.consultationId,
+      patientUid: _effectivePatientUid,
+    );
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Widget _buildDateSeparator(DateTime date) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2ECF2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Text(
+          AppDateFormatter.formatChatDateSeparator(date),
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF64748B),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildPatientHeaderAvatar() {
@@ -513,6 +638,14 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
   }
 
   Widget _buildCompletedBar() {
+    final completedAt = _consultation?.completedAt;
+    final timeStr = completedAt != null
+        ? AppDateFormatter.formatFullDateTime(completedAt)
+        : '';
+    final text = timeStr.isNotEmpty
+        ? 'Konsultasi telah selesai pada $timeStr'
+        : 'Konsultasi telah selesai';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -530,12 +663,15 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
             const Icon(Icons.check_circle_rounded,
                 color: AppColors.successGreen, size: 20),
             const SizedBox(width: 8),
-            const Text(
-              'Konsultasi telah selesai',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-                color: AppColors.primaryText,
+            Flexible(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: AppColors.primaryText,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
           ],
@@ -564,6 +700,14 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
       statusLabel = 'Konsultasi Berlangsung';
       statusColor = AppColors.successGreen;
     }
+
+    final schedStr = AppDateFormatter.formatScheduledDateTime(
+      _consultation?.effectiveScheduledDate,
+      _consultation?.scheduledTime,
+    );
+    final subtitleText = schedStr.isNotEmpty
+        ? '$statusLabel • $schedStr'
+        : statusLabel;
 
     final Widget chatContent = Stack(
       fit: StackFit.expand,
@@ -634,9 +778,9 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                           const SizedBox(width: 5),
                           Flexible(
                             child: Text(
-                              statusLabel,
+                              subtitleText,
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 11,
                                 color: statusColor,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -878,15 +1022,34 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 12),
                               itemCount: messages.length,
-                              itemBuilder: (_, i) => ChatBubble(
-                                message: messages[i],
-                                currentUserRole: widget.isDoctor ? 'doctor' : 'patient',
-                                peerPhotoUrl: peerPhoto,
-                                peerInitials: _consultation?.patientInitials ?? 'P',
-                                lastReadByPeerAt: widget.isDoctor
-                                    ? _consultation?.lastReadByPatientAt
-                                    : _consultation?.lastReadByDoctorAt,
-                              ),
+                              itemBuilder: (_, i) {
+                                final msg = messages[i];
+                                final showDateSeparator = i == 0 ||
+                                    !_isSameDay(messages[i - 1].createdAt,
+                                        msg.createdAt);
+
+                                return Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    if (showDateSeparator)
+                                      _buildDateSeparator(msg.createdAt),
+                                    ChatBubble(
+                                      message: msg,
+                                      currentUserRole: widget.isDoctor
+                                          ? 'doctor'
+                                          : 'patient',
+                                      peerPhotoUrl: peerPhoto,
+                                      peerInitials:
+                                          _consultation?.patientInitials ?? 'P',
+                                      lastReadByPeerAt: widget.isDoctor
+                                          ? _consultation?.lastReadByPatientAt
+                                          : _consultation?.lastReadByDoctorAt,
+                                    ),
+                                  ],
+                                );
+                              },
                             );
                           },
                         ),
@@ -1193,6 +1356,195 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+/// Dialog Pop-up Penyelesaian Konsultasi oleh Dokter (Bagian D).
+class _SelesaikanKonsultasiDialog extends StatefulWidget {
+  final String patientName;
+  final Future<void> Function(String recommendation) onConfirm;
+
+  const _SelesaikanKonsultasiDialog({
+    required this.patientName,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_SelesaikanKonsultasiDialog> createState() =>
+      _SelesaikanKonsultasiDialogState();
+}
+
+class _SelesaikanKonsultasiDialogState
+    extends State<_SelesaikanKonsultasiDialog> {
+  final TextEditingController _recommendationController =
+      TextEditingController();
+  bool _isSubmitting = false;
+  String? _inlineError;
+
+  @override
+  void dispose() {
+    _recommendationController.dispose();
+    super.dispose();
+  }
+
+  void _validate(String val) {
+    final trimmed = val.trim();
+    if (trimmed.isEmpty) {
+      setState(() => _inlineError = 'Rekomendasi dokter wajib diisi.');
+    } else if (trimmed.length < 10) {
+      setState(() => _inlineError =
+          'Rekomendasi dokter minimal 10 karakter (saat ini ${trimmed.length}).');
+    } else if (trimmed.length > 500) {
+      setState(() => _inlineError =
+          'Rekomendasi dokter maksimal 500 karakter (saat ini ${trimmed.length}).');
+    } else {
+      if (_inlineError != null) {
+        setState(() => _inlineError = null);
+      }
+    }
+  }
+
+  Future<void> _submit() async {
+    _validate(_recommendationController.text);
+    if (_inlineError != null) return;
+
+    setState(() => _isSubmitting = true);
+    try {
+      await widget.onConfirm(_recommendationController.text.trim());
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+          _inlineError = e.toString().replaceAll('Exception: ', '');
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Text(
+        'Selesaikan Konsultasi',
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Konsultasi dengan ${widget.patientName} akan ditandai selesai dan chat tidak bisa dibalas lagi.',
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF475569),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Rekomendasi dokter',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primaryText,
+              ),
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _recommendationController,
+              enabled: !_isSubmitting,
+              maxLines: 4,
+              maxLength: 500,
+              onChanged: _validate,
+              decoration: InputDecoration(
+                hintText:
+                    'Tulis saran untuk pasien, mis. pola makan atau kapan perlu kontrol',
+                hintStyle: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.neutralGray,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide:
+                      const BorderSide(color: AppColors.primary, width: 1.5),
+                ),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                contentPadding: const EdgeInsets.all(12),
+                counterText: '',
+              ),
+            ),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _recommendationController,
+              builder: (_, val, _) {
+                final len = val.text.trim().length;
+                return Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (_inlineError != null)
+                        Expanded(
+                          child: Text(
+                            _inlineError!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        )
+                      else
+                        const SizedBox.shrink(),
+                      Text(
+                        '$len/500',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: len > 500 ? Colors.red : AppColors.neutralGray,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.pop(context, false),
+          child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.successGreen,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          onPressed: _isSubmitting ? null : _submit,
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : const Text('Selesaikan'),
+        ),
+      ],
     );
   }
 }

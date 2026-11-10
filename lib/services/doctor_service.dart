@@ -344,29 +344,85 @@ class DoctorService {
     return availableDoctors;
   }
 
-  /// Kriteria urutan rekomendasi dokter berdasarkan keprofesionalan/pengalaman (U3):
-  /// (a) Dokter spesialis lebih dulu (specialty mengandung "Spesialis" atau "Sp.", case-insensitive)
-  /// (b) experienceYears menurun (pengalaman terbanyak di atas)
-  /// (c) Nama dokter menaik (A-Z)
-  static int compareDoctorRecommendation(DoctorModel a, DoctorModel b) {
-    final aSpecialty = a.specialty.toLowerCase();
-    final bSpecialty = b.specialty.toLowerCase();
-    final aIsSpecialist = aSpecialty.contains('spesialis') || aSpecialty.contains('sp.');
-    final bIsSpecialist = bSpecialty.contains('spesialis') || bSpecialty.contains('sp.');
+  /// Bobot skor rekomendasi dokter (Revisi 8 Bagian B):
+  /// Skor = (kWeightHandled * consultationsHandled) + (kWeightExperience * experienceYears).
+  /// consultationsHandled null dianggap 0.
+  static const int kWeightHandled = 1;
+  static const int kWeightExperience = 1;
 
-    // Kriteria (a): Spesialis lebih dulu
-    if (aIsSpecialist != bIsSpecialist) {
-      return aIsSpecialist ? -1 : 1;
+  /// Kriteria urutan rekomendasi dokter berdasarkan Skor = consultationsHandled + experienceYears (Revisi 8):
+  /// (a) Skor TERTINGGI ditempatkan PALING ATAS (descending)
+  /// (b) Jika skor sama -> experienceYears menurun (descending)
+  /// (c) Nama dokter menaik (A-Z)
+  /// Aturan lama "spesialis lebih dulu" telah dihapus/digantikan.
+  static int compareDoctorRecommendation(DoctorModel a, DoctorModel b) {
+    final scoreA = (kWeightHandled * a.consultationsHandled) +
+        (kWeightExperience * a.experienceYears);
+    final scoreB = (kWeightHandled * b.consultationsHandled) +
+        (kWeightExperience * b.experienceYears);
+
+    // 1. Skor tertinggi paling atas (descending)
+    if (scoreA != scoreB) {
+      return scoreB.compareTo(scoreA);
     }
 
-    // Kriteria (b): Pengalaman tahun menurun (descending)
+    // 2. Jika skor sama -> experienceYears menurun (descending)
     final expDiff = b.experienceYears.compareTo(a.experienceYears);
     if (expDiff != 0) {
       return expDiff;
     }
 
-    // Kriteria (c): Nama alfabetis menaik (ascending)
+    // 3. Nama alfabetis menaik (ascending A-Z)
     return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+  }
+
+  /// Memperbarui hanya experienceYears pada dokumen Firestore 3 dokter seed secara aman (merge).
+  Future<void> syncDoctorExperienceYears() async {
+    final updates = {
+      'dr_ketut_maulana': 10,
+      'dr_dandi_wijaya': 9,
+      'dr_oggy_agustin': 5,
+    };
+    for (final entry in updates.entries) {
+      try {
+        final ref = _doctorsRef.doc(entry.key);
+        final doc = await ref.get();
+        if (doc.exists) {
+          await ref.set({
+            'experienceYears': entry.value,
+          }, SetOptions(merge: true));
+          debugPrint('[DoctorService] Updated ${entry.key} experienceYears = ${entry.value}');
+        }
+      } catch (e) {
+        debugPrint('[DoctorService] Gagal syncDoctorExperienceYears untuk ${entry.key}: $e');
+      }
+    }
+  }
+
+  /// Rekonsiliasi consultationsHandled (Revisi 8 Bagian E):
+  /// Saat dokter membuka Beranda, jika jumlah consultation completed milik dokter
+  /// lebih besar dari consultationsHandled, set ke jumlah itu (hanya naik, tidak pernah turun).
+  Future<void> reconcileConsultationsHandled({
+    required String doctorId,
+    required int completedCount,
+  }) async {
+    if (doctorId.isEmpty || completedCount <= 0) return;
+    try {
+      final docRef = _doctorsRef.doc(doctorId);
+      final snap = await docRef.get();
+      if (snap.exists && snap.data() != null) {
+        final current = (snap.data()!['consultationsHandled'] as num?)?.toInt() ?? 0;
+        if (completedCount > current) {
+          await docRef.set({
+            'consultationsHandled': completedCount,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+          debugPrint('[DoctorService] Reconciled consultationsHandled for $doctorId: $current -> $completedCount');
+        }
+      }
+    } catch (e) {
+      debugPrint('[DoctorService] Gagal reconcileConsultationsHandled: $e');
+    }
   }
 
   /// Selesaikan konsultasi oleh dokter (mendelegasikan ke ConsultationService).
@@ -482,7 +538,7 @@ class DoctorService {
         id: 'dr_ketut_maulana',
         name: 'Dr. Ketut Maulana',
         specialty: 'Dokter Umum',
-        experienceYears: 8,
+        experienceYears: 10,
         photoUrl: '',
         price: 50000,
         operatingHours: const [
@@ -498,7 +554,7 @@ class DoctorService {
         id: 'dr_oggy_agustin',
         name: 'Dr. Oggy Agustin',
         specialty: 'Spesialis Penyakit Dalam',
-        experienceYears: 12,
+        experienceYears: 5,
         photoUrl: '',
         price: 75000,
         operatingHours: const [
@@ -514,7 +570,7 @@ class DoctorService {
         id: 'dr_dandi_wijaya',
         name: 'Dr. Dandi Wijaya',
         specialty: 'Dokter Umum',
-        experienceYears: 5,
+        experienceYears: 9,
         photoUrl: '',
         price: 45000,
         operatingHours: const [

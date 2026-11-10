@@ -451,9 +451,30 @@ class _DoctorProfileTabState extends State<DoctorProfileTab> {
                   fontWeight: FontWeight.bold,
                   color: AppColors.primaryText)),
           const SizedBox(height: 4),
-          Text(widget.doctor.specialtyDisplay,
-              style: const TextStyle(
-                  fontSize: 13, color: AppColors.summaryCardSubtext)),
+          // Subtitle profil dokter live dari data (E.5): "Dokter Umum • 10 tahun • N konsultasi ditangani"
+          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection('doctors')
+                .doc(widget.doctor.id)
+                .snapshots(),
+            builder: (context, snap) {
+              final docData = snap.data?.data();
+              final specialty = docData?['specialty'] as String? ?? widget.doctor.specialty;
+              final expYears = (docData?['experienceYears'] as num?)?.toInt() ?? widget.doctor.experienceYears;
+              final handled = (docData?['consultationsHandled'] as num?)?.toInt() ?? widget.doctor.consultationsHandled;
+              final subtitle = '$specialty • $expYears tahun • $handled konsultasi ditangani';
+
+              return Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.summaryCardSubtext,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              );
+            },
+          ),
           const SizedBox(height: 24),
 
           // ── Kartu Form Profil ──

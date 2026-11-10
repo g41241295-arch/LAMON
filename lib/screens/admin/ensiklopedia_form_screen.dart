@@ -152,9 +152,6 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
     }
   }
 
-  // Konversi file gambar ke Base64 string (sudah dilakukan di _pickImage)
-  // Method ini dipertahankan sebagai helper jika diperlukan di masa depan.
-  String? _getPendingBase64() => _imageBase64Pending;
 
   bool _validate() {
     bool ok = true;

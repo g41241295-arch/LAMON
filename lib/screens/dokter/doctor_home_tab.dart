@@ -54,27 +54,23 @@ class DoctorHomeTab extends StatelessWidget {
     final now = DateTime.now();
     final doctorName = doctor.formattedNameWithDoctorTitle;
 
-    // Hitung statistik pasien hari ini:
-    // Hanya menghitung konsultasi berbayar yang SUDAH dikonfirmasi ('active' atau 'completed')
-    // dengan jadwal atau konfirmasi/pembuatan pada hari ini.
+    // Hitung statistik pasien hari ini (C.5):
+    // consultation dengan scheduledDate == hari ini dan status active ATAU completed, live.
     final todayConsultations = consultations.where((c) {
       if (c.paymentStatus != PaymentStatus.paid) return false;
       final isConfirmed = c.status == 'active' || c.status == 'completed';
       if (!isConfirmed) return false;
 
-      final isCreatedToday = c.createdAt.year == now.year &&
-          c.createdAt.month == now.month &&
-          c.createdAt.day == now.day;
-      final isConfirmedToday = c.doctorConfirmedAt != null &&
-          c.doctorConfirmedAt!.year == now.year &&
-          c.doctorConfirmedAt!.month == now.month &&
-          c.doctorConfirmedAt!.day == now.day;
-
-      return isCreatedToday || isConfirmedToday;
+      final sched = c.effectiveScheduledDate;
+      return sched.year == now.year &&
+          sched.month == now.month &&
+          sched.day == now.day;
     }).toList();
 
+    // E.2: "Menunggu respons" mengecualikan completed
     final waitingResponseList = consultations.where((c) {
       return c.paymentStatus == PaymentStatus.paid &&
+          !c.isCompleted &&
           c.lastMessageSenderType == 'patient';
     }).toList();
 
@@ -82,13 +78,24 @@ class DoctorHomeTab extends StatelessWidget {
       return c.paymentStatus == PaymentStatus.paid && c.isWaiting;
     }).toList();
 
+    // Rekonsiliasi consultationsHandled (E.4):
+    final completedCount = consultations.where((c) => c.isCompleted).length;
+    if (completedCount > doctor.consultationsHandled) {
+      DoctorService().reconcileConsultationsHandled(
+        doctorId: doctor.id,
+        completedCount: completedCount,
+      );
+    }
+
     // ── Jadwal praktik dokter hari ini ──
     final todayKey =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     final todaySlots = scheduleMap[todayKey] ?? [];
 
+    final bottomPadding = MediaQuery.viewPaddingOf(context).bottom + 24;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, bottomPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -624,9 +631,10 @@ class DoctorHomeTab extends StatelessWidget {
   }
 
   Widget _buildWaitingItemCard(BuildContext context, ConsultationModel item) {
-    final scheduleDisplay = item.scheduledTime.isNotEmpty
-        ? 'Jadwal: ${item.scheduledTime}'
-        : 'Hari ini, ${AppDateFormatter.formatTime(item.createdAt)} WIB';
+    final scheduleDisplay = AppDateFormatter.formatScheduledDateTime(
+      item.effectiveScheduledDate,
+      item.scheduledTime,
+    );
 
     return GestureDetector(
       onTap: () => _showConfirmationBottomSheet(context, item),
@@ -751,7 +759,10 @@ class DoctorHomeTab extends StatelessWidget {
                   _detailRow('Usia', '${item.patientAge} tahun'),
                 _detailRow(
                   'Jadwal Konsultasi',
-                  item.scheduledTime.isNotEmpty ? item.scheduledTime : 'Hari ini',
+                  AppDateFormatter.formatScheduledDateTime(
+                    item.effectiveScheduledDate,
+                    item.scheduledTime,
+                  ),
                 ),
                 _detailRow(
                   'Waktu Pemesanan',
