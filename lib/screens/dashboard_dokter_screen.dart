@@ -8,6 +8,7 @@ import '../models/doctor_model.dart';
 import '../services/doctor_service.dart';
 import '../services/fcm_service.dart';
 import '../widgets/app_header_pill.dart';
+import '../widgets/app_background.dart';
 import 'dokter/doctor_home_tab.dart';
 import 'dokter/doctor_messages_tab.dart';
 import 'dokter/doctor_profile_tab.dart';
@@ -248,22 +249,24 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => Scaffold(
-          backgroundColor: AppColors.bgGradientMiddle,
-          body: SafeArea(
-            child: Column(
-              children: [
-                AppHeaderPill(
-                  title: 'Profil Dokter',
-                  onBack: () => Navigator.pop(context),
-                ),
-                Expanded(
-                  child: DoctorProfileTab(
-                    doctor: _doctor!,
-                    onProfileUpdated: () => _loadDoctorData(),
+        builder: (_) => AppBackground(
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: SafeArea(
+              child: Column(
+                children: [
+                  AppHeaderPill(
+                    title: 'Profil Dokter',
+                    onBack: () => Navigator.pop(context),
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: DoctorProfileTab(
+                      doctor: _doctor!,
+                      onProfileUpdated: () => _loadDoctorData(),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -279,26 +282,28 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => Scaffold(
-          backgroundColor: AppColors.bgGradientMiddle,
-          body: SafeArea(
-            bottom: true,
-            child: Column(
-              children: [
-                AppHeaderPill(
-                  title: 'Pesan',
-                  onBack: () => Navigator.pop(context),
-                ),
-                Expanded(
-                  child: DoctorMessagesTab(
-                    key: ValueKey('msg_${initialBelumDibalas}_$focusSearch'),
-                    doctorId: _doctor?.id,
-                    consultations: _consultations,
-                    initialBelumDibalas: initialBelumDibalas,
-                    focusSearch: focusSearch,
+        builder: (_) => AppBackground(
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: SafeArea(
+              bottom: true,
+              child: Column(
+                children: [
+                  AppHeaderPill(
+                    title: 'Pesan',
+                    onBack: () => Navigator.pop(context),
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: DoctorMessagesTab(
+                      key: ValueKey('msg_${initialBelumDibalas}_$focusSearch'),
+                      doctorId: _doctor?.id,
+                      consultations: _consultations,
+                      initialBelumDibalas: initialBelumDibalas,
+                      focusSearch: focusSearch,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -309,8 +314,9 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoadingDoctor) {
-      return const Scaffold(
-        backgroundColor: AppColors.bgGradientMiddle,
+      return const AppBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -327,12 +333,14 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
             ],
           ),
         ),
-      );
+      ),
+    );
     }
 
     if (_errorMessage != null || _doctor == null) {
-      return Scaffold(
-        backgroundColor: AppColors.bgGradientMiddle,
+      return AppBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
         body: SafeArea(
           child: Center(
             child: Padding(
@@ -398,7 +406,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
             ),
           ),
         ),
-      );
+      ),
+    );
     }
 
     // Hitung total pesan unread untuk badge kartu Pesan di Beranda (E.2: mengecualikan completed)
@@ -411,19 +420,21 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
               : 0),
     );
 
-    return Scaffold(
-      backgroundColor: AppColors.bgGradientMiddle,
-      body: SafeArea(
-        bottom: true,
-        child: DoctorHomeTab(
-          doctor: _doctor!,
-          consultations: _consultations,
-          scheduleMap: _scheduleMap,
-          totalUnreadMessages: totalUnread,
-          onTapProfile: _openProfileScreen,
-          onTapMessages: _openMessagesScreen,
-          onTapWaitingResponse: () =>
-              _openMessagesScreen(initialBelumDibalas: true),
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          bottom: true,
+          child: DoctorHomeTab(
+            doctor: _doctor!,
+            consultations: _consultations,
+            scheduleMap: _scheduleMap,
+            totalUnreadMessages: totalUnread,
+            onTapProfile: _openProfileScreen,
+            onTapMessages: _openMessagesScreen,
+            onTapWaitingResponse: () =>
+                _openMessagesScreen(initialBelumDibalas: true),
+          ),
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../constants/app_colors.dart';
+import '../../widgets/app_background.dart';
 import '../../services/berita/berita_repository.dart';
 import '../../models/berita_article_model.dart';
 import '../../widgets/berita/berita_image.dart';
@@ -20,18 +21,6 @@ class _BeritaDetailScreenState extends State<BeritaDetailScreen> {
   BeritaArticle? _article;
   bool _loading = true;
   bool _notFound = false;
-
-  static const _gradient = BoxDecoration(
-    gradient: LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [
-        AppColors.bgGradientTop,
-        AppColors.bgGradientMiddle,
-        AppColors.bgGradientBottom,
-      ],
-    ),
-  );
 
   @override
   void initState() {
@@ -53,9 +42,8 @@ class _BeritaDetailScreenState extends State<BeritaDetailScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return Container(
-        decoration: _gradient,
-        child: const Scaffold(
+      return const AppBackground(
+        child: Scaffold(
           backgroundColor: Colors.transparent,
           body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
         ),
@@ -63,8 +51,7 @@ class _BeritaDetailScreenState extends State<BeritaDetailScreen> {
     }
 
     if (_notFound || _article == null) {
-      return Container(
-        decoration: _gradient,
+      return AppBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
           appBar: AppBar(
