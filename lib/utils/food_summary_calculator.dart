@@ -1,5 +1,85 @@
 import '../models/food_entry_model.dart';
 
+// ─── Enum & Model untuk Status Kesehatan Lambung ─────────────────────────────
+
+/// Tiga level risiko kesehatan lambung berdasarkan pola makan harian.
+enum LambungRiskLevel {
+  aman,
+  perluDiperhatikan,
+  berisiko,
+}
+
+/// Hasil kalkulasi skor risiko lambung.
+class LambungRiskScore {
+  final LambungRiskLevel level;
+  final String label;
+  final String explanation;
+
+  const LambungRiskScore({
+    required this.level,
+    required this.label,
+    required this.explanation,
+  });
+}
+
+// ─── Model untuk Target & Realisasi Gizi Harian ──────────────────────────────
+
+/// Target gizi harian (kebutuhan rata-rata orang dewasa aktif).
+class NutritionTarget {
+  /// Kalori target harian (kkal)
+  final int calories;
+  /// Protein target harian (gram)
+  final double protein;
+  /// Karbohidrat target harian (gram)
+  final double carbs;
+  /// Lemak target harian (gram)
+  final double fat;
+
+  const NutritionTarget({
+    this.calories = 2000,
+    this.protein = 60.0,
+    this.carbs = 300.0,
+    this.fat = 65.0,
+  });
+}
+
+/// Hasil kalkulasi asupan gizi harian beserta persentase terhadap target.
+class DailyNutrition {
+  /// Estimasi kalori total (kkal) — dihitung dari jumlah entri & intensitas makan
+  final int calories;
+  /// Estimasi protein (gram)
+  final double protein;
+  /// Estimasi karbohidrat (gram)
+  final double carbs;
+  /// Estimasi lemak (gram)
+  final double fat;
+
+  /// Persentase kalori terhadap target (0–100+)
+  final int caloriesPercentage;
+  /// Persentase protein terhadap target (0–100+)
+  final int proteinPercentage;
+  /// Persentase karbohidrat terhadap target (0–100+)
+  final int carbsPercentage;
+  /// Persentase lemak terhadap target (0–100+)
+  final int fatPercentage;
+
+  final NutritionTarget target;
+
+  const DailyNutrition({
+    required this.calories,
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+    required this.caloriesPercentage,
+    required this.proteinPercentage,
+    required this.carbsPercentage,
+    required this.fatPercentage,
+    required this.target,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 class FoodSummaryCalculator {
   final List<FoodEntry> entries;
   final List<String> uniqueDates;
@@ -278,5 +358,178 @@ class FoodSummaryCalculator {
         'hasData': true,
       },
     };
+  }
+
+  // ─── Kalkulasi Status Lambung & Gizi Harian ──────────────────────────────
+
+  /// Menghitung skor risiko kesehatan lambung berdasarkan pola makan.
+  ///
+  /// Faktor risiko (tiap faktor menambah skor):
+  /// - Berbaring setelah makan: +2 per entri
+  /// - Level pedas tinggi (>=3): +1 per entri
+  /// - Level asam tinggi (>=3): +1 per entri
+  /// - Level berlemak tinggi (>=3): +1 per entri
+  /// - Konsumsi kopi: +1 per entri
+  /// - Konsumsi soda: +2 per entri
+  /// - Junk food: +1 per kemunculan
+  ///
+  /// Skoring:
+  /// - Skor rata-rata <= 2.0: Aman
+  /// - Skor rata-rata 2.1–4.0: Perlu Diperhatikan
+  /// - Skor rata-rata > 4.0: Berisiko
+  LambungRiskScore calculateLambungRiskScore() {
+    if (entries.isEmpty) {
+      return const LambungRiskScore(
+        level: LambungRiskLevel.aman,
+        label: 'Belum Ada Data',
+        explanation:
+            'Belum ada catatan makan hari ini. Mulai catat pola makanmu untuk melihat status kesehatan lambung.',
+      );
+    }
+
+    double totalScore = 0;
+
+    for (final entry in entries) {
+      double entryScore = 0;
+
+      if (entry.berbaringSetelahMakan) entryScore += 2;
+      if (entry.levelPedas >= 3) entryScore += 1;
+      if (entry.levelAsam >= 3) entryScore += 1;
+      if (entry.levelBerlemak >= 3) entryScore += 1;
+      if (entry.konsumsiKopi) entryScore += 1;
+      if (entry.konsumsiSoda) entryScore += 2;
+
+      for (final jenis in entry.jenisMakanan) {
+        if (jenis.trim().toLowerCase() == 'junk food') entryScore += 1;
+      }
+
+      totalScore += entryScore;
+    }
+
+    final avgScore = totalScore / entries.length;
+
+    if (avgScore <= 2.0) {
+      return const LambungRiskScore(
+        level: LambungRiskLevel.aman,
+        label: 'Lambung Aman',
+        explanation:
+            'Pola makanmu hari ini cukup baik untuk kesehatan lambung. Pertahankan kebiasaan makan yang sehat dan hindari makanan yang bisa memicu asam lambung.',
+      );
+    } else if (avgScore <= 4.0) {
+      return const LambungRiskScore(
+        level: LambungRiskLevel.perluDiperhatikan,
+        label: 'Perlu Diperhatikan',
+        explanation:
+            'Ada beberapa kebiasaan makan yang bisa memicu gangguan lambung. Kurangi makanan pedas, asam, atau berlemak tinggi, dan hindari berbaring segera setelah makan.',
+      );
+    } else {
+      return const LambungRiskScore(
+        level: LambungRiskLevel.berisiko,
+        label: 'Berisiko Tinggi',
+        explanation:
+            'Pola makanmu berisiko tinggi untuk kesehatan lambung. Segera ubah kebiasaan makan: hindari makanan pedas/asam/berlemak, minuman berkafein dan soda, serta jangan berbaring setelah makan.',
+      );
+    }
+  }
+
+  /// Menghitung estimasi asupan gizi harian berdasarkan pencatatan makanan.
+  ///
+  /// Karena tidak ada data nutrisi aktual per makanan, estimasi dilakukan
+  /// berdasarkan pilihan sumber karbohidrat & protein menggunakan nilai rata-rata
+  /// tipikal per sajian, disesuaikan jumlah sesi makan yang tercatat.
+  ///
+  /// Nilai estimasi per sesi (kebutuhan 2000 kkal untuk 3 sesi):
+  /// - Sarapan: ~25% kebutuhan harian
+  /// - Makan Siang: ~40% kebutuhan harian
+  /// - Makan Malam: ~35% kebutuhan harian
+  DailyNutrition calculateDailyNutrition() {
+    const target = NutritionTarget(
+      calories: 2000,
+      protein: 60.0,
+      carbs: 300.0,
+      fat: 65.0,
+    );
+
+    if (entries.isEmpty) {
+      return DailyNutrition(
+        calories: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+        caloriesPercentage: 0,
+        proteinPercentage: 0,
+        carbsPercentage: 0,
+        fatPercentage: 0,
+        target: target,
+      );
+    }
+
+    // Bobot kalori per sesi makan (proporsi dari total harian)
+    double totalCalories = 0;
+    double totalProtein = 0;
+    double totalCarbs = 0;
+    double totalFat = 0;
+
+    for (final entry in entries) {
+      // Kalori dasar per sesi
+      final double sessionCalories;
+      final double sessionProtein;
+      final double sessionCarbs;
+      final double sessionFat;
+
+      switch (entry.sesi) {
+        case MealSession.sarapan:
+          sessionCalories = 500; // ~25% dari 2000 kkal
+          sessionProtein = 15;
+          sessionCarbs = 75;
+          sessionFat = 16;
+          break;
+        case MealSession.makanSiang:
+          sessionCalories = 800; // ~40% dari 2000 kkal
+          sessionProtein = 24;
+          sessionCarbs = 120;
+          sessionFat = 26;
+          break;
+        case MealSession.makanMalam:
+          sessionCalories = 700; // ~35% dari 2000 kkal
+          sessionProtein = 21;
+          sessionCarbs = 105;
+          sessionFat = 23;
+          break;
+      }
+
+      // Modifikasi berdasarkan jenis makanan (Junk Food +20% kalori & lemak)
+      double calMod = 1.0;
+      double fatMod = 1.0;
+      for (final jenis in entry.jenisMakanan) {
+        if (jenis.trim().toLowerCase() == 'junk food') {
+          calMod += 0.20;
+          fatMod += 0.30;
+        }
+      }
+
+      // Modifikasi berdasarkan level berlemak (skala 0-4)
+      final fatLevelMod = 1.0 + (entry.levelBerlemak * 0.05);
+
+      totalCalories += sessionCalories * calMod;
+      totalProtein += sessionProtein * (entry.protein.isNotEmpty ? 1.1 : 0.8);
+      totalCarbs += sessionCarbs * (entry.sumberKarbohidrat.isNotEmpty ? 1.0 : 0.6);
+      totalFat += sessionFat * fatMod * fatLevelMod;
+    }
+
+    int pct(double actual, double tgt) =>
+        tgt > 0 ? (actual / tgt * 100).round().clamp(0, 999) : 0;
+
+    return DailyNutrition(
+      calories: totalCalories.round(),
+      protein: double.parse(totalProtein.toStringAsFixed(1)),
+      carbs: double.parse(totalCarbs.toStringAsFixed(1)),
+      fat: double.parse(totalFat.toStringAsFixed(1)),
+      caloriesPercentage: pct(totalCalories, target.calories.toDouble()),
+      proteinPercentage: pct(totalProtein, target.protein),
+      carbsPercentage: pct(totalCarbs, target.carbs),
+      fatPercentage: pct(totalFat, target.fat),
+      target: target,
+    );
   }
 }

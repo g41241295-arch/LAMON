@@ -39,9 +39,6 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
   /// Tanggal yang sedang ditampilkan
   String? _selectedDate;
 
-  /// Sesi hari ini yang sudah terisi (Set firestoreKey).
-  Set<String> _todayFilledSessions = {};
-
   bool _isPreviewMode = false;
   List<FoodEntry> _mockEntries = [];
   List<String> _mockAvailableDates = [];
@@ -84,17 +81,12 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
           _allEntries = [];
           _availableDates = [];
           _selectedDate = null;
-          _todayFilledSessions = {};
           _calculator = null;
         });
         break;
 
       case FoodSummarySuccess(:final entries):
         final todayStr = FoodEntryService.todayString();
-        final todaySessionKeys = entries
-            .where((e) => e.tanggal == todayStr)
-            .map((e) => e.sesi.firestoreKey)
-            .toSet();
 
         // Ambil semua tanggal unik terurut descending (terbaru di depan)
         final dates = entries
@@ -110,7 +102,6 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
             _allEntries = [];
             _availableDates = [];
             _selectedDate = null;
-            _todayFilledSessions = todaySessionKeys;
             _calculator = null;
           });
           return;
@@ -142,7 +133,6 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
           _allEntries = entries;
           _availableDates = dates;
           _selectedDate = chosenDate;
-          _todayFilledSessions = todaySessionKeys;
           _calculator = calc;
         });
         break;
@@ -1336,7 +1326,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
         border: Border.all(color: borderTone, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1355,7 +1345,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
               border: Border.all(color: borderTone, width: 2),
               boxShadow: [
                 BoxShadow(
-                  color: primaryTone.withOpacity(0.18),
+                  color: primaryTone.withValues(alpha: 0.18),
                   blurRadius: 14,
                   offset: const Offset(0, 4),
                 ),
@@ -1373,7 +1363,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
               fontSize: 10,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.0,
-              color: primaryTone.withOpacity(0.75),
+              color: primaryTone.withValues(alpha: 0.75),
             ),
           ),
           const SizedBox(height: 4),
@@ -1395,22 +1385,22 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.85),
+              color: Colors.white.withValues(alpha: 0.85),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: borderTone.withOpacity(0.8)),
+              border: Border.all(color: borderTone.withValues(alpha: 0.8)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.schedule_rounded,
-                    size: 13, color: primaryTone.withOpacity(0.7)),
+                    size: 13, color: primaryTone.withValues(alpha: 0.7)),
                 const SizedBox(width: 5),
                 Text(
                   'Berdasarkan $entryCount dari 3 waktu makan yang tercatat',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: primaryTone.withOpacity(0.8),
+                    color: primaryTone.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -1423,9 +1413,9 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.65),
+              color: Colors.white.withValues(alpha: 0.65),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: borderTone.withOpacity(0.5)),
+              border: Border.all(color: borderTone.withValues(alpha: 0.5)),
             ),
             child: Text(
               risk.explanation,
@@ -1528,7 +1518,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.12),
+            color: color.withValues(alpha: 0.12),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -1646,7 +1636,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1717,7 +1707,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1838,7 +1828,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -1858,7 +1848,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1943,7 +1933,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -1991,7 +1981,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -2014,7 +2004,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: color.withOpacity(0.45),
+                      color: color.withValues(alpha: 0.45),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -2119,7 +2109,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -2160,7 +2150,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
