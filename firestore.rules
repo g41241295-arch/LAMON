@@ -10,7 +10,7 @@ service cloud.firestore {
     function userDoc() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
-
+ 
     function isDoctor() {
       return isSignedIn() && 
              ('role' in userDoc()) && 
