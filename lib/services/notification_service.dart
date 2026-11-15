@@ -123,10 +123,20 @@ class ChatInAppNotificationService {
                   : 'Dokter');
 
           final patientUid = data['patientUid'] as String? ?? '';
+          final isCompletedEvent = !isDoctor &&
+              (data['status'] == 'completed' ||
+                  lastMessageText == 'Konsultasi selesai');
+
+          final notifTitle = isCompletedEvent
+              ? 'Konsultasi Selesai'
+              : 'Pesan baru dari $peerName';
+          final notifMessage = isCompletedEvent
+              ? 'Konsultasi selesai - lihat rekomendasi dokter'
+              : lastMessageText;
 
           showInAppMessage(
-            title: 'Pesan baru dari $peerName',
-            message: lastMessageText,
+            title: notifTitle,
+            message: notifMessage,
             onTap: () {
               final nav = navigatorKey.currentState;
               if (nav != null) {

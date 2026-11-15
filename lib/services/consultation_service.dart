@@ -379,13 +379,16 @@ class ConsultationService {
     }
   }
 
-  /// Pop-up dan transaksi penyelesaian konsultasi oleh dokter (D.2):
-  /// - Baca consultation; jika sudah completed -> batalkan transaksi ("Konsultasi sudah selesai").
-  /// - Update consultation (status 'completed', completedAt serverTimestamp, doctorRecommendation,
-  ///   lastMessageText "Konsultasi selesai", lastMessageAt serverTimestamp, lastMessageSenderType 'doctor',
-  ///   unreadForPatient +1).
-  /// - Tulis dokumen pesan ringkasan di sub-koleksi messages (senderType 'doctor', type 'consultation_summary', text = rekomendasi).
-  /// - Increment doctors/{doctorId}.consultationsHandled sebesar 1 DALAM transaksi yang sama.
+  /// Pop-up dan transaksi penyelesaian konsultasi oleh dokter (Bagian A - Revisi 9):
+  /// - Transaksi UTAMA hanya berisi:
+  ///   (a) Guard idempoten (jika sudah completed -> batalkan transaksi dengan pesan "Konsultasi sudah selesai").
+  ///   (b) Update consultation (status 'completed', completedAt serverTimestamp, doctorRecommendation,
+  ///       lastMessageText "Konsultasi selesai", lastMessageAt serverTimestamp, lastMessageSenderType 'doctor',
+  ///       lastMessageId, unreadForPatient +1).
+  ///   (c) Tulis dokumen pesan ringkasan di sub-koleksi messages (senderType 'doctor', type 'consultation_summary', text = rekomendasi).
+  /// - Increment doctors/{doctorId}.consultationsHandled dilakukan SETELAH transaksi utama sukses
+  ///   sebagai langkah terpisah best effort (FieldValue.increment(1), error ditangkap tanpa membatalkan penyelesaian).
+  ///   Rekonsiliasi di Beranda Dokter menutup selisih jika increment gagal.
   Future<void> completeConsultationWithRecommendation({
     required String consultationId,
     required String recommendation,
@@ -406,10 +409,10 @@ class ConsultationService {
       throw Exception('Referensi konsultasi tidak valid.');
     }
 
-    final doctorDocRef = _db.collection('doctors').doc(doctorId);
     final messagesColRef = consultationDocRef.collection('messages');
     final newMessageDocRef = messagesColRef.doc();
 
+    // 1. Transaksi UTAMA: HANYA consultation & pesan ringkasan
     await _db.runTransaction((transaction) async {
       final consultSnap = await transaction.get(consultationDocRef);
       if (!consultSnap.exists) {
@@ -421,7 +424,7 @@ class ConsultationService {
         throw Exception('Konsultasi sudah selesai.');
       }
 
-      // 1. Update consultation
+      // Update consultation
       transaction.update(consultationDocRef, {
         'status': 'completed',
         'completedAt': FieldValue.serverTimestamp(),
@@ -429,30 +432,38 @@ class ConsultationService {
         'lastMessageText': 'Konsultasi selesai',
         'lastMessageAt': FieldValue.serverTimestamp(),
         'lastMessageSenderType': 'doctor',
+        'lastMessageId': newMessageDocRef.id,
         'unreadForPatient': FieldValue.increment(1),
       });
 
-      // 2. Write consultation_summary message
+      // Write consultation_summary message
       transaction.set(newMessageDocRef, {
         'senderType': 'doctor',
         'type': 'consultation_summary',
         'text': recommendation.trim(),
         'sentAt': FieldValue.serverTimestamp(),
+        'deletedForEveryone': false,
+        'hiddenFor': <String>[],
       });
+    });
 
-      // 3. Increment doctor consultationsHandled
-      final doctorSnap = await transaction.get(doctorDocRef);
-      if (doctorSnap.exists) {
-        transaction.update(doctorDocRef, {
+    debugPrint('[ConsultationService] Transaksi utama penyelesaian konsultasi $consultationId sukses.');
+
+    // 2. Increment consultationsHandled dokter sebagai langkah terpisah best effort
+    if (doctorId.isNotEmpty) {
+      try {
+        final doctorDocRef = _db.collection('doctors').doc(doctorId);
+        await doctorDocRef.update({
           'consultationsHandled': FieldValue.increment(1),
           'updatedAt': FieldValue.serverTimestamp(),
         });
+        debugPrint('[ConsultationService] Increment consultationsHandled dokter $doctorId berhasil.');
+      } catch (e) {
+        debugPrint('[ConsultationService] Gagal increment consultationsHandled (rekonsiliasi Beranda Dokter akan menutup selisih): $e');
       }
-    });
+    }
 
-    debugPrint('[ConsultationService] Transaksi penyelesaian konsultasi $consultationId sukses.');
-
-    // Relay notifikasi
+    // 3. Relay notifikasi
     NotificationRelayClient.instance.notify(
       patientUid: pUid,
       consultationId: consultationId,
@@ -475,6 +486,7 @@ class ConsultationService {
 
   /// Stream seluruh konsultasi milik pasien (baik active, waiting, maupun completed),
   /// tanpa filter server-side agar tidak memerlukan composite index dan live real-time.
+  /// Otomatis menyaring konsultasi yang disembunyikan oleh pasien (hiddenByPatient == true).
   Stream<List<ConsultationModel>> watchAllPatientConsultations({String? patientUid}) {
     final pUid = patientUid ?? _uid;
     if (pUid == null || pUid.isEmpty) {
@@ -489,12 +501,13 @@ class ConsultationService {
         .map((snap) {
       return snap.docs
           .map((doc) => ConsultationModel.fromFirestore(doc))
-          .where((c) => c.paymentStatus != PaymentStatus.expired)
+          .where((c) => c.paymentStatus != PaymentStatus.expired && !c.hiddenByPatient)
           .toList();
     });
   }
 
   /// Stream daftar riwayat konsultasi pasien berstatus "completed".
+  /// Otomatis menyaring konsultasi yang disembunyikan oleh pasien (hiddenByPatient == true).
   Stream<List<ConsultationModel>> watchCompletedConsultations({String? patientUid}) {
     final pUid = patientUid ?? _uid;
     if (pUid == null || pUid.isEmpty) {
@@ -510,6 +523,7 @@ class ConsultationService {
         .map((snap) {
       final list = snap.docs
           .map((doc) => ConsultationModel.fromFirestore(doc))
+          .where((c) => !c.hiddenByPatient)
           .toList();
 
       // Urutkan terbaru: completedAt ?? createdAt descending
@@ -521,6 +535,62 @@ class ConsultationService {
 
       return list;
     });
+  }
+
+  /// Sembunyikan atau pulihkan konsultasi dari Riwayat Konsultasi pasien (Bagian D).
+  /// Menggunakan soft-hide `hiddenByPatient` sehingga catatan dokter tetap utuh.
+  Future<void> hideConsultationFromHistory({
+    required String consultationId,
+    String? patientUid,
+    bool hidden = true,
+  }) async {
+    final docRef = _consultationDocRef(consultationId, patientUid);
+    if (docRef == null) throw Exception('Referensi konsultasi tidak valid.');
+    await docRef.update({'hiddenByPatient': hidden});
+    debugPrint('[ConsultationService] Konsultasi $consultationId hiddenByPatient = $hidden.');
+  }
+
+  /// Membersihkan riwayat lama (> 30 hari secara default) dengan soft-hide (Bagian D.2).
+  /// Dipecah per 400 operasi untuk mematuhi limit batch Firestore.
+  Future<int> cleanOldConsultationHistory({
+    String? patientUid,
+    Duration olderThan = ConsultationConstants.kOldChatAge,
+  }) async {
+    final uid = patientUid ?? _uid;
+    if (uid == null || uid.isEmpty) return 0;
+
+    final cutoff = DateTime.now().subtract(olderThan);
+    final snap = await _db
+        .collection('users')
+        .doc(uid)
+        .collection('consultations')
+        .where('status', isEqualTo: 'completed')
+        .get();
+
+    final toHide = snap.docs.where((doc) {
+      final data = doc.data();
+      if (data['hiddenByPatient'] == true) return false;
+      final completedAt = (data['completedAt'] as Timestamp?)?.toDate() ??
+          (data['createdAt'] as Timestamp?)?.toDate();
+      if (completedAt == null) return false;
+      return completedAt.isBefore(cutoff);
+    }).toList();
+
+    if (toHide.isEmpty) return 0;
+
+    // Pecah per 400 dokumen per batch
+    const int chunkSize = 400;
+    for (int i = 0; i < toHide.length; i += chunkSize) {
+      final chunk = toHide.skip(i).take(chunkSize);
+      final batch = _db.batch();
+      for (final doc in chunk) {
+        batch.update(doc.reference, {'hiddenByPatient': true});
+      }
+      await batch.commit();
+    }
+
+    debugPrint('[ConsultationService] Berhasil menyembunyikan ${toHide.length} konsultasi lama.');
+    return toHide.length;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -641,6 +711,8 @@ class ConsultationService {
       'text': trimmedText,
       'sentAt': FieldValue.serverTimestamp(),
       'type': type,
+      'deletedForEveryone': false,
+      'hiddenFor': <String>[],
       'attachmentUrl': ?attachmentUrl,
       'fileName': ?fileName,
       'fileSize': ?fileSize,
@@ -660,6 +732,7 @@ class ConsultationService {
         'lastMessageText': previewText,
         'lastMessageAt': FieldValue.serverTimestamp(),
         'lastMessageSenderType': 'patient',
+        'lastMessageId': messageDoc.id,
         'unreadForDoctor': FieldValue.increment(1),
       });
     } else {
@@ -667,6 +740,7 @@ class ConsultationService {
         'lastMessageText': previewText,
         'lastMessageAt': FieldValue.serverTimestamp(),
         'lastMessageSenderType': 'doctor',
+        'lastMessageId': messageDoc.id,
         'unreadForPatient': FieldValue.increment(1),
       });
     }
@@ -712,6 +786,153 @@ class ConsultationService {
       mimeType: mimeType,
       doctorId: doctorId,
     );
+  }
+
+  /// Mengedit teks pesan chat (Bagian C.2).
+  /// Menandai editedAt dan jika pesan yang diedit adalah pesan terakhir (lastMessageId cocok),
+  /// perbarui juga lastMessageText pada dokumen consultation.
+  Future<void> editMessage({
+    required String consultationId,
+    required String messageId,
+    required String newText,
+    String? patientUid,
+    bool isLastMessage = false,
+  }) async {
+    String? effectivePatientUid = (patientUid != null && patientUid.trim().isNotEmpty)
+        ? patientUid.trim()
+        : null;
+
+    if (effectivePatientUid == null) {
+      final consultation = await fetchById(consultationId);
+      effectivePatientUid = consultation?.patientUid ?? _uid;
+    }
+
+    if (effectivePatientUid == null || effectivePatientUid.isEmpty) {
+      throw Exception('patientUid tidak ditemukan untuk konsultasi $consultationId');
+    }
+
+    final messageDocRef = _messagesRef(consultationId, effectivePatientUid)?.doc(messageId);
+    final consultationDocRef = _consultationDocRef(consultationId, effectivePatientUid);
+
+    if (messageDocRef == null || consultationDocRef == null) {
+      throw Exception('Referensi dokumen pesan tidak valid.');
+    }
+
+    final trimmed = newText.trim();
+    if (trimmed.isEmpty) return;
+
+    final batch = _db.batch();
+    batch.update(messageDocRef, {
+      'text': trimmed,
+      'editedAt': FieldValue.serverTimestamp(),
+    });
+
+    if (isLastMessage) {
+      batch.update(consultationDocRef, {
+        'lastMessageText': trimmed,
+      });
+    }
+
+    await batch.commit();
+    debugPrint('[ConsultationService] Pesan $messageId berhasil diedit.');
+  }
+
+  /// Menyembunyikan pesan untuk diri sendiri (Bagian C.3: Hapus untuk saya).
+  /// Menambahkan uid pengguna ke dalam array hiddenFor pada dokumen pesan.
+  Future<void> hideMessageForMe({
+    required String consultationId,
+    required String messageId,
+    required String myUid,
+    String? patientUid,
+  }) async {
+    String? effectivePatientUid = (patientUid != null && patientUid.trim().isNotEmpty)
+        ? patientUid.trim()
+        : null;
+
+    if (effectivePatientUid == null) {
+      final consultation = await fetchById(consultationId);
+      effectivePatientUid = consultation?.patientUid ?? _uid;
+    }
+
+    if (effectivePatientUid == null || effectivePatientUid.isEmpty) {
+      throw Exception('patientUid tidak ditemukan untuk konsultasi $consultationId');
+    }
+
+    final messageDocRef = _messagesRef(consultationId, effectivePatientUid)?.doc(messageId);
+    if (messageDocRef == null) {
+      throw Exception('Referensi pesan tidak valid.');
+    }
+
+    await messageDocRef.update({
+      'hiddenFor': FieldValue.arrayUnion([myUid]),
+    });
+    debugPrint('[ConsultationService] Pesan $messageId disembunyikan untuk uid $myUid.');
+  }
+
+  /// Menghapus pesan untuk semua orang (Bagian C.3: Hapus untuk semua orang).
+  /// Menandai deletedForEveryone = true, mengosongkan teks dan lampiran,
+  /// serta mengubah preview lastMessageText menjadi "Pesan ini telah dihapus" jika pesan terakhir.
+  Future<void> deleteMessageForEveryone({
+    required String consultationId,
+    required String messageId,
+    String? patientUid,
+    bool isLastMessage = false,
+  }) async {
+    String? effectivePatientUid = (patientUid != null && patientUid.trim().isNotEmpty)
+        ? patientUid.trim()
+        : null;
+
+    if (effectivePatientUid == null) {
+      final consultation = await fetchById(consultationId);
+      effectivePatientUid = consultation?.patientUid ?? _uid;
+    }
+
+    if (effectivePatientUid == null || effectivePatientUid.isEmpty) {
+      throw Exception('patientUid tidak ditemukan untuk konsultasi $consultationId');
+    }
+
+    final messageDocRef = _messagesRef(consultationId, effectivePatientUid)?.doc(messageId);
+    final consultationDocRef = _consultationDocRef(consultationId, effectivePatientUid);
+
+    if (messageDocRef == null || consultationDocRef == null) {
+      throw Exception('Referensi dokumen tidak valid.');
+    }
+
+    // Coba bersihkan file storage jika ada attachment URL non-base64
+    try {
+      final snap = await messageDocRef.get();
+      if (snap.exists) {
+        final data = snap.data() ?? {};
+        final attachUrl = data['attachmentUrl'] as String?;
+        if (attachUrl != null && (attachUrl.startsWith('http://') || attachUrl.startsWith('https://'))) {
+          try {
+            await _storage.refFromURL(attachUrl).delete();
+          } catch (storageErr) {
+            debugPrint('[ConsultationService] Gagal menghapus file storage (best-effort): $storageErr');
+          }
+        }
+      }
+    } catch (_) {}
+
+    final batch = _db.batch();
+    batch.update(messageDocRef, {
+      'deletedForEveryone': true,
+      'deletedAt': FieldValue.serverTimestamp(),
+      'text': '',
+      'attachmentUrl': FieldValue.delete(),
+      'fileName': FieldValue.delete(),
+      'fileSize': FieldValue.delete(),
+      'mimeType': FieldValue.delete(),
+    });
+
+    if (isLastMessage) {
+      batch.update(consultationDocRef, {
+        'lastMessageText': 'Pesan ini telah dihapus',
+      });
+    }
+
+    await batch.commit();
+    debugPrint('[ConsultationService] Pesan $messageId berhasil dihapus untuk semua orang.');
   }
 
   /// [SIMULASI] Cek apakah dokter punya akun nyata.
@@ -788,11 +1009,14 @@ class ConsultationService {
           'text': replyText,
           'sentAt': FieldValue.serverTimestamp(),
           'type': 'text',
+          'deletedForEveryone': false,
+          'hiddenFor': <String>[],
         });
         batch.update(consultationDocRef, {
           'lastMessageText': replyText,
           'lastMessageAt': FieldValue.serverTimestamp(),
           'lastMessageSenderType': 'doctor',
+          'lastMessageId': messageDoc.id,
           'unreadForPatient': FieldValue.increment(1),
         });
         await batch.commit();

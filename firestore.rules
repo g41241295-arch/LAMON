@@ -87,24 +87,28 @@ service cloud.firestore {
         allow read: if isDoctorForDoc(resource.data);
 
         // Dokter hanya boleh update field-field status dan pesan tertentu,
-        // dengan pembatasan transisi status: waiting -> active (konfirmasi) atau active -> completed (selesai).
+        // dengan pembatasan transisi status: waiting -> active (konfirmasi) atau active -> completed / waiting -> completed (selesai).
         allow update: if isDoctorForDoc(resource.data)
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                            'status', 'doctorConfirmedAt', 'lastMessageText', 
                            'lastMessageAt', 'lastMessageSenderType', 
                            'unreadForDoctor', 'unreadForPatient', 'lastReadByDoctorAt',
-                           'completedAt', 'doctorRecommendation'
+                           'completedAt', 'doctorRecommendation', 'lastMessageId'
                          ])
                       && (
                         !('status' in request.resource.data.diff(resource.data).affectedKeys()) ||
                         (resource.data.status == 'waiting' && request.resource.data.status == 'active') ||
-                        (resource.data.status == 'active' && request.resource.data.status == 'completed')
+                        (resource.data.status == 'active' && request.resource.data.status == 'completed') ||
+                        (resource.data.status == 'waiting' && request.resource.data.status == 'completed')
                       );
 
         // Sub-koleksi pesan chat
         match /messages/{messageId} {
-          // Pasien pemilik
-          allow read, write: if isSignedIn() && request.auth.uid == userId;
+          // Pasien pemilik dapat membaca pesan
+          allow read: if isSignedIn() && request.auth.uid == userId;
+
+          // Pasien pemilik dapat membuat pesan baru (termasuk auto-reply simulasi dokter)
+          allow create: if isSignedIn() && request.auth.uid == userId;
 
           // Dokter terkait dapat membaca pesan
           allow read: if isDoctorForDoc(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data);
@@ -113,6 +117,49 @@ service cloud.firestore {
           allow create: if isDoctorForDoc(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data)
                         && get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data.paymentStatus == 'paid'
                         && request.resource.data.senderType == 'doctor';
+
+          // Update pesan oleh Pasien pemilik (Bagian C & E):
+          // Pesan ringkasan dokter (type == 'consultation_summary') tidak boleh diubah.
+          // Pasien hanya boleh:
+          // (i) Sembunyikan untuk saya: hanya field 'hiddenFor' yang diubah.
+          // (ii) Edit atau hapus untuk semua pada pesan miliknya (senderType == 'patient'):
+          //      hanya field text, editedAt, deletedForEveryone, deletedAt, dan data lampiran.
+          allow update: if isSignedIn() && request.auth.uid == userId
+                        && (!('type' in resource.data) || resource.data.type != 'consultation_summary')
+                        && (
+                          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hiddenFor']) ||
+                          (
+                            resource.data.senderType == 'patient'
+                            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                                 'text', 'editedAt', 'deletedForEveryone', 'deletedAt',
+                                 'attachmentUrl', 'fileName', 'fileSize', 'mimeType'
+                               ])
+                            && request.resource.data.senderType == resource.data.senderType
+                          )
+                        );
+
+          // Update pesan oleh Dokter terkait (Bagian C & E):
+          // Pesan ringkasan dokter (type == 'consultation_summary') tidak boleh diubah.
+          // Dokter hanya boleh:
+          // (i) Sembunyikan untuk saya: hanya field 'hiddenFor' yang diubah.
+          // (ii) Edit atau hapus untuk semua pada pesan dokter miliknya (senderType == 'doctor'):
+          //      hanya field text, editedAt, deletedForEveryone, deletedAt, dan data lampiran.
+          allow update: if isDoctorForDoc(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data)
+                        && (!('type' in resource.data) || resource.data.type != 'consultation_summary')
+                        && (
+                          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hiddenFor']) ||
+                          (
+                            resource.data.senderType == 'doctor'
+                            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                                 'text', 'editedAt', 'deletedForEveryone', 'deletedAt',
+                                 'attachmentUrl', 'fileName', 'fileSize', 'mimeType'
+                               ])
+                            && request.resource.data.senderType == resource.data.senderType
+                          )
+                        );
+
+          // Hard delete pesan dilarang dari klien (wajib melalui soft delete / hiddenFor)
+          allow delete: if false;
         }
       }
     }

@@ -16,6 +16,9 @@ class ChatBubble extends StatelessWidget {
   final String peerPhotoUrl;
   final String peerInitials;
   final DateTime? lastReadByPeerAt;
+  final bool isSelected;
+  final VoidCallback? onLongPress;
+  final VoidCallback? onTap;
 
   const ChatBubble({
     super.key,
@@ -24,6 +27,9 @@ class ChatBubble extends StatelessWidget {
     this.peerPhotoUrl = '',
     this.peerInitials = 'P',
     this.lastReadByPeerAt,
+    this.isSelected = false,
+    this.onLongPress,
+    this.onTap,
   });
 
   @override
@@ -102,9 +108,95 @@ class ChatBubble extends StatelessWidget {
         (lastReadByPeerAt!.isAfter(message.sentAt) ||
             lastReadByPeerAt!.isAtSameMomentAs(message.sentAt));
 
-    final statusText = isMe ? (isRead ? 'Dibaca $timeStr' : 'Terkirim $timeStr') : timeStr;
+    final editLabel = message.isEdited ? 'Diedit • ' : '';
+    final statusText = isMe
+        ? (isRead ? '${editLabel}Dibaca $timeStr' : '${editLabel}Terkirim $timeStr')
+        : '$editLabel$timeStr';
 
-    // Skema warna bubble
+    // ── Kasus Pesan Dihapus untuk Semua Orang (Bagian C.3) ──
+    if (message.deletedForEveryone) {
+      final deletedText = isMe ? 'Anda menghapus pesan ini' : 'Pesan ini telah dihapus';
+      return InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.12) : Colors.transparent,
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          child: Row(
+            mainAxisAlignment:
+                isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (!isMe) ...[
+                _buildPeerAvatar(),
+                const SizedBox(width: 8),
+              ],
+              Flexible(
+                child: Column(
+                  crossAxisAlignment:
+                      isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.72,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        borderRadius: BorderRadius.only(
+                          topLeft: const Radius.circular(18),
+                          topRight: const Radius.circular(18),
+                          bottomLeft: Radius.circular(isMe ? 18 : 4),
+                          bottomRight: Radius.circular(isMe ? 4 : 18),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.block_rounded,
+                            size: 15,
+                            color: Color(0xFF94A3B8),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              deletedText,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontStyle: FontStyle.italic,
+                                color: Color(0xFF64748B),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      timeStr,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.neutralGray,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isMe) ...[
+                const SizedBox(width: 8),
+                _buildMeAvatar(isMe),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Skema warna bubble biasa
     Color bubbleColor;
     Color textColor;
     Border? bubbleBorder;
@@ -127,131 +219,145 @@ class ChatBubble extends StatelessWidget {
       bubbleBorder = Border.all(color: const Color(0xFFD6E8F3), width: 1);
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment:
-            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // Avatar lawan bicara (kiri)
-          if (!isMe) ...[
-            if (currentUserRole == 'patient')
-              DoctorAvatar(
-                photoUrl: peerPhotoUrl,
-                size: 32,
-                borderRadius: 10,
-              )
-            else
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
-                child: Text(
-                  peerInitials,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-            const SizedBox(width: 8),
-          ],
+    return InkWell(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        color: isSelected ? AppColors.primary.withValues(alpha: 0.12) : Colors.transparent,
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        child: Row(
+          mainAxisAlignment:
+              isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // Avatar lawan bicara (kiri)
+            if (!isMe) ...[
+              _buildPeerAvatar(),
+              const SizedBox(width: 8),
+            ],
 
-          // Bubble konten
-          Flexible(
-            child: Column(
-              crossAxisAlignment:
-                  isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-              children: [
-                Container(
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.72,
-                  ),
-                  decoration: BoxDecoration(
-                    color: bubbleColor,
-                    border: bubbleBorder,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(18),
-                      topRight: const Radius.circular(18),
-                      bottomLeft: Radius.circular(isMe ? 18 : 4),
-                      bottomRight: Radius.circular(isMe ? 4 : 18),
+            // Bubble konten
+            Flexible(
+              child: Column(
+                crossAxisAlignment:
+                    isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.72,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
+                    decoration: BoxDecoration(
+                      color: bubbleColor,
+                      border: bubbleBorder,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(18),
+                        topRight: const Radius.circular(18),
+                        bottomLeft: Radius.circular(isMe ? 18 : 4),
+                        bottomRight: Radius.circular(isMe ? 4 : 18),
                       ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(18),
-                      topRight: const Radius.circular(18),
-                      bottomLeft: Radius.circular(isMe ? 18 : 4),
-                      bottomRight: Radius.circular(isMe ? 4 : 18),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ── Konten Lampiran Gambar ──
-                        if (message.isImage && message.hasAttachment)
-                          _buildImageAttachment(context),
-
-                        // ── Konten Lampiran Dokumen PDF ──
-                        if (message.isFile && message.hasAttachment)
-                          _buildFileAttachment(context, isMe),
-
-                        // ── Teks Pesan (atau Caption) ──
-                        if (message.text.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 10),
-                            child: Text(
-                              message.text,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: textColor,
-                                height: 1.4,
-                              ),
-                            ),
-                          ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
                       ],
                     ),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  statusText,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.neutralGray,
-                  ),
-                ),
-              ],
-            ),
-          ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(18),
+                        topRight: const Radius.circular(18),
+                        bottomLeft: Radius.circular(isMe ? 18 : 4),
+                        bottomRight: Radius.circular(isMe ? 4 : 18),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ── Konten Lampiran Gambar ──
+                          if (message.isImage && message.hasAttachment)
+                            _buildImageAttachment(context),
 
-          // Avatar diri sendiri (kanan)
-          if (isMe) ...[
-            const SizedBox(width: 8),
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: isMe && currentUserRole == 'doctor'
-                  ? const Color(0xFFFFF0B3)
-                  : AppColors.primaryLight.withValues(alpha: 0.25),
-              child: Icon(
-                currentUserRole == 'doctor'
-                    ? Icons.medical_services_rounded
-                    : Icons.person_rounded,
-                size: 16,
-                color: AppColors.primary,
+                          // ── Konten Lampiran Dokumen PDF ──
+                          if (message.isFile && message.hasAttachment)
+                            _buildFileAttachment(context, isMe),
+
+                          // ── Teks Pesan (atau Caption) ──
+                          if (message.text.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 10),
+                              child: Text(
+                                message.text,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: textColor,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    statusText,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.neutralGray,
+                    ),
+                  ),
+                ],
               ),
             ),
+
+            // Avatar diri sendiri (kanan)
+            if (isMe) ...[
+              const SizedBox(width: 8),
+              _buildMeAvatar(isMe),
+            ],
           ],
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPeerAvatar() {
+    if (currentUserRole == 'patient') {
+      return DoctorAvatar(
+        photoUrl: peerPhotoUrl,
+        size: 32,
+        borderRadius: 10,
+      );
+    }
+    return CircleAvatar(
+      radius: 16,
+      backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
+      child: Text(
+        peerInitials,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: AppColors.primary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMeAvatar(bool isMe) {
+    return CircleAvatar(
+      radius: 16,
+      backgroundColor: isMe && currentUserRole == 'doctor'
+          ? const Color(0xFFFFF0B3)
+          : AppColors.primaryLight.withValues(alpha: 0.25),
+      child: Icon(
+        currentUserRole == 'doctor'
+            ? Icons.medical_services_rounded
+            : Icons.person_rounded,
+        size: 16,
+        color: AppColors.primary,
       ),
     );
   }

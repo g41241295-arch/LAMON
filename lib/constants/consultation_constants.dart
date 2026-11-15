@@ -19,6 +19,15 @@ class ConsultationConstants {
   /// Durasi batas waktu pembayaran (kompatibilitas backward).
   static const Duration paymentDeadlineDuration = kPaymentWindow;
 
+  /// Batas waktu pengeditan pesan chat (15 menit ala WhatsApp).
+  static const Duration kEditWindow = Duration(minutes: 15);
+
+  /// Batas waktu hapus pesan untuk semua orang (1 jam ala WhatsApp).
+  static const Duration kDeleteForEveryoneWindow = Duration(hours: 1);
+
+  /// Batas usia chat lama yang dapat dibersihkan dari riwayat pasien (30 hari).
+  static const Duration kOldChatAge = Duration(days: 30);
+
   /// Delay simulasi balasan dokter (3 detik setelah pasien kirim pesan).
   /// TODO(chat-realtime): Hapus simulasi ini dan ganti dengan sistem
   /// notifikasi push / WebSocket / Firebase Cloud Messaging untuk

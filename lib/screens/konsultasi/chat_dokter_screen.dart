@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../constants/app_colors.dart';
+import '../../constants/consultation_constants.dart';
 import '../../models/consultation_model.dart';
 import '../../services/consultation_service.dart';
 import '../../services/notification_service.dart';
@@ -55,10 +56,16 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
   bool _isCompleting = false;
   bool _hasLoadedConsultation = false;
   int _previousMessageCount = 0;
-  bool _showTemplates = false;
   bool _hasShownPatientPopup = false;
 
-  /// Template pesan cepat untuk pasien (Bagian W)
+  // Selected & Edit Message state (Bagian C)
+  ChatMessage? _selectedMessage;
+  ChatMessage? _editingMessage;
+  String? _editingOriginalText;
+  List<ChatMessage> _lastVisibleMessages = [];
+  List<ChatMessage> _getVisibleMessages() => _lastVisibleMessages;
+
+  /// Template pesan cepat untuk pasien (Bagian B)
   static const List<String> _patientTemplates = [
     'Dokter, saya merasakan nyeri di bagian perut atas sejak beberapa hari.',
     'Apakah gejala yang saya alami ini berbahaya?',
@@ -74,6 +81,185 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
   String? _attachmentType; // 'image' | 'file'
   String? _attachmentMimeType;
   int? _attachmentSize;
+
+  bool _isMyMessage(ChatMessage msg) {
+    if (widget.isDoctor) {
+      return msg.isDoctor;
+    } else {
+      return msg.isPatient;
+    }
+  }
+
+  bool _isConsultationActiveOrWaiting() {
+    final c = _consultation;
+    if (c == null) return false;
+    return c.isActive || c.isWaiting;
+  }
+
+  bool _canEdit(ChatMessage msg) {
+    if (msg.type == 'consultation_summary') return false;
+    if (msg.deletedForEveryone) return false;
+    if (msg.type != 'text') return false;
+    if (!_isMyMessage(msg)) return false;
+    if (!_isConsultationActiveOrWaiting()) return false;
+    final elapsed = DateTime.now().difference(msg.sentAt);
+    return elapsed <= ConsultationConstants.kEditWindow;
+  }
+
+  bool _canDeleteForEveryone(ChatMessage msg) {
+    if (msg.type == 'consultation_summary') return false;
+    if (msg.deletedForEveryone) return false;
+    if (!_isMyMessage(msg)) return false;
+    if (!_isConsultationActiveOrWaiting()) return false;
+    final elapsed = DateTime.now().difference(msg.sentAt);
+    return elapsed <= ConsultationConstants.kDeleteForEveryoneWindow;
+  }
+
+  bool _canHideForMe(ChatMessage msg) {
+    if (msg.type == 'consultation_summary') return false;
+    if (msg.deletedForEveryone) return false;
+    if (!_isConsultationActiveOrWaiting()) return false;
+    return true;
+  }
+
+  bool _canDelete(ChatMessage msg) {
+    return _canHideForMe(msg) || _canDeleteForEveryone(msg);
+  }
+
+  void _copySelectedMessage() {
+    final msg = _selectedMessage;
+    if (msg == null) return;
+    if (msg.text.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: msg.text));
+      _showAppSnackBar('Teks disalin ke papan klip', isSuccess: true);
+    }
+    setState(() => _selectedMessage = null);
+  }
+
+  void _startEditSelectedMessage() {
+    final msg = _selectedMessage;
+    if (msg == null) return;
+    setState(() {
+      _editingMessage = msg;
+      _editingOriginalText = msg.text;
+      _inputController.text = msg.text;
+      _inputController.selection = TextSelection.fromPosition(
+        TextPosition(offset: msg.text.length),
+      );
+      _selectedMessage = null;
+    });
+    _focusNode.requestFocus();
+  }
+
+  void _cancelEdit() {
+    setState(() {
+      _editingMessage = null;
+      _editingOriginalText = null;
+      _inputController.clear();
+    });
+  }
+
+  Future<void> _saveEditedMessage(List<ChatMessage> visibleMessages) async {
+    final msg = _editingMessage;
+    if (msg == null) return;
+
+    final newText = _inputController.text.trim();
+    if (newText.isEmpty) {
+      _showAppSnackBar('Pesan tidak boleh kosong.', isError: true);
+      return;
+    }
+
+    if (newText == _editingOriginalText) {
+      _cancelEdit();
+      return;
+    }
+
+    final isLast = visibleMessages.isNotEmpty && visibleMessages.last.id == msg.id;
+
+    try {
+      await _consultationService.editMessage(
+        consultationId: widget.consultationId,
+        messageId: msg.id,
+        newText: newText,
+        patientUid: _effectivePatientUid,
+        isLastMessage: isLast,
+      );
+      _showAppSnackBar('Pesan berhasil diedit', isSuccess: true);
+    } catch (e) {
+      _showAppSnackBar('Gagal mengedit pesan: $e', isError: true);
+    } finally {
+      _cancelEdit();
+    }
+  }
+
+  Future<void> _showDeleteMessageDialog(List<ChatMessage> visibleMessages) async {
+    final msg = _selectedMessage;
+    if (msg == null) return;
+
+    final canDeleteEveryone = _canDeleteForEveryone(msg);
+    final isLast = visibleMessages.isNotEmpty && visibleMessages.last.id == msg.id;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text('Hapus pesan?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: Text(
+          canDeleteEveryone
+              ? 'Anda dapat menghapus pesan ini hanya untuk Anda, atau untuk semua orang di obrolan ini.'
+              : 'Pesan ini akan dihapus dari obrolan di perangkat Anda saja.',
+          style: const TextStyle(fontSize: 13, color: AppColors.primaryText),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              setState(() => _selectedMessage = null);
+              final myUid = _consultationService.currentUid ?? '';
+              try {
+                await _consultationService.hideMessageForMe(
+                  consultationId: widget.consultationId,
+                  messageId: msg.id,
+                  myUid: myUid,
+                  patientUid: _effectivePatientUid,
+                );
+              } catch (e) {
+                _showAppSnackBar('Gagal menghapus pesan: $e', isError: true);
+              }
+            },
+            child: const Text('Hapus untuk saya', style: TextStyle(color: Colors.red)),
+          ),
+          if (canDeleteEveryone)
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                setState(() => _selectedMessage = null);
+                try {
+                  await _consultationService.deleteMessageForEveryone(
+                    consultationId: widget.consultationId,
+                    messageId: msg.id,
+                    patientUid: _effectivePatientUid,
+                    isLastMessage: isLast,
+                  );
+                } catch (e) {
+                  _showAppSnackBar('Gagal menghapus pesan: $e', isError: true);
+                }
+              },
+              child: const Text('Hapus untuk semua orang'),
+            ),
+        ],
+      ),
+    );
+  }
 
   void _showAppSnackBar(String message, {bool isError = false, bool isSuccess = false}) {
     if (!mounted) return;
@@ -724,113 +910,164 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
         Scaffold(
           resizeToAvoidBottomInset: true,
           backgroundColor: Colors.transparent,
-          appBar: AppBar(
-            backgroundColor: Colors.white.withValues(alpha: 0.94),
-            elevation: 0.5,
-            surfaceTintColor: Colors.transparent,
-            shadowColor: Colors.black.withValues(alpha: 0.08),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: AppColors.primaryText),
-              onPressed: () => Navigator.pop(context),
-              tooltip: 'Kembali',
-            ),
-            titleSpacing: 0,
-            title: Row(
-              children: [
-                if (widget.isDoctor)
-                  _buildPatientHeaderAvatar()
-                else
-                  DoctorAvatar(
-                    photoUrl: _consultation?.effectiveDoctorPhotoUrl ?? '',
-                    doctorId: _consultation?.doctorId,
-                    doctorName: _consultation?.doctorName,
-                    size: 36,
-                    borderRadius: 10,
+          appBar: _selectedMessage != null
+              ? AppBar(
+                  backgroundColor: Colors.white,
+                  elevation: 1,
+                  leading: IconButton(
+                    icon: const Icon(Icons.close_rounded,
+                        color: AppColors.primaryText),
+                    onPressed: () => setState(() => _selectedMessage = null),
+                    tooltip: 'Batal seleksi',
                   ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        titleName,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primaryText,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                  title: const Text(
+                    '1 pesan dipilih',
+                    style: TextStyle(
+                      color: AppColors.primaryText,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  actions: [
+                    if (!_selectedMessage!.deletedForEveryone &&
+                        _selectedMessage!.text.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.copy_rounded,
+                            color: AppColors.primaryText),
+                        tooltip: 'Salin',
+                        onPressed: _copySelectedMessage,
                       ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: statusColor,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          Flexible(
-                            child: Text(
-                              subtitleText,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: statusColor,
-                                fontWeight: FontWeight.w600,
+                    if (_canEdit(_selectedMessage!))
+                      IconButton(
+                        icon: const Icon(Icons.edit_rounded,
+                            color: AppColors.primaryText),
+                        tooltip: 'Edit pesan',
+                        onPressed: _startEditSelectedMessage,
+                      ),
+                    if (_canDelete(_selectedMessage!))
+                      Builder(
+                        builder: (btnCtx) => IconButton(
+                          icon: const Icon(Icons.delete_outline_rounded,
+                              color: AppColors.primaryText),
+                          tooltip: 'Hapus pesan',
+                          onPressed: () =>
+                              _showDeleteMessageDialog(_getVisibleMessages()),
+                        ),
+                      ),
+                    const SizedBox(width: 8),
+                  ],
+                )
+              : AppBar(
+                  backgroundColor: Colors.white.withValues(alpha: 0.94),
+                  elevation: 0.5,
+                  surfaceTintColor: Colors.transparent,
+                  shadowColor: Colors.black.withValues(alpha: 0.08),
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                        color: AppColors.primaryText),
+                    onPressed: () => Navigator.pop(context),
+                    tooltip: 'Kembali',
+                  ),
+                  titleSpacing: 0,
+                  title: Row(
+                    children: [
+                      if (widget.isDoctor)
+                        _buildPatientHeaderAvatar()
+                      else
+                        DoctorAvatar(
+                          photoUrl: _consultation?.effectiveDoctorPhotoUrl ?? '',
+                          doctorId: _consultation?.doctorId,
+                          doctorName: _consultation?.doctorName,
+                          size: 36,
+                          borderRadius: 10,
+                        ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              titleName,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primaryText,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: BoxDecoration(
+                                    color: statusColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                Flexible(
+                                  child: Text(
+                                    subtitleText,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: statusColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-            actions: [
-              if (widget.isDoctor && !widget.readOnly && (_consultation?.isActive ?? false))
-                Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: TextButton.icon(
-                    style: TextButton.styleFrom(
-                      backgroundColor:
-                          AppColors.successGreen.withValues(alpha: 0.12),
-                      foregroundColor: AppColors.successGreen,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    onPressed: _isCompleting ? null : _showSelesaikanKonsultasiDialog,
-                    icon: _isCompleting
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.successGreen,
+                  actions: [
+                    if (widget.isDoctor &&
+                        !widget.readOnly &&
+                        (_consultation?.isActive ?? false))
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(
+                            backgroundColor:
+                                AppColors.successGreen.withValues(alpha: 0.12),
+                            foregroundColor: AppColors.successGreen,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                          )
-                        : const Icon(Icons.check_circle_outline_rounded,
-                            size: 16),
-                    label: Text(
-                      _isCompleting ? 'Memproses...' : 'Selesai',
-                      style: const TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w700),
-                    ),
-                  ),
+                          ),
+                          onPressed: _isCompleting
+                              ? null
+                              : _showSelesaikanKonsultasiDialog,
+                          icon: _isCompleting
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.successGreen,
+                                  ),
+                                )
+                              : const Icon(Icons.check_circle_outline_rounded,
+                                  size: 16),
+                          label: Text(
+                            _isCompleting ? 'Memproses...' : 'Selesai',
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-            ],
-          ),
           body: GestureDetector(
             behavior: HitTestBehavior.translucent,
             onTap: () => FocusScope.of(context).unfocus(),
@@ -926,32 +1163,37 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                               );
                             }
 
-                            final messages = snapshot.data ?? [];
+                            final allMessages = snapshot.data ?? [];
+                            final myUid = _consultationService.currentUid ?? '';
+                            final visibleMessages = allMessages
+                                .where((m) => !m.hiddenFor.contains(myUid))
+                                .toList();
+                            _lastVisibleMessages = visibleMessages;
 
                             // Auto-scroll ke pesan terbaru:
                             // 1. Saat pertama kali chat dibuka / pesan dimuat
                             // 2. Saat pesan baru masuk dan user sedang berada di dekat bagian bawah
-                            if (messages.isNotEmpty) {
+                            if (visibleMessages.isNotEmpty) {
                               if (_previousMessageCount == 0) {
-                                _previousMessageCount = messages.length;
+                                _previousMessageCount = visibleMessages.length;
                                 WidgetsBinding.instance
                                     .addPostFrameCallback((_) => _scrollToBottom());
-                              } else if (messages.length > _previousMessageCount) {
+                              } else if (visibleMessages.length > _previousMessageCount) {
                                 final isNearBottom = !_scrollController.hasClients ||
                                     (_scrollController.position.maxScrollExtent -
                                             _scrollController.offset <=
                                         120);
-                                _previousMessageCount = messages.length;
+                                _previousMessageCount = visibleMessages.length;
                                 if (isNearBottom) {
                                   WidgetsBinding.instance
                                       .addPostFrameCallback((_) => _scrollToBottom());
                                 }
                               } else {
-                                _previousMessageCount = messages.length;
+                                _previousMessageCount = visibleMessages.length;
                               }
                             }
 
-                            if (messages.isEmpty) {
+                            if (visibleMessages.isEmpty) {
                               return LayoutBuilder(
                                 builder: (context, constraints) {
                                   return SingleChildScrollView(
@@ -1021,11 +1263,11 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                               controller: _scrollController,
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 12),
-                              itemCount: messages.length,
+                              itemCount: visibleMessages.length,
                               itemBuilder: (_, i) {
-                                final msg = messages[i];
+                                final msg = visibleMessages[i];
                                 final showDateSeparator = i == 0 ||
-                                    !_isSameDay(messages[i - 1].createdAt,
+                                    !_isSameDay(visibleMessages[i - 1].createdAt,
                                         msg.createdAt);
 
                                 return Column(
@@ -1046,6 +1288,16 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                                       lastReadByPeerAt: widget.isDoctor
                                           ? _consultation?.lastReadByPatientAt
                                           : _consultation?.lastReadByDoctorAt,
+                                      isSelected: _selectedMessage?.id == msg.id,
+                                      onLongPress: () {
+                                        if (msg.type == 'consultation_summary' || isCompleted) return;
+                                        setState(() => _selectedMessage = msg);
+                                      },
+                                      onTap: () {
+                                        if (_selectedMessage != null) {
+                                          setState(() => _selectedMessage = null);
+                                        }
+                                      },
                                     ),
                                   ],
                                 );
@@ -1058,15 +1310,21 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                 // ── Bar Pratinjau Lampiran (jika ada yang dipilih) ──
                 if (_attachmentBytes != null) _buildAttachmentPreviewBar(),
 
-                // ── Template Pesan Cepat (pasien saja, Bagian W) ──
-                if (!isCompleted && !widget.isDoctor && _showTemplates)
+                // ── Banner Mengedit Pesan (Bagian C.2) ──
+                if (_editingMessage != null) _buildEditingBanner(),
+
+                // ── Template Pesan Cepat Langsung Tampil Tanpa Tombol Petir (Bagian B) ──
+                if (!isCompleted &&
+                    !widget.isDoctor &&
+                    _editingMessage == null &&
+                    (isWaiting || (_consultation?.isActive ?? false)))
                   _buildTemplateSuggestions(),
 
                 // ── Kolom Input Bar Menempel di atas Keyboard / Bar Selesai ──
                 if (isCompleted)
                   _buildCompletedBar()
                 else
-                  _buildInputBar(context),
+                  _buildInputBar(context, _lastVisibleMessages),
               ],
             ),
           ),
@@ -1194,7 +1452,61 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     );
   }
 
-  Widget _buildInputBar(BuildContext context) {
+  Widget _buildEditingBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF1F5F9),
+        border: Border(
+          top: BorderSide(color: Color(0xFFE2E8F0)),
+          bottom: BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Mengedit pesan',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+                Text(
+                  _editingOriginalText ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: const Icon(Icons.close_rounded,
+                size: 18, color: Color(0xFF64748B)),
+            onPressed: _cancelEdit,
+            tooltip: 'Batal edit',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputBar(BuildContext context, List<ChatMessage> visibleMessages) {
+    final isEditing = _editingMessage != null;
+
     return SafeArea(
       top: false,
       child: Container(
@@ -1211,32 +1523,19 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
         ),
         child: Row(
           children: [
-            // Tombol Template (pasien saja, Bagian W)
-            if (!widget.isDoctor)
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
-                icon: Icon(
-                  Icons.bolt_rounded,
-                  color: _showTemplates ? AppColors.primary : AppColors.neutralGray,
-                  size: 24,
-                ),
-                onPressed: () => setState(() => _showTemplates = !_showTemplates),
-                tooltip: 'Template pesan cepat',
-              ),
             // Tombol Lampiran (+)
             IconButton(
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
-              icon: const Icon(
+              icon: Icon(
                 Icons.add_circle_outline_rounded,
-                color: AppColors.primary,
+                color: isEditing ? AppColors.neutralGray : AppColors.primary,
                 size: 26,
               ),
-              onPressed: (_isSending || _isUploading)
+              onPressed: (_isSending || _isUploading || isEditing)
                   ? null
                   : _showAttachmentOptions,
-              tooltip: 'Lampirkan file atau foto',
+              tooltip: isEditing ? 'Tidak dapat melampirkan saat mengedit' : 'Lampirkan file atau foto',
             ),
             const SizedBox(width: 4),
 
@@ -1254,27 +1553,27 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                   maxLines: 4,
                   minLines: 1,
                   textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    hintText: 'Tulis pesan...',
-                    hintStyle: TextStyle(
+                  decoration: InputDecoration(
+                    hintText: isEditing ? 'Edit pesan...' : 'Tulis pesan...',
+                    hintStyle: const TextStyle(
                       color: AppColors.neutralGray,
                       fontSize: 14,
                     ),
                     border: InputBorder.none,
                     isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
                   ),
                 ),
               ),
             ),
             const SizedBox(width: 8),
 
-            // Tombol Kirim
+            // Tombol Kirim / Simpan Perubahan
             Container(
               width: 42,
               height: 42,
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
+              decoration: BoxDecoration(
+                color: isEditing ? AppColors.successGreen : AppColors.primary,
                 shape: BoxShape.circle,
               ),
               child: _isSending || _isUploading
@@ -1288,13 +1587,15 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                   : IconButton(
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
-                      icon: const Icon(
-                        Icons.send_rounded,
+                      icon: Icon(
+                        isEditing ? Icons.check_rounded : Icons.send_rounded,
                         color: Colors.white,
                         size: 20,
                       ),
-                      onPressed: _sendMessage,
-                      tooltip: 'Kirim pesan',
+                      onPressed: isEditing
+                          ? () => _saveEditedMessage(visibleMessages)
+                          : _sendMessage,
+                      tooltip: isEditing ? 'Simpan perubahan' : 'Kirim pesan',
                     ),
             ),
           ],
@@ -1303,7 +1604,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     );
   }
 
-  /// Widget strip template pesan cepat (Bagian W)
+  /// Widget strip template pesan cepat (Bagian B - Langsung tampil tanpa tombol petir)
   Widget _buildTemplateSuggestions() {
     return Container(
       height: 44,
@@ -1327,7 +1628,6 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                 _inputController.selection = TextSelection.fromPosition(
                   TextPosition(offset: template.length),
                 );
-                setState(() => _showTemplates = false);
                 _focusNode.requestFocus();
               },
               child: Container(
@@ -1380,7 +1680,9 @@ class _SelesaikanKonsultasiDialogState
   final TextEditingController _recommendationController =
       TextEditingController();
   bool _isSubmitting = false;
-  String? _inlineError;
+  String? _validationError;
+  String? _saveErrorMessage;
+  String? _saveErrorCode;
 
   @override
   void dispose() {
@@ -1391,25 +1693,30 @@ class _SelesaikanKonsultasiDialogState
   void _validate(String val) {
     final trimmed = val.trim();
     if (trimmed.isEmpty) {
-      setState(() => _inlineError = 'Rekomendasi dokter wajib diisi.');
+      setState(() => _validationError = 'Rekomendasi dokter wajib diisi.');
     } else if (trimmed.length < 10) {
-      setState(() => _inlineError =
+      setState(() => _validationError =
           'Rekomendasi dokter minimal 10 karakter (saat ini ${trimmed.length}).');
     } else if (trimmed.length > 500) {
-      setState(() => _inlineError =
+      setState(() => _validationError =
           'Rekomendasi dokter maksimal 500 karakter (saat ini ${trimmed.length}).');
     } else {
-      if (_inlineError != null) {
-        setState(() => _inlineError = null);
+      if (_validationError != null) {
+        setState(() => _validationError = null);
       }
     }
   }
 
   Future<void> _submit() async {
     _validate(_recommendationController.text);
-    if (_inlineError != null) return;
+    if (_validationError != null) return;
 
-    setState(() => _isSubmitting = true);
+    setState(() {
+      _isSubmitting = true;
+      _saveErrorMessage = null;
+      _saveErrorCode = null;
+    });
+
     try {
       await widget.onConfirm(_recommendationController.text.trim());
       if (mounted) Navigator.pop(context, true);
@@ -1417,7 +1724,8 @@ class _SelesaikanKonsultasiDialogState
       if (mounted) {
         setState(() {
           _isSubmitting = false;
-          _inlineError = e.toString().replaceAll('Exception: ', '');
+          _saveErrorMessage = 'Gagal menyimpan rekomendasi';
+          _saveErrorCode = e.toString().replaceAll('Exception: ', '').trim();
         });
       }
     }
@@ -1491,10 +1799,10 @@ class _SelesaikanKonsultasiDialogState
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      if (_inlineError != null)
+                      if (_validationError != null)
                         Expanded(
                           child: Text(
-                            _inlineError!,
+                            _validationError!,
                             style: const TextStyle(
                               color: Colors.red,
                               fontSize: 11,
@@ -1516,6 +1824,50 @@ class _SelesaikanKonsultasiDialogState
                 );
               },
             ),
+            if (_saveErrorMessage != null) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFECACA)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded,
+                            size: 15, color: Colors.red),
+                        const SizedBox(width: 6),
+                        Text(
+                          _saveErrorMessage!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_saveErrorCode != null && _saveErrorCode!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 21),
+                        child: Text(
+                          _saveErrorCode!,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFF991B1B),
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

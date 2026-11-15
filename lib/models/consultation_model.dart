@@ -90,6 +90,10 @@ class ConsultationModel {
   final DateTime? lastReadByDoctorAt;
   final DateTime? lastReadByPatientAt;
 
+  // Bagian A: field tambahan
+  final String? lastMessageId;
+  final bool hiddenByPatient;
+
   const ConsultationModel({
     required this.id,
     required this.doctorId,
@@ -126,6 +130,8 @@ class ConsultationModel {
     this.unreadForPatient = 0,
     this.lastReadByDoctorAt,
     this.lastReadByPatientAt,
+    this.lastMessageId,
+    this.hiddenByPatient = false,
   });
 
   /// Konsultasi sudah expired batas waktu pembayaran.
@@ -225,6 +231,8 @@ class ConsultationModel {
     int? unreadForPatient,
     DateTime? lastReadByDoctorAt,
     DateTime? lastReadByPatientAt,
+    String? lastMessageId,
+    bool? hiddenByPatient,
   }) {
     return ConsultationModel(
       id: id ?? this.id,
@@ -263,6 +271,8 @@ class ConsultationModel {
       unreadForPatient: unreadForPatient ?? this.unreadForPatient,
       lastReadByDoctorAt: lastReadByDoctorAt ?? this.lastReadByDoctorAt,
       lastReadByPatientAt: lastReadByPatientAt ?? this.lastReadByPatientAt,
+      lastMessageId: lastMessageId ?? this.lastMessageId,
+      hiddenByPatient: hiddenByPatient ?? this.hiddenByPatient,
     );
   }
 
@@ -319,6 +329,8 @@ class ConsultationModel {
       unreadForPatient: (data['unreadForPatient'] as num?)?.toInt() ?? 0,
       lastReadByDoctorAt: (data['lastReadByDoctorAt'] as Timestamp?)?.toDate(),
       lastReadByPatientAt: (data['lastReadByPatientAt'] as Timestamp?)?.toDate(),
+      lastMessageId: data['lastMessageId'] as String?,
+      hiddenByPatient: data['hiddenByPatient'] as bool? ?? false,
     );
   }
 
@@ -368,6 +380,8 @@ class ConsultationModel {
           'lastReadByDoctorAt': Timestamp.fromDate(lastReadByDoctorAt!),
         if (lastReadByPatientAt != null)
           'lastReadByPatientAt': Timestamp.fromDate(lastReadByPatientAt!),
+        if (lastMessageId != null) 'lastMessageId': lastMessageId,
+        'hiddenByPatient': hiddenByPatient,
       };
 }
 
@@ -377,11 +391,15 @@ class ChatMessage {
   final String senderType; // "patient" | "doctor"
   final String text;
   final DateTime sentAt;
-  final String type; // "text" | "image" | "file"
+  final String type; // "text" | "image" | "file" | "consultation_summary"
   final String? attachmentUrl;
   final String? fileName;
   final int? fileSize;
   final String? mimeType;
+  final DateTime? editedAt;
+  final bool deletedForEveryone;
+  final DateTime? deletedAt;
+  final List<String> hiddenFor;
 
   const ChatMessage({
     required this.id,
@@ -393,6 +411,10 @@ class ChatMessage {
     this.fileName,
     this.fileSize,
     this.mimeType,
+    this.editedAt,
+    this.deletedForEveryone = false,
+    this.deletedAt,
+    this.hiddenFor = const [],
   });
 
   bool get isDoctor => senderType == 'doctor';
@@ -400,11 +422,50 @@ class ChatMessage {
   bool get hasAttachment => attachmentUrl != null && attachmentUrl!.isNotEmpty;
   bool get isImage => type == 'image';
   bool get isFile => type == 'file';
+  bool get isEdited => editedAt != null;
+  bool get isDeleted => deletedForEveryone;
   DateTime get createdAt => sentAt;
+
+  ChatMessage copyWith({
+    String? id,
+    String? senderType,
+    String? text,
+    DateTime? sentAt,
+    String? type,
+    String? attachmentUrl,
+    String? fileName,
+    int? fileSize,
+    String? mimeType,
+    DateTime? editedAt,
+    bool? deletedForEveryone,
+    DateTime? deletedAt,
+    List<String>? hiddenFor,
+  }) {
+    return ChatMessage(
+      id: id ?? this.id,
+      senderType: senderType ?? this.senderType,
+      text: text ?? this.text,
+      sentAt: sentAt ?? this.sentAt,
+      type: type ?? this.type,
+      attachmentUrl: attachmentUrl ?? this.attachmentUrl,
+      fileName: fileName ?? this.fileName,
+      fileSize: fileSize ?? this.fileSize,
+      mimeType: mimeType ?? this.mimeType,
+      editedAt: editedAt ?? this.editedAt,
+      deletedForEveryone: deletedForEveryone ?? this.deletedForEveryone,
+      deletedAt: deletedAt ?? this.deletedAt,
+      hiddenFor: hiddenFor ?? this.hiddenFor,
+    );
+  }
 
   factory ChatMessage.fromFirestore(
       DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? {};
+    final hiddenList = (data['hiddenFor'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        const <String>[];
+
     return ChatMessage(
       id: doc.id,
       senderType: data['senderType'] as String? ?? 'doctor',
@@ -415,6 +476,10 @@ class ChatMessage {
       fileName: data['fileName'] as String?,
       fileSize: (data['fileSize'] as num?)?.toInt(),
       mimeType: data['mimeType'] as String?,
+      editedAt: (data['editedAt'] as Timestamp?)?.toDate(),
+      deletedForEveryone: data['deletedForEveryone'] as bool? ?? false,
+      deletedAt: (data['deletedAt'] as Timestamp?)?.toDate(),
+      hiddenFor: hiddenList,
     );
   }
 
@@ -427,5 +492,9 @@ class ChatMessage {
         if (fileName != null) 'fileName': fileName,
         if (fileSize != null) 'fileSize': fileSize,
         if (mimeType != null) 'mimeType': mimeType,
+        if (editedAt != null) 'editedAt': Timestamp.fromDate(editedAt!),
+        'deletedForEveryone': deletedForEveryone,
+        if (deletedAt != null) 'deletedAt': Timestamp.fromDate(deletedAt!),
+        'hiddenFor': hiddenFor,
       };
 }

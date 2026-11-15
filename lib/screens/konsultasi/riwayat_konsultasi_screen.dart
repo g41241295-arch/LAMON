@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
+import '../../constants/consultation_constants.dart';
 import '../../models/consultation_model.dart';
 import '../../models/doctor_model.dart';
 import '../../services/consultation_service.dart';
@@ -84,243 +85,358 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
     return grouped;
   }
 
+  Future<void> _confirmDeleteConsultation(ConsultationModel item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text('Hapus dari riwayat?',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: Text(
+          'Konsultasi dengan ${item.doctorName} akan disembunyikan dari riwayat Anda. Catatan dokter tetap tersimpan normal.',
+          style: const TextStyle(fontSize: 13, color: AppColors.primaryText),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await _consultationService.hideConsultationFromHistory(
+          consultationId: item.id,
+          patientUid: item.patientUid,
+          hidden: true,
+        );
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Konsultasi dihapus dari riwayat'),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Urungkan',
+              textColor: Colors.amberAccent,
+              onPressed: () async {
+                try {
+                  await _consultationService.hideConsultationFromHistory(
+                    consultationId: item.id,
+                    patientUid: item.patientUid,
+                    hidden: false,
+                  );
+                } catch (e) {
+                  debugPrint('Gagal membatalkan penghapusan: $e');
+                }
+              },
+            ),
+          ),
+        );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal menghapus riwayat: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showCleanOldHistoryDialog(
+      List<ConsultationModel> completedList) async {
+    final cutoff = DateTime.now().subtract(ConsultationConstants.kOldChatAge);
+    final oldList = completedList.where((c) {
+      if (c.hiddenByPatient) return false;
+      final date = c.completedAt ?? c.createdAt;
+      return date.isBefore(cutoff);
+    }).toList();
+
+    if (oldList.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tidak ada riwayat lama.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text('Bersihkan riwayat lama',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: Text(
+          'Terdapat ${oldList.length} riwayat konsultasi yang lebih dari 30 hari. Apakah Anda yakin ingin menghapusnya dari riwayat Anda?',
+          style: const TextStyle(fontSize: 13, color: AppColors.primaryText),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Bersihkan'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        final count = await _consultationService.cleanOldConsultationHistory();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                '$count riwayat konsultasi lama berhasil dibersihkan'),
+            backgroundColor: AppColors.successGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal membersihkan riwayat: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      appBar: AppHeaderPill(
-        title: 'Riwayat Konsultasi',
-      ),
-      body: StreamBuilder<List<ConsultationModel>>(
-        stream: _consultationService.watchAllPatientConsultations(),
-        builder: (context, snapshot) {
-          // ── 1. State Loading ──
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: AppColors.primary),
-                  SizedBox(height: 14),
-                  Text(
-                    'Memuat riwayat konsultasi...',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.summaryCardSubtext,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
+    return StreamBuilder<List<ConsultationModel>>(
+      stream: _consultationService.watchAllPatientConsultations(),
+      builder: (context, snapshot) {
+        final allList = snapshot.data ?? [];
+        final completedList =
+            allList.where((c) => c.isCompleted && !c.hiddenByPatient).toList();
 
-          // ── 2. State Error (Tampil sebagai error, bukan empty) ──
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.error_outline_rounded,
-                          color: Colors.red, size: 32),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Gagal Memuat Riwayat',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryText,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${snapshot.error}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.summaryCardSubtext,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          final allList = snapshot.data ?? [];
-
-          // ── Pisahkan Sisi Klien: Sedang Berlangsung vs Selesai ──
-          final ongoingList = allList
-              .where((c) => c.isActive || c.isWaiting)
-              .toList();
-
-          ongoingList.sort((a, b) {
-            final timeA = a.lastMessageAt ?? a.createdAt;
-            final timeB = b.lastMessageAt ?? b.createdAt;
-            return timeB.compareTo(timeA);
-          });
-
-          final completedList = allList
-              .where((c) => c.isCompleted)
-              .toList();
-
-          completedList.sort((a, b) {
-            final timeA = a.completedAt ?? a.createdAt;
-            final timeB = b.completedAt ?? b.createdAt;
-            return timeB.compareTo(timeA);
-          });
-
-          // ── 3. State Kosong (Empty) hanya jika kedua bagian kosong ──
-          if (ongoingList.isEmpty && completedList.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.history_rounded,
-                        size: 40,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Belum ada riwayat konsultasi',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryText,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Konsultasi yang sedang berlangsung dan yang sudah selesai akan tampil di halaman ini.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.summaryCardSubtext,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          // ── 4. Tampilan Riwayat Konsultasi (Dua Bagian) ──
-          final groupedCompleted = _groupByDate(completedList);
-          final sortedDateKeys = groupedCompleted.keys.toList();
-
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-            children: [
-              // ══════════════════════════════════════════════════════════════
-              // BAGIAN ATAS: Sedang Berlangsung (hanya jika ada)
-              // ══════════════════════════════════════════════════════════════
-              if (ongoingList.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.only(top: 4, bottom: 12),
+        return AppScaffold(
+          appBar: AppHeaderPill(
+            title: 'Riwayat Konsultasi',
+            rightAction: PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert_rounded,
+                  color: AppColors.primaryText),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              onSelected: (val) {
+                if (val == 'clean_old') {
+                  _showCleanOldHistoryDialog(completedList);
+                }
+              },
+              itemBuilder: (ctx) => [
+                const PopupMenuItem(
+                  value: 'clean_old',
                   child: Row(
                     children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: AppColors.successGreen,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Sedang Berlangsung (${ongoingList.length})',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryText,
-                        ),
-                      ),
+                      Icon(Icons.cleaning_services_rounded,
+                          size: 18, color: AppColors.primary),
+                      SizedBox(width: 10),
+                      Text('Bersihkan riwayat lama',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
-                ...ongoingList.map((item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: _buildOngoingConsultationCard(context, item),
-                    )),
-                const SizedBox(height: 10),
               ],
-
-              // ══════════════════════════════════════════════════════════════
-              // BAGIAN BAWAH: Selesai (hanya jika ada)
-              // ══════════════════════════════════════════════════════════════
-              if (completedList.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.only(top: 8, bottom: 12),
-                  child: Row(
+            ),
+          ),
+          body: Builder(
+            builder: (context) {
+              // ── 1. State Loading ──
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
-                        Icons.check_circle_outline_rounded,
-                        size: 16,
-                        color: AppColors.neutralGray,
-                      ),
-                      const SizedBox(width: 8),
+                      CircularProgressIndicator(color: AppColors.primary),
+                      SizedBox(height: 14),
                       Text(
-                        'Selesai (${completedList.length})',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryText,
+                        'Memuat riwayat konsultasi...',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.summaryCardSubtext,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
-                ),
-                ...sortedDateKeys.expand((dateKey) {
-                  final items = groupedCompleted[dateKey]!;
-                  final firstDate =
-                      items.first.completedAt ?? items.first.createdAt;
-                  final formattedHeaderDate =
-                      AppDateFormatter.formatLongDate(firstDate);
+                );
+              }
 
-                  return [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4, bottom: 10),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.calendar_today_rounded,
-                            size: 14,
+              // ── 2. State Error (Tampil sebagai error, bukan empty) ──
+              if (snapshot.hasError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.error_outline_rounded,
+                              color: Colors.red, size: 32),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Gagal Memuat Riwayat',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryText,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '${snapshot.error}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.summaryCardSubtext,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              // ── Pisahkan Sisi Klien: Sedang Berlangsung vs Selesai ──
+              final ongoingList = allList
+                  .where((c) => (c.isActive || c.isWaiting) && !c.hiddenByPatient)
+                  .toList();
+
+              ongoingList.sort((a, b) {
+                final timeA = a.lastMessageAt ?? a.createdAt;
+                final timeB = b.lastMessageAt ?? b.createdAt;
+                return timeB.compareTo(timeA);
+              });
+
+              completedList.sort((a, b) {
+                final timeA = a.completedAt ?? a.createdAt;
+                final timeB = b.completedAt ?? b.createdAt;
+                return timeB.compareTo(timeA);
+              });
+
+              // ── 3. State Kosong (Empty) hanya jika kedua bagian kosong ──
+              if (ongoingList.isEmpty && completedList.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.history_rounded,
+                            size: 40,
                             color: AppColors.primary,
                           ),
-                          const SizedBox(width: 6),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          'Belum ada riwayat konsultasi',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryText,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Konsultasi yang sedang berlangsung dan yang sudah selesai akan tampil di halaman ini.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.summaryCardSubtext,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              // ── 4. Tampilan Riwayat Konsultasi (Dua Bagian) ──
+              final groupedCompleted = _groupByDate(completedList);
+              final sortedDateKeys = groupedCompleted.keys.toList();
+
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                children: [
+                  // ══════════════════════════════════════════════════════════════
+                  // BAGIAN ATAS: Sedang Berlangsung (hanya jika ada)
+                  // ══════════════════════════════════════════════════════════════
+                  if (ongoingList.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4, bottom: 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppColors.successGreen,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           Text(
-                            formattedHeaderDate,
+                            'Sedang Berlangsung (${ongoingList.length})',
                             style: const TextStyle(
-                              fontSize: 13,
+                              fontSize: 15,
                               fontWeight: FontWeight.bold,
                               color: AppColors.primaryText,
                             ),
@@ -328,17 +444,80 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                         ],
                       ),
                     ),
-                    ...items.map((item) => Padding(
+                    ...ongoingList.map((item) => Padding(
                           padding: const EdgeInsets.only(bottom: 14),
-                          child: _buildConsultationHistoryCard(context, item),
+                          child: _buildOngoingConsultationCard(context, item),
                         )),
-                  ];
-                }),
-              ],
-            ],
-          );
-        },
-      ),
+                    const SizedBox(height: 10),
+                  ],
+
+                  // ══════════════════════════════════════════════════════════════
+                  // BAGIAN BAWAH: Selesai (hanya jika ada)
+                  // ══════════════════════════════════════════════════════════════
+                  if (completedList.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 12),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.check_circle_outline_rounded,
+                            size: 16,
+                            color: AppColors.neutralGray,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Selesai (${completedList.length})',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryText,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ...sortedDateKeys.expand((dateKey) {
+                      final items = groupedCompleted[dateKey]!;
+                      final firstDate =
+                          items.first.completedAt ?? items.first.createdAt;
+                      final formattedHeaderDate =
+                          AppDateFormatter.formatLongDate(firstDate);
+
+                      return [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4, bottom: 10),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_rounded,
+                                size: 14,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                formattedHeaderDate,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        ...items.map((item) => Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
+                              child: _buildConsultationHistoryCard(context, item),
+                            )),
+                      ];
+                    }),
+                  ],
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -637,6 +816,7 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
             ),
           );
         },
+        onLongPress: () => _confirmDeleteConsultation(item),
         child: Container(
           decoration: BoxDecoration(
             color: AppColors.cardBackground,
@@ -654,7 +834,7 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Baris Atas: Judul "Konsultasi dengan" & Badge Status "Selesai" (Hijau)
+          // Baris Atas: Judul "Konsultasi dengan" & Badge Status "Selesai" (Hijau) + Menu Opsi
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -666,33 +846,67 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                   color: AppColors.summaryCardSubtext,
                 ),
               ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5E9),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFC8E6C9), width: 1),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.check_circle_rounded,
-                      size: 13,
-                      color: Color(0xFF2E7D32),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F5E9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFC8E6C9), width: 1),
                     ),
-                    SizedBox(width: 4),
-                    Text(
-                      'Selesai',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2E7D32),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.check_circle_rounded,
+                          size: 13,
+                          color: Color(0xFF2E7D32),
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'Selesai',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2E7D32),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: const Icon(Icons.more_vert_rounded,
+                        size: 18, color: AppColors.neutralGray),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    onSelected: (val) {
+                      if (val == 'delete') {
+                        _confirmDeleteConsultation(item);
+                      }
+                    },
+                    itemBuilder: (ctx) => [
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline_rounded,
+                                size: 16, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Hapus dari riwayat',
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.red)),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
