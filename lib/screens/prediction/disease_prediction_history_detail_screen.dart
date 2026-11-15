@@ -4,6 +4,7 @@ import '../../models/reflux_prediction_model.dart';
 import '../../providers/app_state.dart';
 import '../../services/prediction_history_repository.dart';
 import '../../utils/app_date_formatter.dart';
+import '../../widgets/app_background.dart';
 import 'widgets/factor_contribution_bar.dart';
 
 class DiseasePredictionHistoryDetailScreen extends StatefulWidget {
@@ -120,81 +121,70 @@ class _DiseasePredictionHistoryDetailScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.desktopBackground,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isLargeScreen = constraints.maxWidth > 520;
-          final contentWidget = _buildScreenBody();
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final isLargeScreen = constraints.maxWidth > 520;
+            final contentWidget = _buildScreenBody();
 
-          if (isLargeScreen) {
-            final maxH = constraints.maxHeight.isFinite
-                ? constraints.maxHeight.clamp(0.0, 920.0)
-                : 880.0;
-            return Center(
-              child: Container(
-                width: 420,
-                height: maxH,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(36),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 30,
-                      offset: const Offset(0, 10),
+            if (isLargeScreen) {
+              final maxH = constraints.maxHeight.isFinite
+                  ? constraints.maxHeight.clamp(0.0, 920.0)
+                  : 880.0;
+              return Center(
+                child: Container(
+                  width: 420,
+                  height: maxH,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(36),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                    border: Border.all(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      width: 3,
                     ),
-                  ],
-                  border: Border.all(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    width: 3,
                   ),
+                  child: contentWidget,
                 ),
-                child: contentWidget,
-              ),
-            );
-          }
+              );
+            }
 
-          return contentWidget;
-        },
+            return contentWidget;
+          },
+        ),
       ),
     );
   }
 
   Widget _buildScreenBody() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.bgGradientTop,
-            AppColors.bgGradientMiddle,
-            AppColors.bgGradientBottom,
-          ],
-        ),
-      ),
-      child: SafeArea(
-        child: Column(
-          children: [
-            // 1. HEADER (BACK + JUDUL "DETAIL PEMERIKSAAN")
-            _buildHeader(),
+    return SafeArea(
+      child: Column(
+        children: [
+          // 1. HEADER (BACK + JUDUL "DETAIL PEMERIKSAAN")
+          _buildHeader(),
 
-            // 2. KONTEN DETAIL SNAPSHOT (SCROLLABLE)
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(AppColors.primary),
-                      ),
-                    )
-                  : (_result == null
-                      ? _buildNotFoundState()
-                      : _buildDetailContent(_result!)),
-            ),
-          ],
-        ),
+          // 2. KONTEN DETAIL SNAPSHOT (SCROLLABLE)
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    ),
+                  )
+                : (_result == null
+                    ? _buildNotFoundState()
+                    : _buildDetailContent(_result!)),
+          ),
+        ],
       ),
     );
   }

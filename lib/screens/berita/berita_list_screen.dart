@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
+import '../../widgets/app_background.dart';
 import '../../models/berita_article_model.dart';
 import '../../services/berita/berita_repository.dart';
 import '../../services/berita/berita_service.dart';
@@ -27,18 +28,7 @@ class _BeritaListScreenState extends State<BeritaListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.bgGradientTop,
-            AppColors.bgGradientMiddle,
-            AppColors.bgGradientBottom,
-          ],
-        ),
-      ),
+    return AppBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Column(
