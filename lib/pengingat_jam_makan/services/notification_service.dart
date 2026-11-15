@@ -5,6 +5,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import '../../services/notification_service.dart';
+import '../screens/pilih_kondisi_screen.dart';
 import 'meal_reminder_service.dart';
 
 /// ─────────────────────────────────────────────────────────────────────────────
@@ -232,8 +234,28 @@ class NotificationService {
           '[NotifService] Notifikasi diklik: id=${details.id}, '
           'action="${details.actionId}", payload=${details.payload}');
     }
-    // Alur buka app ditangani OS (splash → login/biometrik → Beranda).
-    // Tidak perlu navigasi manual.
+    // Jika notifikasi adalah pengingat jadwal habis -> buka layar Pilih Kondisi
+    if (details.payload != null &&
+        details.payload!.contains('type=plan_expired')) {
+      _navigateToPilihKondisi();
+    }
+  }
+
+  void _navigateToPilihKondisi() {
+    void doPush() {
+      final nav = ChatInAppNotificationService.navigatorKey.currentState;
+      if (nav != null) {
+        nav.push(
+          MaterialPageRoute(builder: (_) => const PilihKondisiScreen()),
+        );
+      }
+    }
+
+    if (ChatInAppNotificationService.navigatorKey.currentState != null) {
+      doPush();
+    } else {
+      Future.delayed(const Duration(milliseconds: 800), doPush);
+    }
   }
 
   // ── Izin exact alarm ──────────────────────────────────────────────────────
@@ -303,18 +325,31 @@ class NotificationService {
   Future<void> updateLocalTimeZone() async {
     try {
       final tzInfo = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(tzInfo.identifier));
-      if (kDebugMode) {
-        debugPrint('[NotifService] Timezone: ${tzInfo.identifier}');
-      }
-    } catch (_) {
+      final identifier = tzInfo.identifier;
       try {
-        tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+        tz.setLocalLocation(tz.getLocation(identifier));
         if (kDebugMode) {
-          debugPrint('[NotifService] Fallback timezone: Asia/Jakarta');
+          debugPrint('[NotifService] Timezone terpasang: $identifier');
         }
-      } catch (_) {}
+        return;
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+              '[NotifService] Identifier "$identifier" tidak ada di tzdb: $e');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[NotifService] Gagal baca local timezone perangkat: $e');
+      }
     }
+
+    try {
+      tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+      if (kDebugMode) {
+        debugPrint('[NotifService] Fallback timezone: Asia/Jakarta');
+      }
+    } catch (_) {}
   }
 
   // ── ID Notifikasi ─────────────────────────────────────────────────────────
@@ -389,25 +424,28 @@ class NotificationService {
 
   /// Menjadwalkan alarm tepat waktu.
   ///
-  /// Menggunakan [AndroidScheduleMode.exactAllowWhileIdle].
-  /// Fallback ke inexact jika izin exact alarm tidak tersedia.
+  /// Menggunakan [AndroidScheduleMode.alarmClock] (prioritas tertinggi, kebal Doze & Samsung Device Care),
+  /// dengan cadangan [AndroidScheduleMode.exactAllowWhileIdle] lalu [AndroidScheduleMode.inexactAllowWhileIdle].
+  ///
+  /// Menerima [scheduledDateTime] bertipe [tz.TZDateTime] yang dibangun langsung
+  /// dengan `tz.TZDateTime(tz.local, tahun, bulan, tanggal, jam, menit)`.
   Future<void> scheduleMealReminder({
     required int id,
     required String title,
     required String body,
-    required DateTime scheduledDateTime,
+    required tz.TZDateTime scheduledDateTime,
     String? uid,
+    String? payload,
   }) async {
     try {
-      if (scheduledDateTime.isBefore(DateTime.now())) {
+      final nowTz = tz.TZDateTime.now(tz.local);
+      if (scheduledDateTime.isBefore(nowTz)) {
         if (kDebugMode) {
           debugPrint(
-              '[NotifService] Skip ID $id: waktu ${scheduledDateTime.toLocal()} sudah lewat');
+              '[NotifService] Skip ID $id: waktu $scheduledDateTime sudah lewat');
         }
         return;
       }
-
-      final tzScheduled = tz.TZDateTime.from(scheduledDateTime, tz.local);
 
       final androidDetails = _buildAlarmDetails(title: title);
 
@@ -423,9 +461,8 @@ class NotificationService {
         iOS: darwinDetails,
       );
 
-      // Cek izin exact alarm; fallback ke inexact jika belum diberikan
-      AndroidScheduleMode scheduleMode =
-          AndroidScheduleMode.exactAllowWhileIdle;
+      // Cek izin exact alarm; prioritaskan alarmClock
+      AndroidScheduleMode scheduleMode = AndroidScheduleMode.alarmClock;
 
       if (Platform.isAndroid) {
         final androidImpl = _notificationsPlugin
@@ -448,27 +485,111 @@ class NotificationService {
         }
       }
 
-      await _notificationsPlugin.zonedSchedule(
-        id: id,
-        title: title,
-        body: body,
-        scheduledDate: tzScheduled,
-        notificationDetails: notificationDetails,
-        androidScheduleMode: scheduleMode,
-        payload: 'meal_reminder',
-      );
+      final isoPayload = payload ?? scheduledDateTime.toIso8601String();
+
+      // Coba jadwalkan dengan mode utama (alarmClock)
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          id: id,
+          title: title,
+          body: body,
+          scheduledDate: scheduledDateTime,
+          notificationDetails: notificationDetails,
+          androidScheduleMode: scheduleMode,
+          payload: isoPayload,
+        );
+      } catch (e) {
+        // Fallback berjenjang bila alarmClock ditolak platform
+        if (scheduleMode == AndroidScheduleMode.alarmClock) {
+          if (kDebugMode) {
+            debugPrint(
+                '[NotifService] Fallback ke exactAllowWhileIdle karena: $e');
+          }
+          try {
+            scheduleMode = AndroidScheduleMode.exactAllowWhileIdle;
+            await _notificationsPlugin.zonedSchedule(
+              id: id,
+              title: title,
+              body: body,
+              scheduledDate: scheduledDateTime,
+              notificationDetails: notificationDetails,
+              androidScheduleMode: scheduleMode,
+              payload: isoPayload,
+            );
+          } catch (e2) {
+            if (kDebugMode) {
+              debugPrint(
+                  '[NotifService] Fallback ke inexactAllowWhileIdle karena: $e2');
+            }
+            scheduleMode = AndroidScheduleMode.inexactAllowWhileIdle;
+            await _notificationsPlugin.zonedSchedule(
+              id: id,
+              title: title,
+              body: body,
+              scheduledDate: scheduledDateTime,
+              notificationDetails: notificationDetails,
+              androidScheduleMode: scheduleMode,
+              payload: isoPayload,
+            );
+          }
+        } else {
+          rethrow;
+        }
+      }
 
       if (kDebugMode) {
         final soundUri = _kUseBundledAlarmSound
             ? 'res/raw/$_kBundledAlarmSoundName'
             : _kSystemAlarmUri;
+        final offset = scheduledDateTime.timeZoneOffset;
+        final sign = offset.isNegative ? '-' : '+';
+        final offsetStr = '$sign'
+            '${offset.inHours.abs().toString().padLeft(2, '0')}:'
+            '${(offset.inMinutes.abs() % 60).toString().padLeft(2, '0')}';
         debugPrint(
             '[NotifService] ✅ Alarm dijadwal: ID=$id, "$title", '
-            'waktu=${scheduledDateTime.toLocal()}, uid=$uid, '
-            'mode=$scheduleMode, sound=$soundUri');
+            'tz=${tz.local.name} (offset $offsetStr), '
+            'waktuLokal=$scheduledDateTime, uid=$uid, '
+            'mode=$scheduleMode, sound=$soundUri, payload=$isoPayload');
       }
     } catch (e) {
       debugPrint('[NotifService] ❌ Gagal jadwal notifikasi ID $id: $e');
+    }
+  }
+
+  /// Mengirim notifikasi instan langsung ke status bar (mis. jadwal habis saat app dibuka/resumed).
+  Future<void> showInstantNotification({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    try {
+      final androidDetails = _buildAlarmDetails(title: title);
+      const darwinDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        interruptionLevel: InterruptionLevel.timeSensitive,
+      );
+      final notificationDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: darwinDetails,
+      );
+
+      await _notificationsPlugin.show(
+        id: id,
+        title: title,
+        body: body,
+        notificationDetails: notificationDetails,
+        payload: payload,
+      );
+      if (kDebugMode) {
+        debugPrint(
+            '[NotifService] 🔔 Notifikasi instan dikirim: ID=$id, "$title", payload=$payload');
+      }
+    } catch (e) {
+      debugPrint('[NotifService] ❌ Gagal kirim notifikasi instan ID $id: $e');
     }
   }
 

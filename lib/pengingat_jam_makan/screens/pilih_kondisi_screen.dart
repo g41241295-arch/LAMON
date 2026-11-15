@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../debug/alarm_debug.dart';
 import '../models/meal_reminder_plan.dart';
 import '../widgets/glass_container.dart';
 import 'kalender_jadwal_screen.dart';
@@ -122,6 +124,17 @@ class PilihKondisiScreen extends StatelessWidget {
               ),
             ),
           ),
+
+          // 5. Diagnostik kDebugMode: Tombol "Alarm terjadwal"
+          if (kDebugMode)
+            const Positioned(
+              bottom: 24,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: AlarmDebugButton(),
+              ),
+            ),
         ],
       ),
     );

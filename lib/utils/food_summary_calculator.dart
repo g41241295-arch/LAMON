@@ -1,38 +1,45 @@
 import '../models/food_entry_model.dart';
 
-// ─── Enum & Model untuk Status Kesehatan Lambung ─────────────────────────────
-
-/// Tiga level risiko kesehatan lambung berdasarkan pola makan harian.
+/// 3 Kategori risiko lambung sesuai acuan medis GERD/maag
 enum LambungRiskLevel {
   aman,
   perluDiperhatikan,
-  berisiko,
+  berisiko;
+
+  String get label {
+    switch (this) {
+      case LambungRiskLevel.aman:
+        return 'Aman untuk Lambung';
+      case LambungRiskLevel.perluDiperhatikan:
+        return 'Perlu Diperhatikan';
+      case LambungRiskLevel.berisiko:
+        return 'Berisiko bagi Lambung';
+    }
+  }
 }
 
-/// Hasil kalkulasi skor risiko lambung.
-class LambungRiskScore {
+/// Hasil kalkulasi skor risiko lambung harian
+class LambungRiskResult {
   final LambungRiskLevel level;
   final String label;
   final String explanation;
+  final List<String> triggerFactors;
+  final double score;
 
-  const LambungRiskScore({
+  const LambungRiskResult({
     required this.level,
     required this.label,
     required this.explanation,
+    required this.triggerFactors,
+    required this.score,
   });
 }
 
-// ─── Model untuk Target & Realisasi Gizi Harian ──────────────────────────────
-
-/// Target gizi harian (kebutuhan rata-rata orang dewasa aktif).
+/// Target acuan kecukupan gizi harian umum dewasa (AKG Indonesia standar)
 class NutritionTarget {
-  /// Kalori target harian (kkal)
   final int calories;
-  /// Protein target harian (gram)
   final double protein;
-  /// Karbohidrat target harian (gram)
   final double carbs;
-  /// Lemak target harian (gram)
   final double fat;
 
   const NutritionTarget({
@@ -43,42 +50,49 @@ class NutritionTarget {
   });
 }
 
-/// Hasil kalkulasi asupan gizi harian beserta persentase terhadap target.
-class DailyNutrition {
-  /// Estimasi kalori total (kkal) — dihitung dari jumlah entri & intensitas makan
+/// Rangkuman asupan gizi aktual vs target harian
+class DailyNutritionSummary {
   final int calories;
-  /// Estimasi protein (gram)
   final double protein;
-  /// Estimasi karbohidrat (gram)
   final double carbs;
-  /// Estimasi lemak (gram)
   final double fat;
-
-  /// Persentase kalori terhadap target (0–100+)
-  final int caloriesPercentage;
-  /// Persentase protein terhadap target (0–100+)
-  final int proteinPercentage;
-  /// Persentase karbohidrat terhadap target (0–100+)
-  final int carbsPercentage;
-  /// Persentase lemak terhadap target (0–100+)
-  final int fatPercentage;
-
   final NutritionTarget target;
 
-  const DailyNutrition({
+  const DailyNutritionSummary({
     required this.calories,
     required this.protein,
     required this.carbs,
     required this.fat,
-    required this.caloriesPercentage,
-    required this.proteinPercentage,
-    required this.carbsPercentage,
-    required this.fatPercentage,
-    required this.target,
+    this.target = const NutritionTarget(),
   });
+
+  int get caloriesPercentage =>
+      target.calories > 0 ? ((calories / target.calories) * 100).round() : 0;
+
+  int get proteinPercentage =>
+      target.protein > 0 ? ((protein / target.protein) * 100).round() : 0;
+
+  int get carbsPercentage =>
+      target.carbs > 0 ? ((carbs / target.carbs) * 100).round() : 0;
+
+  int get fatPercentage =>
+      target.fat > 0 ? ((fat / target.fat) * 100).round() : 0;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+/// Item nutrisi per bahan makanan
+class FoodNutritionItem {
+  final int calories;
+  final double protein;
+  final double carbs;
+  final double fat;
+
+  const FoodNutritionItem({
+    required this.calories,
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+  });
+}
 
 class FoodSummaryCalculator {
   final List<FoodEntry> entries;
@@ -360,176 +374,346 @@ class FoodSummaryCalculator {
     };
   }
 
-  // ─── Kalkulasi Status Lambung & Gizi Harian ──────────────────────────────
+  // ===========================================================================
+  // 1. STATUS RISIKO KESEHATAN LAMBUNG (GERD / MAAG)
+  // ===========================================================================
 
-  /// Menghitung skor risiko kesehatan lambung berdasarkan pola makan.
+  /// Menghitung skor dan kategori risiko terhadap kesehatan lambung untuk hari itu.
   ///
-  /// Faktor risiko (tiap faktor menambah skor):
-  /// - Berbaring setelah makan: +2 per entri
-  /// - Level pedas tinggi (>=3): +1 per entri
-  /// - Level asam tinggi (>=3): +1 per entri
-  /// - Level berlemak tinggi (>=3): +1 per entri
-  /// - Konsumsi kopi: +1 per entri
-  /// - Konsumsi soda: +2 per entri
-  /// - Junk food: +1 per kemunculan
+  /// Kategori:
+  /// - Aman untuk Lambung (hijau): score < 3.5
+  /// - Perlu Diperhatikan (kuning/oranye): 3.5 <= score < 7.0
+  /// - Berisiko bagi Lambung (merah): score >= 7.0
   ///
-  /// Skoring:
-  /// - Skor rata-rata <= 2.0: Aman
-  /// - Skor rata-rata 2.1–4.0: Perlu Diperhatikan
-  /// - Skor rata-rata > 4.0: Berisiko
-  LambungRiskScore calculateLambungRiskScore() {
+  /// Logika penilaian mengombinasikan:
+  /// 1. Persentase Junk Food vs Homemade
+  /// 2. Rasa dominan (pedas, asam, berlemak, asin) & level rasa ekstrem
+  /// 3. Minuman pemicu refluks (kopi, soda)
+  /// 4. Beban harian (beban pikiran/stres & beban aktivitas fisik)
+  /// 5. Kebiasaan berbaring setelah makan
+  LambungRiskResult calculateLambungRiskScore() {
     if (entries.isEmpty) {
-      return const LambungRiskScore(
+      return const LambungRiskResult(
         level: LambungRiskLevel.aman,
-        label: 'Belum Ada Data',
-        explanation:
-            'Belum ada catatan makan hari ini. Mulai catat pola makanmu untuk melihat status kesehatan lambung.',
+        label: 'Aman untuk Lambung',
+        explanation: 'Belum ada data catatan makanan hari ini.',
+        triggerFactors: [],
+        score: 0.0,
       );
     }
 
-    double totalScore = 0;
+    double score = 0.0;
+    final triggers = <String>[];
 
-    for (final entry in entries) {
-      double entryScore = 0;
+    // 1. Jenis Makanan: Junk Food
+    final jStats = jenisMakananStats;
+    final junkPct = jStats['Junk Food'] ?? 0;
+    if (junkPct >= 50) {
+      score += 3.0;
+      triggers.add('junk food tinggi ($junkPct%)');
+    } else if (junkPct > 0) {
+      score += 1.5;
+      triggers.add('konsumsi junk food ($junkPct%)');
+    }
 
-      if (entry.berbaringSetelahMakan) entryScore += 2;
-      if (entry.levelPedas >= 3) entryScore += 1;
-      if (entry.levelAsam >= 3) entryScore += 1;
-      if (entry.levelBerlemak >= 3) entryScore += 1;
-      if (entry.konsumsiKopi) entryScore += 1;
-      if (entry.konsumsiSoda) entryScore += 2;
+    // 2. Rasa Dominan & Level Rasa
+    final rStats = rasaDominanStats;
+    final dominantKeys = rStats.map((e) => e.key.toLowerCase()).toSet();
 
-      for (final jenis in entry.jenisMakanan) {
-        if (jenis.trim().toLowerCase() == 'junk food') entryScore += 1;
+    // Pedas
+    final hasHighPedas = entries.any((e) => e.levelPedas >= 3);
+    if (dominantKeys.contains('pedas')) {
+      score += 3.0;
+      triggers.add('rasa dominan pedas');
+    } else if (hasHighPedas) {
+      score += 2.0;
+      triggers.add('makanan pedas');
+    } else if (entries.any((e) => e.levelPedas == 2)) {
+      score += 1.0;
+    }
+
+    // Asam
+    final hasHighAsam = entries.any((e) => e.levelAsam >= 3);
+    if (dominantKeys.contains('asam')) {
+      score += 2.5;
+      triggers.add('rasa dominan asam');
+    } else if (hasHighAsam) {
+      score += 2.0;
+      triggers.add('makanan asam');
+    } else if (entries.any((e) => e.levelAsam == 2)) {
+      score += 1.0;
+    }
+
+    // Berlemak
+    final hasHighLemak = entries.any((e) => e.levelBerlemak >= 3);
+    if (dominantKeys.contains('berlemak')) {
+      score += 2.5;
+      triggers.add('makanan dominan berlemak');
+    } else if (hasHighLemak) {
+      score += 2.0;
+      triggers.add('makanan berlemak tinggi');
+    } else if (entries.any((e) => e.levelBerlemak == 2)) {
+      score += 1.0;
+    }
+
+    // Asin
+    final hasHighAsin = entries.any((e) => e.levelAsin >= 3);
+    if (dominantKeys.contains('asin')) {
+      score += 1.5;
+      triggers.add('rasa dominan asin');
+    } else if (hasHighAsin) {
+      score += 1.0;
+      triggers.add('makanan tinggi garam/asin');
+    } else if (entries.any((e) => e.levelAsin == 2)) {
+      score += 0.5;
+    }
+
+    // 3. Minuman
+    final mStats = minumanStats;
+    final kopiPct = mStats['Kopi'] ?? 0;
+    final sodaPct = mStats['Soda'] ?? 0;
+
+    if (sodaPct > 0) {
+      score += (sodaPct >= 30 ? 2.5 : 1.5);
+      triggers.add('minuman soda');
+    }
+    if (kopiPct > 0) {
+      score += (kopiPct >= 30 ? 2.0 : 1.0);
+      triggers.add('konsumsi kopi');
+    }
+
+    // 4. Beban Pikiran & Aktivitas
+    final bStats = bebanHarianStats;
+    final pikiran = bStats['Beban Pikiran'];
+    final aktivitas = bStats['Beban Aktivitas'];
+
+    if (pikiran != null && pikiran['hasData'] == true) {
+      final avgPikiran = (pikiran['average'] as num).toDouble();
+      if (avgPikiran >= 3.5) {
+        score += 2.5;
+        triggers.add('beban pikiran/stres tinggi');
+      } else if (avgPikiran >= 2.5) {
+        score += 1.0;
+        triggers.add('beban pikiran cukup tinggi');
       }
-
-      totalScore += entryScore;
     }
 
-    final avgScore = totalScore / entries.length;
+    if (aktivitas != null && aktivitas['hasData'] == true) {
+      final avgAktivitas = (aktivitas['average'] as num).toDouble();
+      if (avgAktivitas >= 4.0) {
+        score += 1.0;
+        triggers.add('aktivitas fisik berat');
+      }
+    }
 
-    if (avgScore <= 2.0) {
-      return const LambungRiskScore(
-        level: LambungRiskLevel.aman,
-        label: 'Lambung Aman',
-        explanation:
-            'Pola makanmu hari ini cukup baik untuk kesehatan lambung. Pertahankan kebiasaan makan yang sehat dan hindari makanan yang bisa memicu asam lambung.',
-      );
-    } else if (avgScore <= 4.0) {
-      return const LambungRiskScore(
-        level: LambungRiskLevel.perluDiperhatikan,
-        label: 'Perlu Diperhatikan',
-        explanation:
-            'Ada beberapa kebiasaan makan yang bisa memicu gangguan lambung. Kurangi makanan pedas, asam, atau berlemak tinggi, dan hindari berbaring segera setelah makan.',
-      );
+    // 5. Kebiasaan Berbaring Setelah Makan
+    if (entries.any((e) => e.berbaringSetelahMakan)) {
+      score += 2.0;
+      triggers.add('kebiasaan berbaring setelah makan');
+    }
+
+    // Tentukan Kategori & Formulasi Penjelasan
+    final LambungRiskLevel level;
+    final String explanation;
+
+    if (score >= 7.0) {
+      level = LambungRiskLevel.berisiko;
+      if (triggers.isNotEmpty) {
+        explanation =
+            'Pola makan hari ini memiliki banyak faktor pemicu asam lambung, terutama ${triggers.join(", ")}. '
+            'Hindari kombinasi ini untuk mencegah kekambuhan maag atau GERD.';
+      } else {
+        explanation =
+            'Pola makan hari ini berisiko memperburuk kondisi lambung. Disarankan segera kurangi konsumsi makanan pemicu.';
+      }
+    } else if (score >= 3.5) {
+      level = LambungRiskLevel.perluDiperhatikan;
+      if (triggers.isNotEmpty) {
+        explanation =
+            'Pola makan hari ini didominasi beberapa pemicu seperti ${triggers.join(", ")}. '
+            'Disarankan kurangi untuk menjaga lambung tetap stabil.';
+      } else {
+        explanation =
+            'Terdapat beberapa indikator pola makan yang perlu diperhatikan agar tidak membebani kerja lambung.';
+      }
     } else {
-      return const LambungRiskScore(
-        level: LambungRiskLevel.berisiko,
-        label: 'Berisiko Tinggi',
-        explanation:
-            'Pola makanmu berisiko tinggi untuk kesehatan lambung. Segera ubah kebiasaan makan: hindari makanan pedas/asam/berlemak, minuman berkafein dan soda, serta jangan berbaring setelah makan.',
-      );
+      level = LambungRiskLevel.aman;
+      if (jStats['Homemade'] == 100) {
+        explanation =
+            'Pola makan hari ini didominasi makanan homemade yang ramah lambung tanpa pemicu asam lambung berlebih. '
+            'Pertahankan pola sehat ini!';
+      } else {
+        explanation =
+            'Pola makan hari ini relatif ramah lambung dan rendah makanan pemicu refluks. Lambung Anda aman.';
+      }
     }
+
+    return LambungRiskResult(
+      level: level,
+      label: level.label,
+      explanation: explanation,
+      triggerFactors: triggers,
+      score: score,
+    );
   }
 
-  /// Menghitung estimasi asupan gizi harian berdasarkan pencatatan makanan.
-  ///
-  /// Karena tidak ada data nutrisi aktual per makanan, estimasi dilakukan
-  /// berdasarkan pilihan sumber karbohidrat & protein menggunakan nilai rata-rata
-  /// tipikal per sajian, disesuaikan jumlah sesi makan yang tercatat.
-  ///
-  /// Nilai estimasi per sesi (kebutuhan 2000 kkal untuk 3 sesi):
-  /// - Sarapan: ~25% kebutuhan harian
-  /// - Makan Siang: ~40% kebutuhan harian
-  /// - Makan Malam: ~35% kebutuhan harian
-  DailyNutrition calculateDailyNutrition() {
-    const target = NutritionTarget(
-      calories: 2000,
-      protein: 60.0,
-      carbs: 300.0,
-      fat: 65.0,
-    );
+  // ===========================================================================
+  // 2. ASUPAN GIZI HARIAN (AKUMULASI DARI CATATAN MAKAN)
+  // ===========================================================================
 
-    if (entries.isEmpty) {
-      return DailyNutrition(
-        calories: 0,
-        protein: 0,
-        carbs: 0,
-        fat: 0,
-        caloriesPercentage: 0,
-        proteinPercentage: 0,
-        carbsPercentage: 0,
-        fatPercentage: 0,
-        target: target,
-      );
-    }
-
-    // Bobot kalori per sesi makan (proporsi dari total harian)
-    double totalCalories = 0;
-    double totalProtein = 0;
-    double totalCarbs = 0;
-    double totalFat = 0;
+  /// Menghitung akumulasi asupan kalori, protein, karbohidrat, dan lemak
+  /// dari seluruh makanan yang dicatat hari itu vs target harian standar.
+  DailyNutritionSummary calculateDailyNutrition() {
+    int totalCalories = 0;
+    double totalProtein = 0.0;
+    double totalCarbs = 0.0;
+    double totalFat = 0.0;
 
     for (final entry in entries) {
-      // Kalori dasar per sesi
-      final double sessionCalories;
-      final double sessionProtein;
-      final double sessionCarbs;
-      final double sessionFat;
-
-      switch (entry.sesi) {
-        case MealSession.sarapan:
-          sessionCalories = 500; // ~25% dari 2000 kkal
-          sessionProtein = 15;
-          sessionCarbs = 75;
-          sessionFat = 16;
-          break;
-        case MealSession.makanSiang:
-          sessionCalories = 800; // ~40% dari 2000 kkal
-          sessionProtein = 24;
-          sessionCarbs = 120;
-          sessionFat = 26;
-          break;
-        case MealSession.makanMalam:
-          sessionCalories = 700; // ~35% dari 2000 kkal
-          sessionProtein = 21;
-          sessionCarbs = 105;
-          sessionFat = 23;
-          break;
+      // 1. Karbohidrat
+      for (final karbo in entry.sumberKarbohidrat) {
+        final nut = _getKarboNutrition(karbo);
+        totalCalories += nut.calories;
+        totalProtein += nut.protein;
+        totalCarbs += nut.carbs;
+        totalFat += nut.fat;
       }
 
-      // Modifikasi berdasarkan jenis makanan (Junk Food +20% kalori & lemak)
-      double calMod = 1.0;
-      double fatMod = 1.0;
+      // 2. Protein
+      for (final prot in entry.protein) {
+        String pName = prot;
+        if (prot.trim().toLowerCase() == 'lainnya' &&
+            entry.proteinLainnya != null &&
+            entry.proteinLainnya!.trim().isNotEmpty) {
+          pName = entry.proteinLainnya!.trim();
+        }
+        final nut = _getProteinNutrition(pName);
+        totalCalories += nut.calories;
+        totalProtein += nut.protein;
+        totalCarbs += nut.carbs;
+        totalFat += nut.fat;
+      }
+
+      // 3. Sayuran
+      for (final sayur in entry.sayuran) {
+        String sName = sayur;
+        if (sayur.trim().toLowerCase() == 'lainnya' &&
+            entry.sayuranLainnya != null &&
+            entry.sayuranLainnya!.trim().isNotEmpty) {
+          sName = entry.sayuranLainnya!.trim();
+        }
+        final nut = _getSayuranNutrition(sName);
+        totalCalories += nut.calories;
+        totalProtein += nut.protein;
+        totalCarbs += nut.carbs;
+        totalFat += nut.fat;
+      }
+
+      // 4. Jenis Makanan (Junk Food menambahkan kalori dan lemak olahan)
       for (final jenis in entry.jenisMakanan) {
         if (jenis.trim().toLowerCase() == 'junk food') {
-          calMod += 0.20;
-          fatMod += 0.30;
+          totalCalories += 180;
+          totalProtein += 3.0;
+          totalCarbs += 15.0;
+          totalFat += 12.0;
         }
       }
 
-      // Modifikasi berdasarkan level berlemak (skala 0-4)
-      final fatLevelMod = 1.0 + (entry.levelBerlemak * 0.05);
+      // 5. Level Berlemak (minyak goreng / santan / margarin)
+      switch (entry.levelBerlemak) {
+        case 1:
+          totalFat += 2.0;
+          totalCalories += 18;
+          break;
+        case 2:
+          totalFat += 5.0;
+          totalCalories += 45;
+          break;
+        case 3:
+          totalFat += 9.0;
+          totalCalories += 81;
+          break;
+        case 4:
+          totalFat += 14.0;
+          totalCalories += 126;
+          break;
+      }
 
-      totalCalories += sessionCalories * calMod;
-      totalProtein += sessionProtein * (entry.protein.isNotEmpty ? 1.1 : 0.8);
-      totalCarbs += sessionCarbs * (entry.sumberKarbohidrat.isNotEmpty ? 1.0 : 0.6);
-      totalFat += sessionFat * fatMod * fatLevelMod;
+      // 6. Minuman
+      if (entry.konsumsiSoda) {
+        totalCalories += 140;
+        totalCarbs += 35.0;
+      }
+      if (entry.konsumsiKopi) {
+        totalCalories += 25;
+        totalProtein += 0.5;
+        totalCarbs += 4.0;
+        totalFat += 0.5;
+      }
     }
 
-    int pct(double actual, double tgt) =>
-        tgt > 0 ? (actual / tgt * 100).round().clamp(0, 999) : 0;
-
-    return DailyNutrition(
-      calories: totalCalories.round(),
-      protein: double.parse(totalProtein.toStringAsFixed(1)),
-      carbs: double.parse(totalCarbs.toStringAsFixed(1)),
-      fat: double.parse(totalFat.toStringAsFixed(1)),
-      caloriesPercentage: pct(totalCalories, target.calories.toDouble()),
-      proteinPercentage: pct(totalProtein, target.protein),
-      carbsPercentage: pct(totalCarbs, target.carbs),
-      fatPercentage: pct(totalFat, target.fat),
-      target: target,
+    return DailyNutritionSummary(
+      calories: totalCalories,
+      protein: totalProtein,
+      carbs: totalCarbs,
+      fat: totalFat,
     );
+  }
+
+  // ── Helper Nutrisi Per Pilihan Makanan ──────────────────────────────────────
+
+  static FoodNutritionItem _getKarboNutrition(String raw) {
+    final lower = raw.trim().toLowerCase();
+    if (lower.contains('putih')) {
+      return const FoodNutritionItem(calories: 204, protein: 4.2, carbs: 44.1, fat: 0.4);
+    } else if (lower.contains('merah')) {
+      return const FoodNutritionItem(calories: 165, protein: 3.5, carbs: 35.0, fat: 1.5);
+    } else if (lower.contains('roti')) {
+      return const FoodNutritionItem(calories: 160, protein: 5.5, carbs: 30.0, fat: 2.0);
+    } else if (lower.contains('mie')) {
+      return const FoodNutritionItem(calories: 220, protein: 5.0, carbs: 42.0, fat: 3.5);
+    } else if (lower.contains('kentang')) {
+      return const FoodNutritionItem(calories: 130, protein: 2.8, carbs: 30.0, fat: 0.2);
+    }
+    // Standar karbohidrat lainnya
+    return const FoodNutritionItem(calories: 180, protein: 4.0, carbs: 38.0, fat: 1.0);
+  }
+
+  static FoodNutritionItem _getProteinNutrition(String raw) {
+    final lower = raw.trim().toLowerCase();
+    if (lower.contains('ayam')) {
+      return const FoodNutritionItem(calories: 195, protein: 25.0, carbs: 0.0, fat: 9.0);
+    } else if (lower.contains('sapi')) {
+      return const FoodNutritionItem(calories: 250, protein: 26.0, carbs: 0.0, fat: 15.0);
+    } else if (lower.contains('ikan')) {
+      return const FoodNutritionItem(calories: 140, protein: 22.0, carbs: 0.0, fat: 5.0);
+    } else if (lower.contains('telur')) {
+      return const FoodNutritionItem(calories: 78, protein: 6.5, carbs: 0.6, fat: 5.3);
+    } else if (lower.contains('tahu') || lower.contains('tempe')) {
+      return const FoodNutritionItem(calories: 150, protein: 14.0, carbs: 7.0, fat: 7.5);
+    } else if (lower.contains('udang') || lower.contains('cumi')) {
+      return const FoodNutritionItem(calories: 110, protein: 20.0, carbs: 0.5, fat: 1.5);
+    }
+    // Standar protein lainnya
+    return const FoodNutritionItem(calories: 160, protein: 18.0, carbs: 2.0, fat: 8.0);
+  }
+
+  static FoodNutritionItem _getSayuranNutrition(String raw) {
+    final lower = raw.trim().toLowerCase();
+    if (lower.contains('bayam')) {
+      return const FoodNutritionItem(calories: 23, protein: 2.9, carbs: 3.6, fat: 0.4);
+    } else if (lower.contains('kembang kol') || lower.contains('kol')) {
+      return const FoodNutritionItem(calories: 25, protein: 2.0, carbs: 5.0, fat: 0.3);
+    } else if (lower.contains('sawi')) {
+      return const FoodNutritionItem(calories: 20, protein: 1.8, carbs: 3.2, fat: 0.2);
+    } else if (lower.contains('brokoli')) {
+      return const FoodNutritionItem(calories: 34, protein: 2.8, carbs: 6.6, fat: 0.4);
+    } else if (lower.contains('wortel')) {
+      return const FoodNutritionItem(calories: 41, protein: 0.9, carbs: 9.6, fat: 0.2);
+    } else if (lower.contains('kangkung')) {
+      return const FoodNutritionItem(calories: 19, protein: 2.6, carbs: 3.1, fat: 0.2);
+    }
+    // Standar sayuran lainnya
+    return const FoodNutritionItem(calories: 25, protein: 2.0, carbs: 4.0, fat: 0.3);
   }
 }
