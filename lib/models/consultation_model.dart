@@ -95,6 +95,12 @@ class ConsultationModel {
   final bool hiddenByPatient;
   final bool chatExpired;
 
+  // Revisi 11: Penilaian & Hapus Chat Dokter
+  final int? rating; // 1 - 5
+  final DateTime? ratedAt;
+  final bool hiddenByDoctor;
+  final DateTime? hiddenByDoctorAt;
+
   const ConsultationModel({
     required this.id,
     required this.doctorId,
@@ -134,7 +140,14 @@ class ConsultationModel {
     this.lastMessageId,
     this.hiddenByPatient = false,
     this.chatExpired = false,
+    this.rating,
+    this.ratedAt,
+    this.hiddenByDoctor = false,
+    this.hiddenByDoctorAt,
   });
+
+  /// Apakah konsultasi ini sudah dinilai oleh pasien
+  bool get isRated => rating != null && rating! >= 1 && rating! <= 5;
 
   /// Konsultasi sudah expired batas waktu pembayaran.
   bool get isExpired => paymentStatus == PaymentStatus.expired;
@@ -236,6 +249,10 @@ class ConsultationModel {
     String? lastMessageId,
     bool? hiddenByPatient,
     bool? chatExpired,
+    int? rating,
+    DateTime? ratedAt,
+    bool? hiddenByDoctor,
+    DateTime? hiddenByDoctorAt,
   }) {
     return ConsultationModel(
       id: id ?? this.id,
@@ -277,6 +294,10 @@ class ConsultationModel {
       lastMessageId: lastMessageId ?? this.lastMessageId,
       hiddenByPatient: hiddenByPatient ?? this.hiddenByPatient,
       chatExpired: chatExpired ?? this.chatExpired,
+      rating: rating ?? this.rating,
+      ratedAt: ratedAt ?? this.ratedAt,
+      hiddenByDoctor: hiddenByDoctor ?? this.hiddenByDoctor,
+      hiddenByDoctorAt: hiddenByDoctorAt ?? this.hiddenByDoctorAt,
     );
   }
 
@@ -336,6 +357,10 @@ class ConsultationModel {
       lastMessageId: data['lastMessageId'] as String?,
       hiddenByPatient: data['hiddenByPatient'] as bool? ?? false,
       chatExpired: data['chatExpired'] as bool? ?? false,
+      rating: (data['rating'] as num?)?.toInt(),
+      ratedAt: (data['ratedAt'] as Timestamp?)?.toDate(),
+      hiddenByDoctor: data['hiddenByDoctor'] as bool? ?? false,
+      hiddenByDoctorAt: (data['hiddenByDoctorAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -388,6 +413,11 @@ class ConsultationModel {
         if (lastMessageId != null) 'lastMessageId': lastMessageId,
         'hiddenByPatient': hiddenByPatient,
         if (chatExpired) 'chatExpired': chatExpired,
+        if (rating != null) 'rating': rating,
+        if (ratedAt != null) 'ratedAt': Timestamp.fromDate(ratedAt!),
+        'hiddenByDoctor': hiddenByDoctor,
+        if (hiddenByDoctorAt != null)
+          'hiddenByDoctorAt': Timestamp.fromDate(hiddenByDoctorAt!),
       };
 }
 

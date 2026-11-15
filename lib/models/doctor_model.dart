@@ -45,6 +45,8 @@ class DoctorModel {
   final String specialty;
   final int experienceYears;
   final int consultationsHandled;
+  final int ratingSum;
+  final int ratingCount;
   final String photoUrl;
   final int price;
   final List<OperatingHour> operatingHours;
@@ -62,6 +64,8 @@ class DoctorModel {
     required this.specialty,
     required this.experienceYears,
     this.consultationsHandled = 0,
+    this.ratingSum = 0,
+    this.ratingCount = 0,
     required this.photoUrl,
     required this.price,
     required this.operatingHours,
@@ -80,6 +84,14 @@ class DoctorModel {
   /// Formatted subtitle profil dokter: "Dokter Umum • 10 tahun • N konsultasi ditangani".
   String get profileSubtitle =>
       '$specialty • $experienceYears tahun • $consultationsHandled konsultasi ditangani';
+
+  /// Nilai rata-rata rating dokter (0.0 jika belum ada penilaian).
+  double get averageRating =>
+      ratingCount > 0 ? (ratingSum / ratingCount) : 0.0;
+
+  /// Teks format rata-rata rating dokter 1 desimal (mis. "4.8") atau "Belum ada penilaian".
+  String get formattedRating =>
+      ratingCount > 0 ? averageRating.toStringAsFixed(1) : 'Belum ada penilaian';
 
   /// Jam operasional pertama untuk ditampilkan di kartu.
   OperatingHour? get primaryHour =>
@@ -118,6 +130,8 @@ class DoctorModel {
     String? specialty,
     int? experienceYears,
     int? consultationsHandled,
+    int? ratingSum,
+    int? ratingCount,
     String? photoUrl,
     int? price,
     List<OperatingHour>? operatingHours,
@@ -135,6 +149,8 @@ class DoctorModel {
       specialty: specialty ?? this.specialty,
       experienceYears: experienceYears ?? this.experienceYears,
       consultationsHandled: consultationsHandled ?? this.consultationsHandled,
+      ratingSum: ratingSum ?? this.ratingSum,
+      ratingCount: ratingCount ?? this.ratingCount,
       photoUrl: photoUrl ?? this.photoUrl,
       price: price ?? this.price,
       operatingHours: operatingHours ?? this.operatingHours,
@@ -157,6 +173,8 @@ class DoctorModel {
       specialty: data['specialty'] as String? ?? '',
       experienceYears: (data['experienceYears'] as num?)?.toInt() ?? 0,
       consultationsHandled: (data['consultationsHandled'] as num?)?.toInt() ?? 0,
+      ratingSum: (data['ratingSum'] as num?)?.toInt() ?? 0,
+      ratingCount: (data['ratingCount'] as num?)?.toInt() ?? 0,
       photoUrl: data['photoUrl'] as String? ?? '',
       price: (data['price'] as num?)?.toInt() ?? 0,
       operatingHours: rawHours
@@ -177,6 +195,8 @@ class DoctorModel {
         'specialty': specialty,
         'experienceYears': experienceYears,
         'consultationsHandled': consultationsHandled,
+        'ratingSum': ratingSum,
+        'ratingCount': ratingCount,
         'photoUrl': photoUrl,
         'price': price,
         'operatingHours': operatingHours.map((h) => h.toMap()).toList(),

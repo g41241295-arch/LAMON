@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
@@ -266,6 +267,10 @@ class DoctorHomeTab extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+
+          // ── 3b. Kartu Statistik Penilaian Dokter Live (Revisi 11 Bagian A) ──
+          _buildRatingStatsCard(doctor.id),
           const SizedBox(height: 24),
 
           // ── 4. Section Jadwal Praktik (E: pill label) ──
@@ -598,6 +603,117 @@ class DoctorHomeTab extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  // ── 3b: Widget Kartu Statistik Penilaian Dokter Live (Revisi 11 Bagian A) ──
+  Widget _buildRatingStatsCard(String doctorId) {
+    if (doctorId.isEmpty) return const SizedBox.shrink();
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('doctors')
+          .doc(doctorId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data() ?? {};
+        final ratingSum = (data['ratingSum'] as num?)?.toInt() ?? 0;
+        final ratingCount = (data['ratingCount'] as num?)?.toInt() ?? 0;
+        final avgRating = ratingCount > 0 ? (ratingSum / ratingCount) : 0.0;
+        final formattedAvg =
+            ratingCount > 0 ? avgRating.toStringAsFixed(1) : '-';
+        final countText =
+            ratingCount > 0 ? '$ratingCount penilaian' : 'Belum ada penilaian';
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFE2F0F9), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFFECB3), width: 1),
+                ),
+                child: const Icon(
+                  Icons.star_rounded,
+                  color: Color(0xFFFFB300),
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Penilaian Pasien',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.summaryCardSubtext,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      countText,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: ratingCount > 0
+                            ? AppColors.primary
+                            : AppColors.neutralGray,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    formattedAvg,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primaryText,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  const Text(
+                    '/ 5.0',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.neutralGray,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

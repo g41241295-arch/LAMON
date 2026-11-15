@@ -609,6 +609,121 @@ class ConsultationService {
     return toHide.length;
   }
 
+  /// Mengirim penilaian (rating 1-5) dari pasien untuk konsultasi yang sudah completed (Revisi 11 Bagian A).
+  /// Operasi dilakukan atomik dalam satu batch/transaksi:
+  /// - consultation.rating = rating (1-5)
+  /// - consultation.ratedAt = serverTimestamp()
+  /// - doctors/{doctorId}.ratingSum += rating
+  /// - doctors/{doctorId}.ratingCount += 1
+  Future<void> submitConsultationRating({
+    required String consultationId,
+    required String doctorId,
+    required int rating,
+    String? patientUid,
+  }) async {
+    final uid = patientUid ?? _uid;
+    if (uid == null || uid.isEmpty) {
+      throw Exception('User belum login.');
+    }
+    if (rating < 1 || rating > 5) {
+      throw Exception('Rating harus bernilai antara 1 dan 5.');
+    }
+
+    final consultationRef = _db
+        .collection('users')
+        .doc(uid)
+        .collection('consultations')
+        .doc(consultationId);
+
+    final cleanDoctorId = doctorId.trim();
+    if (cleanDoctorId.isEmpty) {
+      throw Exception('ID Dokter tidak valid.');
+    }
+    final doctorRef = _db.collection('doctors').doc(cleanDoctorId);
+
+    // Lakukan secara atomik menggunakan WriteBatch
+    final batch = _db.batch();
+    batch.update(consultationRef, {
+      'rating': rating,
+      'ratedAt': FieldValue.serverTimestamp(),
+    });
+    batch.update(doctorRef, {
+      'ratingSum': FieldValue.increment(rating),
+      'ratingCount': FieldValue.increment(1),
+    });
+
+    await batch.commit();
+    debugPrint('[ConsultationService] Sukses submit rating $rating untuk konsultasi $consultationId dan dokter $cleanDoctorId.');
+  }
+
+  /// Sembunyikan atau pulihkan konsultasi dari daftar pesan dokter (Revisi 11 Bagian B).
+  /// Menggunakan soft-hide `hiddenByDoctor` sehingga riwayat pasien tetap utuh.
+  Future<void> hideConsultationByDoctor({
+    required String patientUid,
+    required String consultationId,
+    bool hidden = true,
+  }) async {
+    final cleanPatientUid = patientUid.trim();
+    if (cleanPatientUid.isEmpty) {
+      throw Exception('Patient UID tidak valid.');
+    }
+    final docRef = _db
+        .collection('users')
+        .doc(cleanPatientUid)
+        .collection('consultations')
+        .doc(consultationId);
+
+    await docRef.update({
+      'hiddenByDoctor': hidden,
+      if (hidden) 'hiddenByDoctorAt': FieldValue.serverTimestamp()
+      else 'hiddenByDoctorAt': FieldValue.delete(),
+    });
+    debugPrint('[ConsultationService] Konsultasi $consultationId hiddenByDoctor = $hidden.');
+  }
+
+  /// Membersihkan chat lama dokter (> 30 hari secara default) dengan soft-hide (Revisi 11 Bagian B).
+  /// Hanya menyembunyikan konsultasi berstatus completed atau expired.
+  Future<int> cleanOldDoctorConsultations({
+    required String doctorId,
+    required List<ConsultationModel> consultations,
+    Duration olderThan = ConsultationConstants.kOldChatAge,
+  }) async {
+    if (doctorId.isEmpty) return 0;
+
+    final cutoff = DateTime.now().subtract(olderThan);
+    final toHide = consultations.where((c) {
+      if (c.hiddenByDoctor) return false;
+      if (!c.isCompleted && !c.isExpired) return false;
+      final time = c.completedAt ?? c.createdAt;
+      return time.isBefore(cutoff);
+    }).toList();
+
+    if (toHide.isEmpty) return 0;
+
+    const int chunkSize = 400;
+    for (int i = 0; i < toHide.length; i += chunkSize) {
+      final chunk = toHide.skip(i).take(chunkSize);
+      final batch = _db.batch();
+      for (final item in chunk) {
+        if (item.patientUid.isNotEmpty) {
+          final ref = _db
+              .collection('users')
+              .doc(item.patientUid)
+              .collection('consultations')
+              .doc(item.id);
+          batch.update(ref, {
+            'hiddenByDoctor': true,
+            'hiddenByDoctorAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+      await batch.commit();
+    }
+
+    debugPrint('[ConsultationService] Berhasil menyembunyikan ${toHide.length} chat lama untuk dokter $doctorId.');
+    return toHide.length;
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // CHAT & ATTACHMENTS
   // ─────────────────────────────────────────────────────────────────────────

@@ -11,7 +11,7 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isDoctor() {111
+    function isDoctor() {
       return isSignedIn() && 
              ('role' in userDoc()) && 
              (userDoc().role == 'doctor' || userDoc().role == 'dokter');
@@ -85,10 +85,23 @@ service cloud.firestore {
 
         // Pasien update: pasien TIDAK BOLEH menandai status completed (hanya dokter yang berwenang)
         // Pasien boleh mengubah hiddenByPatient, lastReadByPatientAt, chatExpired, dsb.
+        // Aturan Rating (Revisi 11 Bagian A & C): Pasien pemilik HANYA boleh mengisi rating jika status completed,
+        // rating belum pernah diisi, nilai integer 1..5, dan operasi rating hanya mengubah 'rating' dan 'ratedAt'.
         allow update: if isSignedIn() && request.auth.uid == userId
                       && (!('status' in request.resource.data.diff(resource.data).affectedKeys()) ||
                           request.resource.data.status != 'completed' ||
-                          resource.data.status == 'completed');
+                          resource.data.status == 'completed')
+                      && (
+                        !('rating' in request.resource.data.diff(resource.data).affectedKeys()) ||
+                        (
+                          resource.data.status == 'completed' &&
+                          !('rating' in resource.data) &&
+                          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'ratedAt']) &&
+                          request.resource.data.rating is int &&
+                          request.resource.data.rating >= 1 &&
+                          request.resource.data.rating <= 5
+                        )
+                      );
 
         // Penghapusan fisik konsultasi diizinkan jika sudah melewati batas retensi 60 hari
         allow delete: if isSignedIn() && (
@@ -101,13 +114,15 @@ service cloud.firestore {
 
         // Dokter hanya boleh update field-field status dan pesan tertentu,
         // dengan pembatasan transisi status: waiting -> active (konfirmasi) atau active -> completed / waiting -> completed (selesai).
-        // Mendukung penulisan completedAt, doctorRecommendation, lastMessageId, dan chatExpired.
+        // Mendukung penulisan completedAt, doctorRecommendation, lastMessageId, chatExpired,
+        // serta soft-hide dokter: hiddenByDoctor dan hiddenByDoctorAt (Revisi 11 Bagian B & C).
         allow update: if isDoctorForDoc(resource.data)
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                            'status', 'doctorConfirmedAt', 'lastMessageText', 
                            'lastMessageAt', 'lastMessageSenderType', 
                            'unreadForDoctor', 'unreadForPatient', 'lastReadByDoctorAt',
-                           'completedAt', 'doctorRecommendation', 'lastMessageId', 'chatExpired'
+                           'completedAt', 'doctorRecommendation', 'lastMessageId', 'chatExpired',
+                           'hiddenByDoctor', 'hiddenByDoctorAt'
                          ])
                       && (
                         !('status' in request.resource.data.diff(resource.data).affectedKeys()) ||
@@ -245,7 +260,12 @@ service cloud.firestore {
       // Semua user yang sudah login bisa membaca data dokter
       allow read: if isSignedIn();
 
-      // Dokter hanya dapat mengupdate profil dirinya sendiri dan field tertentu saja
+      // Update dokter:
+      // 1. Admin memiliki hak update penuh.
+      // 2. Dokter hanya dapat mengupdate profil dirinya sendiri dan field tertentu saja.
+      // 3. Pasien login dapat memperbarui agregat rating (ratingSum dan ratingCount) saat memberi penilaian,
+      //    dengan validasi ketat: affectedKeys hanya ratingSum dan ratingCount, ratingCount bertambah tepat 1,
+      //    dan ratingSum bertambah antara 1 sampai 5 (Revisi 11 Bagian A & C).
       allow update: if (isAdmin()) ||
                     (
                       isDoctor() 
@@ -258,6 +278,15 @@ service cloud.firestore {
                            'name', 'strNumber', 'gender', 'updatedAt', 'photoUrl',
                            'photoBase64', 'photoUpdatedAt', 'consultationsHandled', 'experienceYears'
                          ])
+                    ) ||
+                    (
+                      isSignedIn()
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingSum', 'ratingCount'])
+                      && request.resource.data.ratingCount is int
+                      && request.resource.data.ratingSum is int
+                      && request.resource.data.ratingCount == (('ratingCount' in resource.data ? resource.data.ratingCount : 0) + 1)
+                      && request.resource.data.ratingSum >= (('ratingSum' in resource.data ? resource.data.ratingSum : 0) + 1)
+                      && request.resource.data.ratingSum <= (('ratingSum' in resource.data ? resource.data.ratingSum : 0) + 5)
                     );
 
       allow create, delete: if false;

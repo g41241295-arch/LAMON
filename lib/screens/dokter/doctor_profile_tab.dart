@@ -462,7 +462,12 @@ class _DoctorProfileTabState extends State<DoctorProfileTab> {
               final specialty = docData?['specialty'] as String? ?? widget.doctor.specialty;
               final expYears = (docData?['experienceYears'] as num?)?.toInt() ?? widget.doctor.experienceYears;
               final handled = (docData?['consultationsHandled'] as num?)?.toInt() ?? widget.doctor.consultationsHandled;
-              final subtitle = '$specialty • $expYears tahun • $handled konsultasi ditangani';
+              final ratingSum = (docData?['ratingSum'] as num?)?.toInt() ?? widget.doctor.ratingSum;
+              final ratingCount = (docData?['ratingCount'] as num?)?.toInt() ?? widget.doctor.ratingCount;
+              final ratingText = ratingCount > 0
+                  ? ' • ★ ${(ratingSum / ratingCount).toStringAsFixed(1)} ($ratingCount)'
+                  : '';
+              final subtitle = '$specialty • $expYears tahun • $handled konsultasi ditangani$ratingText';
 
               return Text(
                 subtitle,
