@@ -4,7 +4,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/timezone.dart' as tz;
+import '../debug/alarm_debug.dart';
 import '../models/meal_reminder_plan.dart';
 import '../../screens/beranda/models/meal_schedule_model.dart';
 import '../../screens/beranda/services/beranda_meal_service.dart';
@@ -13,39 +16,49 @@ import 'notification_service.dart';
 /// Layanan sinkronisasi rencana jadwal pengingat jam makan.
 ///
 /// ────────────────────────────────────────────────────────────────────────────
-/// KEBIJAKAN PEMBATALAN ALARM
+/// KEBIJAKAN PEMBATALAN & REKONSILIASI ALARM
 /// ────────────────────────────────────────────────────────────────────────────
-/// Alarm HANYA dibatalkan pada dua kondisi:
-///   1. Pengguna menekan tombol Logout secara eksplisit
-///      → panggil [cancelAlarmsForLogout].
-///   2. Login dengan UID BERBEDA dari pemilik alarm
-///      → otomatis batalkan alarm lama, jadwalkan alarm baru.
-///
-/// Alarm TIDAK dibatalkan saat:
-///   • authStateChanges mengirim user=null sementara (startup, biometrik, dsb.)
-///   • Login kembali dengan UID yang SAMA
-///
-/// Saat login ulang dengan UID sama:
-///   • Bandingkan alarm yang seharusnya ada vs pendingNotificationRequests.
-///   • Jadwalkan ulang HANYA alarm yang hilang (tidak batalkan yang masih ada).
+/// 1. Seluruh operasi penjadwalan & rekonsiliasi dijalankan lewat antrean serial
+///    (serial queue). Tidak ada operasi yang berjalan bersamaan. Pemicu yang
+///    datang saat antrean berjalan digabung menjadi satu rekonsiliasi susulan.
+/// 2. Rekonsiliasi membandingkan `pendingNotificationRequests` OS dengan daftar
+///    alarm yang seharusnya aktif untuk SELURUH rentang tanggal (hingga 31 hari):
+///    - Membatalkan hanya alarm usang/tidak berlaku (ID tertentu), tanpa cancelAll.
+///    - Menjadwalkan hanya alarm yang belum ada atau waktunya berubah.
+/// 3. Notifikasi Pengingat "Jadwal Habis" (ID: [kPlanExpiredNotificationId]):
+///    - Dijadwalkan otomatis pada hari setelah tanggal terakhir rencana (H+1)
+///      pukul 08:00 waktu lokal.
+///    - Dikecualikan dari perhitungan selisih alarm makan.
+///    - Diperbarui saat rencana baru disimpan atau dibatalkan saat rencana nonaktif.
+///    - Tampil langsung sekali saja saat aplikasi dibuka/resumed jika waktu rencana sudah lewat.
+/// 4. Logout eksplisit oleh pengguna tetap membatalkan seluruh alarm via [cancelAlarmsForLogout].
 /// ────────────────────────────────────────────────────────────────────────────
 class MealReminderService with WidgetsBindingObserver {
   MealReminderService._();
   static final MealReminderService instance = MealReminderService._();
 
-  // ── Kunci SharedPreferences ───────────────────────────────────────────────
+  // ── ID & Kunci Khusus ─────────────────────────────────────────────────────
+  /// ID tetap khusus untuk notifikasi pengingat "Jadwal makan sudah habis" (H+1 08:00).
+  static const int kPlanExpiredNotificationId = 999999001;
+
   static const String keyBerandaSchedule = 'lamon_meal_schedule';
   static const String keyUserPlanPrefix = 'lamon_meal_plan_';
 
   /// UID pemilik alarm aktif yang tersimpan secara persisten.
-  /// Menjadi referensi keputusan batalkan/pertahankan alarm.
   static const String _keyAlarmOwnerUid = 'lamon_alarm_owner_uid';
+
+  /// Penanda tanggal rencana terakhir yang notifikasi habisnya sudah pernah ditampilkan.
+  static const String _keyPlanExpiredNotifiedKey = 'lamon_plan_expired_notified_key';
 
   // ── State internal ────────────────────────────────────────────────────────
   Timer? _midnightTimer;
   StreamSubscription<User?>? _authSubscription;
   StreamSubscription<DocumentSnapshot>? _firestoreSubscription;
   bool _isInitialized = false;
+
+  // ── Serial Queue (Mutex / Chaining) ───────────────────────────────────────
+  Future<void>? _activeSyncOperation;
+  bool _pendingSyncRequest = false;
 
   /// Notifier daftar jadwal jam makan hari ini untuk Beranda
   final ValueNotifier<List<MealScheduleItem>> todaySchedulesNotifier =
@@ -72,21 +85,24 @@ class MealReminderService with WidgetsBindingObserver {
 
     WidgetsBinding.instance.addObserver(this);
 
-    // 1. Sinkronkan jadwal hari ini ke Beranda saat aplikasi dimulai
+    // 1. Pastikan zona waktu sinkron sebelum perhitungan jadwal
+    await NotificationService.instance.updateLocalTimeZone();
+
+    // 2. Sinkronkan jadwal hari ini ke Beranda saat aplikasi dimulai
     await syncTodayScheduleToBeranda();
 
-    // 2. Pasang timer ke tengah malam berikutnya (00:00:01)
+    // 3. Pasang timer ke tengah malam berikutnya (00:00:01)
     _scheduleMidnightTimer();
 
-    // 3. Pasang pendengar authStateChanges
+    // 4. Pasang pendengar authStateChanges
     _authSubscription =
         FirebaseAuth.instance.authStateChanges().listen(_handleAuthChanged);
 
-    // 4. Pasang realtime listener Firestore jika sudah login
+    // 5. Pasang realtime listener Firestore jika sudah login
     _setupFirestoreListener(currentUid);
 
-    // 5. Verifikasi alarm saat startup
-    await _verifyAndFillMissingAlarms();
+    // 6. Rekonsiliasi alarm saat startup secara serial
+    await reconcileAlarms(reason: 'Startup app');
   }
 
   // ── AppLifecycle ──────────────────────────────────────────────────────────
@@ -99,7 +115,7 @@ class MealReminderService with WidgetsBindingObserver {
       }
       NotificationService.instance.updateLocalTimeZone();
       syncTodayScheduleToBeranda();
-      _verifyAndFillMissingAlarms();
+      reconcileAlarms(reason: 'App resumed');
     }
   }
 
@@ -124,9 +140,6 @@ class MealReminderService with WidgetsBindingObserver {
 
   Future<void> _handleAuthChanged(User? user) async {
     if (user == null) {
-      // ── user == null: JANGAN batalkan alarm ──────────────────────────────
-      // Ini bisa terjadi saat startup, kunci biometrik, atau transisi sementara.
-      // Alarm tetap aktif; pemilik tersimpan di _keyAlarmOwnerUid.
       if (kDebugMode) {
         final ownerUid = await _savedAlarmOwnerUid();
         debugPrint(
@@ -134,11 +147,9 @@ class MealReminderService with WidgetsBindingObserver {
           'Pemilik tersimpan: $ownerUid',
         );
       }
-      // Jangan hapus lamon_meal_schedule — biarkan Beranda tetap menampilkan jadwal.
       return;
     }
 
-    // ── user != null: cek apakah UID berubah ─────────────────────────────
     final newUid = user.uid;
     final savedOwnerUid = await _savedAlarmOwnerUid();
 
@@ -149,7 +160,6 @@ class MealReminderService with WidgetsBindingObserver {
     }
 
     if (savedOwnerUid != null && savedOwnerUid != newUid) {
-      // ── UID BERBEDA → pergantian akun ─────────────────────────────────
       if (kDebugMode) {
         debugPrint(
           '[MealReminder] UID berubah ($savedOwnerUid → $newUid). '
@@ -160,24 +170,17 @@ class MealReminderService with WidgetsBindingObserver {
         reason: 'Login akun berbeda: $savedOwnerUid → $newUid',
       );
       final prefs = await SharedPreferences.getInstance();
-      // Hapus jadwal Beranda akun lama sebelum mengisi jadwal akun baru
       await prefs.remove(keyBerandaSchedule);
+      await prefs.remove(_keyPlanExpiredNotifiedKey);
     }
-    // else: UID sama atau belum ada pemilik → tidak batalkan apapun
 
-    // Simpan UID pemilik alarm baru
     await _saveAlarmOwnerUid(newUid);
 
-    // Pasang listener Firestore untuk akun ini
     _firestoreSubscription?.cancel();
     _firestoreSubscription = null;
     _setupFirestoreListener(newUid);
 
-    // Muat jadwal dan pastikan alarm aktif (tambahkan yang hilang, tidak batalkan yang ada)
-    final plan = await loadPlan(uid: newUid);
-    if (plan != null && plan.enabled) {
-      await _ensureAlarmsScheduled(plan, uid: newUid);
-    }
+    await reconcileAlarms(reason: 'Auth changed');
     await syncTodayScheduleToBeranda();
   }
 
@@ -200,124 +203,256 @@ class MealReminderService with WidgetsBindingObserver {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString(
               '$keyUserPlanPrefix$uid', jsonEncode(plan.toJson()));
-          // Jadwal ulang semua alarm (plan berubah dari perangkat lain)
-          await _scheduleAllAlarmsForPlan(plan, uid: uid);
+          activePlanNotifier.value = plan;
+
+          // Rekonsiliasi secara aman via serial queue (tanpa cancelAll)
+          reconcileAlarms(reason: 'Firestore snapshot update');
           await syncTodayScheduleToBeranda();
         }
       }, onError: (_) {});
     } catch (_) {}
   }
 
-  // ── Verifikasi & isi alarm yang hilang ───────────────────────────────────
+  // ── Antrean Serial & Rekonsiliasi Alarm ────────────────────────────────────
 
-  /// Verifikasi alarm yang seharusnya ada, lalu jadwalkan ulang HANYA
-  /// yang hilang dari pendingNotificationRequests. Tidak membatalkan yang ada.
-  Future<void> _verifyAndFillMissingAlarms() async {
-    try {
-      final uid = currentUid;
-      if (uid == null) {
-        if (kDebugMode) {
-          debugPrint(
-              '[MealReminder] _verifyAndFill: user belum login, skip');
-        }
-        return;
-      }
-
-      final plan = await loadPlan(uid: uid);
-      if (plan == null || !plan.enabled) {
-        if (kDebugMode) {
-          debugPrint('[MealReminder] _verifyAndFill: tidak ada jadwal aktif');
-        }
-        return;
-      }
-
-      final pending =
-          await NotificationService.instance.getPendingNotifications();
-      final pendingIds = pending.map((n) => n.id).toSet();
-
+  /// Menjalankan rekonsiliasi alarm secara serial (satu per satu).
+  /// Pemicu yang datang saat rekonsiliasi berjalan akan digabung (cukup satu rekonsiliasi susulan).
+  Future<void> reconcileAlarms({String? reason}) {
+    if (_activeSyncOperation != null) {
+      _pendingSyncRequest = true;
       if (kDebugMode) {
         debugPrint(
-            '[MealReminder] _verifyAndFill: ${pending.length} alarm pending');
+          '[MealReminder] ⏳ Antrean rekonsiliasi aktif. Permintaan susulan dicatat: ${reason ?? "tanpa alasan"}',
+        );
       }
-
-      // Jadwalkan hanya alarm yang hilang
-      int scheduled = 0;
-      final notif = NotificationService.instance;
-      final slots = _buildAlarmSlots(plan);
-
-      for (final slot in slots) {
-        if (!pendingIds.contains(slot.id) &&
-            slot.scheduledTime.isAfter(DateTime.now())) {
-          await notif.scheduleMealReminder(
-            id: slot.id,
-            title: slot.title,
-            body: slot.body,
-            scheduledDateTime: slot.scheduledTime,
-            uid: uid,
-          );
-          scheduled++;
-        }
-      }
-
-      if (kDebugMode) {
-        debugPrint(
-            '[MealReminder] _verifyAndFill: $scheduled alarm baru dijadwalkan '
-            '(dari ${slots.length} total slot)');
-      }
-    } catch (e) {
-      debugPrint('[MealReminder] Error _verifyAndFillMissingAlarms: $e');
+      return _activeSyncOperation!;
     }
+
+    final completer = Completer<void>();
+    _activeSyncOperation = completer.future;
+
+    () async {
+      try {
+        do {
+          _pendingSyncRequest = false;
+          await _performReconciliation(reason: reason);
+        } while (_pendingSyncRequest);
+      } catch (e) {
+        debugPrint('[MealReminder] ❌ Error pada rekonsiliasi alarm: $e');
+      } finally {
+        _activeSyncOperation = null;
+        completer.complete();
+      }
+    }();
+
+    return _activeSyncOperation!;
   }
 
-  /// Pastikan semua alarm aktif terjadwal.
-  /// Jika uid sama dengan pemilik, hanya tambahkan yang hilang.
-  Future<void> _ensureAlarmsScheduled(MealReminderPlan plan,
-      {required String uid}) async {
-    final pending =
-        await NotificationService.instance.getPendingNotifications();
-    final pendingIds = pending.map((n) => n.id).toSet();
+  /// Inti logika rekonsiliasi:
+  /// - Bandingkan pendingNotificationRequests dengan alarm yang seharusnya aktif.
+  /// - Batalkan hanya yang tidak lagi berlaku (id tertentu), tanpa cancelAll.
+  /// - Jadwalkan hanya yang belum ada atau yang waktunya berubah.
+  /// - Kelola notifikasi "jadwal habis" (ID 999999001).
+  /// - Verifikasi dan catat selisihnya di debugPrint.
+  Future<void> _performReconciliation({String? reason}) async {
+    final uid = currentUid;
+    if (uid == null) {
+      if (kDebugMode) {
+        debugPrint(
+            '[MealReminder] _performReconciliation: user belum login, skip ($reason)');
+      }
+      return;
+    }
 
-    final slots = _buildAlarmSlots(plan);
-    int scheduled = 0;
+    logAlarmDebug(
+        'Memulai rekonsiliasi alarm (Pemicu: ${reason ?? "tidak disebutkan"})');
+
+    final plan = await loadPlan(uid: uid);
     final notif = NotificationService.instance;
+    final prefs = await SharedPreferences.getInstance();
+    final nowTz = tz.TZDateTime.now(tz.local);
 
-    for (final slot in slots) {
-      if (!pendingIds.contains(slot.id) &&
-          slot.scheduledTime.isAfter(DateTime.now())) {
+    final pending = await notif.getPendingNotifications();
+    final pendingMap = {for (final p in pending) p.id: p};
+
+    if (plan == null || !plan.enabled) {
+      // Tidak ada rencana aktif: batalkan semua alarm jam makan yang tersisa & jadwal habis
+      int cancelledCount = 0;
+      for (final p in pending) {
+        if (_isMealReminderNotification(p) ||
+            p.id == kPlanExpiredNotificationId) {
+          await notif.cancelReminder(p.id);
+          cancelledCount++;
+        }
+      }
+      if (kDebugMode) {
+        debugPrint(
+            '[MealReminder] Plan nonaktif: $cancelledCount alarm dibatalkan');
+      }
+      return;
+    }
+
+    // Bangun seluruh slot jam makan yang seharusnya aktif untuk seluruh rentang tanggal
+    final desiredSlots = _buildAlarmSlots(plan);
+    final desiredMap = {for (final s in desiredSlots) s.id: s};
+
+    // 1. Batalkan alarm makan yang ada di pending tetapi TIDAK LAGI berlaku di desiredSlots
+    int cancelledCount = 0;
+    for (final p in pending) {
+      if (_isMealReminderNotification(p) && !desiredMap.containsKey(p.id)) {
+        await notif.cancelReminder(p.id);
+        cancelledCount++;
+        if (kDebugMode) {
+          debugPrint(
+              '[MealReminder] 🗑️ Batalkan alarm usang ID ${p.id} ("${p.title}")');
+        }
+      }
+    }
+
+    // 2. Jadwalkan alarm makan yang belum ada di pending atau yang waktunya berubah
+    int scheduledCount = 0;
+    for (final slot in desiredSlots) {
+      final existing = pendingMap[slot.id];
+      final targetIso = slot.scheduledTime.toIso8601String();
+
+      // Jika belum ada di pending ATAU waktu/payload berbeda -> jadwalkan
+      if (existing == null || existing.payload != targetIso) {
         await notif.scheduleMealReminder(
           id: slot.id,
           title: slot.title,
           body: slot.body,
           scheduledDateTime: slot.scheduledTime,
           uid: uid,
+          payload: targetIso,
         );
-        scheduled++;
+        scheduledCount++;
+      }
+    }
+
+    // 3. Notifikasi Pengingat "Jadwal Habis" (ID: 999999001)
+    // Waktu: hari setelah tanggal terakhir rencana (H+1), pukul 08:00 waktu lokal
+    final dayAfterEnd = plan.endDate.add(const Duration(days: 1));
+    final expiredNotifTime = tz.TZDateTime(
+      tz.local,
+      dayAfterEnd.year,
+      dayAfterEnd.month,
+      dayAfterEnd.day,
+      8,
+      0,
+    );
+    final expiredPayload =
+        'type=plan_expired;time=${expiredNotifTime.toIso8601String()}';
+
+    if (expiredNotifTime.isAfter(nowTz)) {
+      // Jadwal belum habis: pastikan notifikasi terjadwal di hari H+1 pukul 08:00
+      final existingExpired = pendingMap[kPlanExpiredNotificationId];
+      if (existingExpired == null ||
+          existingExpired.payload != expiredPayload) {
+        await notif.scheduleMealReminder(
+          id: kPlanExpiredNotificationId,
+          title: 'Jadwal makan sudah habis',
+          body: 'Atur ulang jam makanmu supaya pengingat tetap berjalan.',
+          scheduledDateTime: expiredNotifTime,
+          uid: uid,
+          payload: expiredPayload,
+        );
+        if (kDebugMode) {
+          debugPrint(
+              '[MealReminder] 📅 Notifikasi jadwal habis dijadwalkan: $expiredNotifTime');
+        }
+      }
+    } else {
+      // Waktu jadwal habis sudah lewat di masa lalu
+      if (pendingMap.containsKey(kPlanExpiredNotificationId)) {
+        await notif.cancelReminder(kPlanExpiredNotificationId);
+      }
+
+      // Pemulihan saat app dibuka/resumed: bila seluruh rentang sudah lewat,
+      // tampilkan notifikasi langsung sekali saja (jangan berulang setiap resume).
+      final planKey =
+          '${MealReminderPlan.formatDate(plan.endDate)}_${plan.updatedAt.millisecondsSinceEpoch}';
+      final lastNotified = prefs.getString(_keyPlanExpiredNotifiedKey);
+      if (lastNotified != planKey) {
+        await prefs.setString(_keyPlanExpiredNotifiedKey, planKey);
+        await notif.showInstantNotification(
+          id: kPlanExpiredNotificationId,
+          title: 'Jadwal makan sudah habis',
+          body: 'Atur ulang jam makanmu supaya pengingat tetap berjalan.',
+          payload: 'type=plan_expired;time=${nowTz.toIso8601String()}',
+        );
+        if (kDebugMode) {
+          debugPrint(
+              '[MealReminder] 📢 Notifikasi jadwal habis instan dikirim (key: $planKey)');
+        }
       }
     }
 
     if (kDebugMode) {
       debugPrint(
-          '[MealReminder] _ensureAlarmsScheduled: $scheduled alarm ditambahkan '
-          '(sudah ada: ${pending.length}, total slot: ${slots.length})');
+        '[MealReminder] Rekonsiliasi selesai ($reason): '
+        '$scheduledCount dijadwalkan ulang/baru, '
+        '$cancelledCount dibatalkan usang, '
+        'total slot makan target=${desiredSlots.length}',
+      );
     }
+
+    // 4. Verifikasi: bandingkan jumlah alarm makan yang seharusnya dengan jumlah di pendingNotificationRequests
+    // (DIKECUALIKAN kPlanExpiredNotificationId agar selisih tidak salah)
+    final afterPending = await notif.getPendingNotifications();
+    final activeMealReminders = afterPending
+        .where((p) =>
+            desiredMap.containsKey(p.id) &&
+            p.id != kPlanExpiredNotificationId)
+        .toList();
+    final expectedCount = desiredSlots.length;
+    final actualCount = activeMealReminders.length;
+    final diff = expectedCount - actualCount;
+
+    if (kDebugMode) {
+      debugPrint(
+        '[MealReminder] 🔍 Verifikasi: seharusnya=$expectedCount, '
+        'aktif di sistem=$actualCount, selisih=$diff',
+      );
+    }
+
+    logAlarmDebug(
+      'Rekonsiliasi selesai: $scheduledCount dibuat/dipulihkan, $cancelledCount dihapus. '
+      'Status: seharusnya=$expectedCount, aktif=$actualCount, selisih=$diff',
+    );
+  }
+
+  /// Mengecek apakah notifikasi pending merupakan alarm jam makan biasa
+  bool _isMealReminderNotification(PendingNotificationRequest p) {
+    if (p.id == kPlanExpiredNotificationId) return false;
+    if (p.payload != null &&
+        (p.payload == 'meal_reminder' ||
+            (!p.payload!.contains('type=plan_expired') &&
+                DateTime.tryParse(p.payload!) != null))) {
+      return true;
+    }
+    // Cek pola digit ID: minimal 9 digit dan berakhiran 1..4 (slotIndex)
+    if (p.id >= 100000000 &&
+        p.id <= 2147483647 &&
+        p.id != kPlanExpiredNotificationId) {
+      final lastDigit = p.id % 10;
+      if (lastDigit >= 1 && lastDigit <= 4) return true;
+    }
+    return false;
   }
 
   // ── Model internal slot alarm ─────────────────────────────────────────────
 
-  /// Membangun daftar semua slot alarm dari sebuah rencana.
+  /// Membangun daftar semua slot alarm dari sebuah rencana untuk SELURUH rentang tanggal aktif.
+  /// Waktu dibangun langsung dengan [tz.TZDateTime(tz.local, ...)].
   List<_AlarmSlot> _buildAlarmSlots(MealReminderPlan plan) {
     final notif = NotificationService.instance;
-    final now = DateTime.now();
-    final today =
-        DateTime(now.year, now.month, now.day);
+    final nowTz = tz.TZDateTime.now(tz.local);
 
     DateTime current = DateTime(
       plan.startDate.year,
       plan.startDate.month,
       plan.startDate.day,
     );
-    // Mulai dari hari ini jika rencana sudah dimulai sebelumnya
-    if (current.isBefore(today)) current = today;
 
     final end = DateTime(
       plan.endDate.year,
@@ -330,39 +465,75 @@ class MealReminderService with WidgetsBindingObserver {
 
     while ((current.isBefore(end) || current.isAtSameMomentAs(end)) &&
         count < 31) {
-      slots.add(_AlarmSlot(
-        id: notif.generateNotificationId(date: current, slotIndex: 1),
-        title: 'Sarapan 🌅',
-        body: 'Waktunya sarapan sehat! Menjaga lambung tetap nyaman hari ini.',
-        scheduledTime: DateTime(
-            current.year, current.month, current.day, plan.sarapan.startHour),
-      ));
+      final sarapanTime = tz.TZDateTime(
+        tz.local,
+        current.year,
+        current.month,
+        current.day,
+        plan.sarapan.startHour,
+        0,
+      );
+      if (sarapanTime.isAfter(nowTz)) {
+        slots.add(_AlarmSlot(
+          id: notif.generateNotificationId(date: current, slotIndex: 1),
+          title: 'Sarapan 🌅',
+          body: 'Waktunya sarapan sehat! Menjaga lambung tetap nyaman hari ini.',
+          scheduledTime: sarapanTime,
+        ));
+      }
 
-      slots.add(_AlarmSlot(
-        id: notif.generateNotificationId(date: current, slotIndex: 2),
-        title: 'Makan Siang 🍽️',
-        body:
-            'Jangan lupa makan siang tepat waktu agar asam lambung stabil.',
-        scheduledTime: DateTime(current.year, current.month, current.day,
-            plan.makanSiang.startHour),
-      ));
+      final siangTime = tz.TZDateTime(
+        tz.local,
+        current.year,
+        current.month,
+        current.day,
+        plan.makanSiang.startHour,
+        0,
+      );
+      if (siangTime.isAfter(nowTz)) {
+        slots.add(_AlarmSlot(
+          id: notif.generateNotificationId(date: current, slotIndex: 2),
+          title: 'Makan Siang 🍽️',
+          body:
+              'Jangan lupa makan siang tepat waktu agar asam lambung stabil.',
+          scheduledTime: siangTime,
+        ));
+      }
 
-      slots.add(_AlarmSlot(
-        id: notif.generateNotificationId(date: current, slotIndex: 3),
-        title: 'Makan Malam 🌙',
-        body: 'Waktunya makan malam. Hindari makan terlalu larut ya!',
-        scheduledTime: DateTime(current.year, current.month, current.day,
-            plan.makanMalam.startHour),
-      ));
+      final malamTime = tz.TZDateTime(
+        tz.local,
+        current.year,
+        current.month,
+        current.day,
+        plan.makanMalam.startHour,
+        0,
+      );
+      if (malamTime.isAfter(nowTz)) {
+        slots.add(_AlarmSlot(
+          id: notif.generateNotificationId(date: current, slotIndex: 3),
+          title: 'Makan Malam 🌙',
+          body: 'Waktunya makan malam. Hindari makan terlalu larut ya!',
+          scheduledTime: malamTime,
+        ));
+      }
 
       if (plan.condition == MealCondition.sakit) {
-        slots.add(_AlarmSlot(
-          id: notif.generateNotificationId(date: current, slotIndex: 4),
-          title: 'Jam Tidur 😴',
-          body: 'Waktunya istirahat tidur untuk pemulihan lambung optimal.',
-          scheduledTime: DateTime(
-              current.year, current.month, current.day, plan.sleepHour),
-        ));
+        final tidurTime = tz.TZDateTime(
+          tz.local,
+          current.year,
+          current.month,
+          current.day,
+          plan.sleepHour,
+          0,
+        );
+        if (tidurTime.isAfter(nowTz)) {
+          slots.add(_AlarmSlot(
+            id: notif.generateNotificationId(date: current, slotIndex: 4),
+            title: 'Jam Tidur 😴',
+            body: 'Waktunya istirahat tidur untuk pemulihan lambung optimal.',
+            scheduledTime: tidurTime,
+          ));
+        }
       }
 
       current = current.add(const Duration(days: 1));
@@ -370,84 +541,6 @@ class MealReminderService with WidgetsBindingObserver {
     }
 
     return slots;
-  }
-
-  // ── Penjadwalan ulang TOTAL (dipakai saat plan berubah) ───────────────────
-
-  /// Batalkan SEMUA alarm lalu jadwalkan ulang dari nol.
-  /// Hanya dipanggil saat data plan berubah (simpan/update dari Firestore).
-  Future<void> _scheduleAllAlarmsForPlan(MealReminderPlan plan,
-      {String? uid}) async {
-    await NotificationService.instance.cancelAllReminders(
-      reason: 'Plan diperbarui — jadwal ulang dari nol',
-    );
-    if (!plan.enabled) return;
-
-    final notif = NotificationService.instance;
-    DateTime current = DateTime(
-      plan.startDate.year,
-      plan.startDate.month,
-      plan.startDate.day,
-    );
-    final end = DateTime(
-      plan.endDate.year,
-      plan.endDate.month,
-      plan.endDate.day,
-    );
-
-    int count = 0;
-    while ((current.isBefore(end) || current.isAtSameMomentAs(end)) &&
-        count < 31) {
-      final sarapanTime = DateTime(
-          current.year, current.month, current.day, plan.sarapan.startHour);
-      await notif.scheduleMealReminder(
-        id: notif.generateNotificationId(date: current, slotIndex: 1),
-        title: 'Sarapan 🌅',
-        body: 'Waktunya sarapan sehat! Menjaga lambung tetap nyaman hari ini.',
-        scheduledDateTime: sarapanTime,
-        uid: uid,
-      );
-
-      final siangTime = DateTime(current.year, current.month, current.day,
-          plan.makanSiang.startHour);
-      await notif.scheduleMealReminder(
-        id: notif.generateNotificationId(date: current, slotIndex: 2),
-        title: 'Makan Siang 🍽️',
-        body:
-            'Jangan lupa makan siang tepat waktu agar asam lambung stabil.',
-        scheduledDateTime: siangTime,
-        uid: uid,
-      );
-
-      final malamTime = DateTime(current.year, current.month, current.day,
-          plan.makanMalam.startHour);
-      await notif.scheduleMealReminder(
-        id: notif.generateNotificationId(date: current, slotIndex: 3),
-        title: 'Makan Malam 🌙',
-        body: 'Waktunya makan malam. Hindari makan terlalu larut ya!',
-        scheduledDateTime: malamTime,
-        uid: uid,
-      );
-
-      if (plan.condition == MealCondition.sakit) {
-        final tidurTime = DateTime(
-            current.year, current.month, current.day, plan.sleepHour);
-        await notif.scheduleMealReminder(
-          id: notif.generateNotificationId(date: current, slotIndex: 4),
-          title: 'Jam Tidur 😴',
-          body: 'Waktunya istirahat tidur untuk pemulihan lambung optimal.',
-          scheduledDateTime: tidurTime,
-          uid: uid,
-        );
-      }
-
-      current = current.add(const Duration(days: 1));
-      count++;
-    }
-
-    if (kDebugMode) {
-      await notif.getPendingNotifications();
-    }
   }
 
   // ── Timer tengah malam ────────────────────────────────────────────────────
@@ -461,6 +554,7 @@ class MealReminderService with WidgetsBindingObserver {
 
     _midnightTimer = Timer(duration, () async {
       await syncTodayScheduleToBeranda();
+      reconcileAlarms(reason: 'Tengah malam lewat');
       _scheduleMidnightTimer();
     });
   }
@@ -498,6 +592,11 @@ class MealReminderService with WidgetsBindingObserver {
     final uid = currentUid;
     final prefs = await SharedPreferences.getInstance();
 
+    // Reset penanda notifikasi jadwal habis agar rencana baru kelak bisa memberitahu lagi
+    await prefs.remove(_keyPlanExpiredNotifiedKey);
+    // Batalkan notifikasi jadwal habis rencana lama agar dijadwalkan ulang mengikuti tanggal baru
+    await NotificationService.instance.cancelReminder(kPlanExpiredNotificationId);
+
     // 1. Simpan ke SharedPreferences lokal
     await prefs.setString(_userKey(uid), jsonEncode(plan.toJson()));
 
@@ -517,8 +616,10 @@ class MealReminderService with WidgetsBindingObserver {
       await _saveAlarmOwnerUid(uid);
     }
 
-    // 3. Batalkan alarm lama dan jadwalkan ulang (plan berubah)
-    await _scheduleAllAlarmsForPlan(plan, uid: uid);
+    activePlanNotifier.value = plan;
+
+    // 3. Rekonsiliasi alarm secara serial (batalkan yang usang, jadwalkan yang baru)
+    await reconcileAlarms(reason: 'Save plan baru');
 
     // 4. Sinkronkan jadwal hari ini ke Beranda
     await syncTodayScheduleToBeranda();
@@ -538,6 +639,7 @@ class MealReminderService with WidgetsBindingObserver {
     );
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(keyBerandaSchedule);
+    await prefs.remove(_keyPlanExpiredNotifiedKey);
     await _clearAlarmOwnerUid();
     todaySchedulesNotifier.value = BerandaMealService.defaultSchedules;
     activePlanNotifier.value = null;
@@ -582,7 +684,7 @@ class _AlarmSlot {
   final int id;
   final String title;
   final String body;
-  final DateTime scheduledTime;
+  final tz.TZDateTime scheduledTime;
 
   const _AlarmSlot({
     required this.id,
