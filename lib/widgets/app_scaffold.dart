@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import 'app_background.dart';
 
 class AppScaffold extends StatelessWidget {
   final Widget body;
@@ -21,18 +22,9 @@ class AppScaffold extends StatelessWidget {
       builder: (context, constraints) {
         final isLargeScreen = constraints.maxWidth > 520;
 
-        Widget content = Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.bgGradientTop,
-                AppColors.bgGradientMiddle,
-                AppColors.bgGradientBottom,
-              ],
-            ),
-          ),
+        // Latar bg_beranda_polos.png menggantikan gradient kuning polos lama.
+        // Scaffold di dalamnya tetap transparan agar latar tembus.
+        Widget content = AppBackground(
           child: Scaffold(
             backgroundColor: Colors.transparent,
             appBar: appBar,
