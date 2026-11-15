@@ -3,6 +3,7 @@ import '../../constants/app_colors.dart';
 import '../../constants/practice_slot_constants.dart';
 import '../../services/doctor_service.dart';
 import '../../utils/app_date_formatter.dart';
+import '../../widgets/app_background.dart';
 
 /// Layar Pilih Jam Praktik Dokter untuk suatu tanggal.
 class PilihJamPraktikScreen extends StatefulWidget {
@@ -230,8 +231,9 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
   Widget build(BuildContext context) {
     final formattedDate = AppDateFormatter.formatLongDate(widget.date);
 
-    return Scaffold(
-      backgroundColor: AppColors.bgGradientMiddle,
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -441,7 +443,8 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildSlotCard(PracticeSlot slot, bool isSelected) {

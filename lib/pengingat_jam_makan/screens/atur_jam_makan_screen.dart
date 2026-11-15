@@ -4,6 +4,7 @@ import '../models/meal_reminder_plan.dart';
 import '../services/meal_reminder_service.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/meal_time_bottom_sheet.dart';
+import '../../widgets/app_background.dart';
 
 /// Layar 3: Pengaturan Jam Makan dan Jam Tidur
 class AturJamMakanScreen extends StatefulWidget {
@@ -198,29 +199,13 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
   Widget build(BuildContext context) {
     final isHealthy = widget.condition == MealCondition.sehat;
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          // 1. Latar Belakang Gradasi Butter Yellow Lembut
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0xFFFEF08A),
-                    Color(0xFFFEF9C3),
-                    Color(0xFFFFFBEB),
-                  ],
-                  stops: [0.0, 0.45, 1.0],
-                ),
-              ),
-            ),
-          ),
-
-          // 2. Konten Utama (Scrollable)
-          SafeArea(
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            // 1. Konten Utama (Scrollable)
+            SafeArea(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -406,7 +391,8 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
             ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildMealCard({
