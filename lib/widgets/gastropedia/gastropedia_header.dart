@@ -60,31 +60,19 @@ class GastropediaHeader extends StatelessWidget {
             child: Center(
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFFFFFDE8),
-                      Color(0xFFF6E8B6),
-                    ],
-                  ),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: const Color(0xFFDEC99B),
+                    color: const Color(0xFFEBE3D0),
                     width: 1.2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
+                      color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 6,
-                      offset: const Offset(0, 3),
-                    ),
-                    const BoxShadow(
-                      color: Colors.white,
-                      blurRadius: 2,
-                      offset: Offset(0, -1),
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),

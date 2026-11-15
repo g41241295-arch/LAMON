@@ -18,7 +18,7 @@ class PilihKondisiScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Latar Belakang Gradasi Butter Yellow
+          // 1. Latar Belakang Gradasi Formal LAMON
           Positioned.fill(
             child: Container(
               decoration: const BoxDecoration(
@@ -26,9 +26,9 @@ class PilihKondisiScreen extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Color(0xFFFEF08A), // Butter yellow
-                    Color(0xFFFEF9C3),
-                    Color(0xFFFFFBEB), // Soft cream
+                    Color(0xFFFCFBF7),
+                    Color(0xFFF7F4EB),
+                    Color(0xFFF2EEDB),
                   ],
                   stops: [0.0, 0.45, 1.0],
                 ),
@@ -45,7 +45,7 @@ class PilihKondisiScreen extends StatelessWidget {
               height: 180,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFFBAE6FD).withValues(alpha: 0.25),
+                color: const Color(0xFF276F8F).withValues(alpha: 0.05),
               ),
             ),
           ),
@@ -57,28 +57,40 @@ class PilihKondisiScreen extends StatelessWidget {
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF86EFAC).withValues(alpha: 0.18),
+                color: const Color(0xFFE5983A).withValues(alpha: 0.05),
               ),
             ),
           ),
 
-          // 3. Pill "Jadwal Harian" di Tengah Horizontal Layar & Tombol Back di Kiri Atas
+          // 3. Pill "Pengingat Jam Makan" di Tengah Horizontal Layar & Tombol Back di Kiri Atas
           Positioned(
             top: topPadding + 12,
             left: 0,
             right: 0,
             child: Center(
-              child: GlassContainer(
-                borderRadius: 22,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                backgroundColor: const Color(0xFFFFF7D6).withValues(alpha: 0.85),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: const Color(0xFFEBE3D0),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
                 child: Text(
-                  'Jadwal Harian',
+                  'Pengingat Jam Makan',
                   style: GoogleFonts.poppins(
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1E3A8A),
+                    color: const Color(0xFF1C4E68),
                   ),
                 ),
               ),
@@ -89,12 +101,27 @@ class PilihKondisiScreen extends StatelessWidget {
             left: 20,
             child: GestureDetector(
               onTap: () => Navigator.pop(context),
-              child: const Padding(
-                padding: EdgeInsets.all(6),
-                child: Icon(
-                  Icons.arrow_back,
-                  color: Color(0xFF1E3A8A),
-                  size: 24,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFEBE3D0),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Color(0xFF1C4E68),
+                  size: 20,
                 ),
               ),
             ),
@@ -145,22 +172,7 @@ class PilihKondisiScreen extends StatelessWidget {
     required String label,
     required MealCondition condition,
   }) {
-    return GlassContainer(
-      borderRadius: 22,
-      height: 52,
-      width: double.infinity,
-      backgroundColor: const Color(0xFFFFF8D6).withValues(alpha: 0.88),
-      border: Border.all(
-        color: Colors.white.withValues(alpha: 0.95),
-        width: 1.5,
-      ),
-      shadows: [
-        BoxShadow(
-          color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
-          blurRadius: 10,
-          offset: const Offset(0, 4),
-        ),
-      ],
+    return GestureDetector(
       onTap: () async {
         final result = await Navigator.push<bool>(
           context,
@@ -169,18 +181,36 @@ class PilihKondisiScreen extends StatelessWidget {
           ),
         );
         if (result == true && context.mounted) {
-          // Berhasil disimpan, teruskan sinyal refresh ke Beranda
           Navigator.pop(context, true);
         }
       },
-      child: Center(
-        child: Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF1E3A8A),
-            letterSpacing: 0.2,
+      child: Container(
+        height: 56,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFFEBE3D0),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1C4E68),
+              letterSpacing: 0.2,
+            ),
           ),
         ),
       ),

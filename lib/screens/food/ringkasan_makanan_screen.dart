@@ -681,22 +681,22 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
     final titlePill = Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF7D6),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: const Color(0xFFE8DCAB),
+          color: const Color(0xFFEBE3D0),
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: const Text(
-        'Ringkasan Makanan',
+        'Ringkasan Nutrisi Harian',
         style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w800,

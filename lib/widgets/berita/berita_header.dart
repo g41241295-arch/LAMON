@@ -31,14 +31,25 @@ class BeritaHeader extends StatelessWidget {
                 onTap: () => Navigator.pop(context),
                 borderRadius: BorderRadius.circular(24),
                 child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: const BoxDecoration(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFFEBE3D0),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: const Icon(
                     Icons.arrow_back_rounded,
-                    color: AppColors.primaryText, // 0xFF1C4E68
+                    color: AppColors.primaryText,
                     size: 20,
                   ),
                 ),
@@ -49,26 +60,26 @@ class BeritaHeader extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF7D6),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: const Color(0xFFE8DCAB),
+                  color: const Color(0xFFEBE3D0),
                   width: 1.2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: const Text(
-                'Berita Terkini',
+                'Berita Kesehatan',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.primaryText, // 0xFF1C4E68
+                  color: AppColors.primaryText,
                   letterSpacing: 0.2,
                 ),
               ),

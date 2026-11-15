@@ -6,6 +6,8 @@ class AppScaffold extends StatelessWidget {
   final Widget? bottomNavigationBar;
   final PreferredSizeWidget? appBar;
   final bool resizeToAvoidBottomInset;
+  final Gradient? backgroundGradient;
+  final Color? backgroundColor;
 
   const AppScaffold({
     super.key,
@@ -13,6 +15,8 @@ class AppScaffold extends StatelessWidget {
     this.bottomNavigationBar,
     this.appBar,
     this.resizeToAvoidBottomInset = true,
+    this.backgroundGradient,
+    this.backgroundColor,
   });
 
   @override
@@ -22,16 +26,20 @@ class AppScaffold extends StatelessWidget {
         final isLargeScreen = constraints.maxWidth > 520;
 
         Widget content = Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.bgGradientTop,
-                AppColors.bgGradientMiddle,
-                AppColors.bgGradientBottom,
-              ],
-            ),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            gradient: backgroundColor != null
+                ? null
+                : (backgroundGradient ??
+                    const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppColors.bgGradientTop,
+                        AppColors.bgGradientMiddle,
+                        AppColors.bgGradientBottom,
+                      ],
+                    )),
           ),
           child: Scaffold(
             backgroundColor: Colors.transparent,

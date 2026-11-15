@@ -8,11 +8,11 @@ import '../pengingat_jam_makan/models/meal_reminder_plan.dart';
 import '../pengingat_jam_makan/services/meal_reminder_service.dart';
 import 'beranda/models/meal_schedule_model.dart';
 import 'beranda/services/beranda_meal_service.dart';
-import 'beranda/widgets/header_section.dart';
-import 'beranda/widgets/meal_alarm_card.dart';
-import 'beranda/widgets/daily_summary_card.dart';
-import 'beranda/widgets/main_menu_list.dart';
-import 'beranda/widgets/info_cards_section.dart';
+import 'beranda/widgets/formal_header_bar.dart';
+import 'beranda/widgets/formal_sapaan_card.dart';
+import 'beranda/widgets/formal_hero_card.dart';
+import 'beranda/widgets/formal_menu_grid.dart';
+import 'beranda/widgets/formal_info_section.dart';
 import '../routes/app_routes.dart';
 
 /// Konstanta padding horizontal seragam untuk seluruh bagian Beranda
@@ -253,35 +253,30 @@ class BerandaScreenState extends State<BerandaScreen>
     );
   }
 
-  void _navigateToPlaceholder(String title, String description) {
-    Navigator.pushNamed(
-      context,
-      '/placeholder',
-      arguments: {'title': title, 'description': description},
-    );
+  void _onPreviousDate() {
+    setState(() {
+      _currentDate = _currentDate.subtract(const Duration(days: 1));
+      _loadStatusForCurrentDate();
+    });
   }
 
-  void _onMainMenuTap(BerandaMenuItem menu) {
-    switch (menu.id) {
-      case 'catat-makananmu':
-        Navigator.pushNamed(context, AppRoutes.catatMakanan);
-        break;
-      case 'ringkasan-makanan':
-        Navigator.pushNamed(context, AppRoutes.ringkasanMakanan);
-        break;
-      case 'prediksi-penyakit':
-        Navigator.pushNamed(context, AppRoutes.diseasePrediction);
-        break;
-      case 'konsul-dokter':
-        Navigator.pushNamed(context, AppRoutes.konsultasi);
-        break;
-      case 'pengingat-jam-makan':
-      default:
-        _navigateToPlaceholder(
-          'Pengingat Jam Makan',
-          menu.description,
-        );
-        break;
+  void _onNextDate() {
+    final now = _mealService.now;
+    final today = DateTime(now.year, now.month, now.day);
+    final cur = DateTime(_currentDate.year, _currentDate.month, _currentDate.day);
+    if (cur.isBefore(today)) {
+      setState(() {
+        _currentDate = _currentDate.add(const Duration(days: 1));
+        _loadStatusForCurrentDate();
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tidak dapat memilih tanggal di masa mendatang.'),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -313,19 +308,12 @@ class BerandaScreenState extends State<BerandaScreen>
       statusText = 'Semua jam makan hari ini sudah selesai';
     }
 
-    // Evaluasi apakah pengguna sedang dalam masa istirahat sakit
-    final plan = MealReminderService.instance.activePlanNotifier.value;
-    final bool isSick = plan != null &&
-        plan.enabled &&
-        plan.condition == MealCondition.sakit &&
-        plan.isDateActive(now);
-    final int sleepHour = plan?.sleepHour ?? 20;
-
-    const topYellow = Color(0xFFFDE88A);
+    const formalBgStart = Color(0xFFFCFBF7);
+    const formalBgEnd = Color(0xFFF7F4EB);
     final viewPadding = MediaQuery.viewPaddingOf(context);
 
     return Scaffold(
-      backgroundColor: topYellow,
+      backgroundColor: formalBgStart,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isLargeScreen = constraints.maxWidth > 520;
@@ -341,134 +329,92 @@ class BerandaScreenState extends State<BerandaScreen>
           final effectiveTopInset =
               isLargeScreen ? 0.0 : viewPadding.top;
 
-          final mainBody = Stack(
-            children: [
-              // 1) Warna dasar kuning
-              const Positioned.fill(
-                child: ColoredBox(color: topYellow),
+          final mainBody = Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  formalBgStart,
+                  formalBgEnd,
+                ],
               ),
-
-              // 2) Latar polos (gradasi kuning dan blob, TANPA gadis) tetap diam di belakang
-              Positioned.fill(
-                child: Image.asset(
-                  'assets/images/bg_beranda_polos.png',
-                  fit: BoxFit.cover,
-                  alignment: Alignment.topCenter,
-                ),
-              ),
-
-              // 3) Area scroll konten: CustomScrollView memenuhi seluruh layar
-              Positioned.fill(
-                child: CustomScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.only(top: effectiveTopInset + 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Header Chip
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: kHPad),
-                              child: HeaderChip(
-                                userName: user.name,
-                                photoUrl: _userPhotoUrl ?? FirebaseAuth.instance.currentUser?.photoURL,
-                                onTap: () async {
-                                  await Navigator.pushNamed(context, AppRoutes.userProfile);
-                                  if (mounted) {
-                                    _loadUserPhoto();
-                                  }
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Kartu Sapaan
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: kHPad),
-                              child: SapaanCard(userName: user.name),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Kartu Jam Makan Aktif
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: kHPad),
-                              child: MealAlarmCard(
-                                schedule: activeSchedule,
-                                isCompleted: isCurrentCompleted,
-                                isActiveNow: isActiveNow,
-                                isAlarmRinging: _mealService.isAlarmRinging,
-                                onMarkCompleted: _onMarkMealCompleted,
-                                onDisabledTap: () =>
-                                    _showNotMealTimeSnackBar(activeSchedule),
-                                statusText: statusText,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Ringkasan Hari Ini
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: kHPad),
-                              child: DailySummaryCard(
-                                dailyStatus: _dailyStatus,
-                                schedules: _schedules,
-                                currentTime: now,
-                                isSick: isSick,
-                                sleepHour: sleepHour,
-                              ),
-                            ),
-                            const SizedBox(height: 32),
-
-                            // Menu Utama
-                            MainMenuList(
-                              hPad: kHPad,
-                              onMenuTap: _onMainMenuTap,
-                            ),
-                            const SizedBox(height: 32),
-
-                            // Seputar Informasi (Gastropedia & Berita)
-                            InfoCardsSection(
-                              hPad: kHPad,
-                              onGastropediaTap: () {
-                                Navigator.pushNamed(context, '/gastropedia');
-                              },
-                              onBeritaTap: () {
-                                Navigator.pushNamed(context, '/berita');
-                              },
-                            ),
-
-                          ],
+            ),
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: effectiveTopInset + 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Formal Header Bar (Avatar + Tanggal < Hari Ini, 15 Nov > + Lonceng)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: kHPad),
+                          child: FormalHeaderBar(
+                            userName: user.name,
+                            photoUrl: _userPhotoUrl ?? FirebaseAuth.instance.currentUser?.photoURL,
+                            currentDate: _currentDate,
+                            onPreviousDate: _onPreviousDate,
+                            onNextDate: _onNextDate,
+                            onProfileTap: () async {
+                              await Navigator.pushNamed(context, AppRoutes.userProfile);
+                              if (mounted) {
+                                _loadUserPhoto();
+                              }
+                            },
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 18),
+
+                        // Kartu Sapaan Formal (Narasi Halo & Maskot Lambung)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: kHPad),
+                          child: FormalSapaanCard(userName: user.name),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Formal Hero Card (Arc Meter + 3 Macro-style Meal Bars + Quick Action)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: kHPad),
+                          child: FormalHeroCard(
+                            schedules: _schedules,
+                            dailyStatus: _dailyStatus,
+                            activeSchedule: activeSchedule,
+                            isActiveNow: isActiveNow,
+                            isCurrentCompleted: isCurrentCompleted,
+                            isAlarmRinging: _mealService.isAlarmRinging,
+                            onMarkCompleted: _onMarkMealCompleted,
+                            onDisabledTap: () =>
+                                _showNotMealTimeSnackBar(activeSchedule),
+                            statusText: statusText,
+                            currentDate: now,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Menu Utama Grid 2x2 ala Referensi
+                        const FormalMenuGrid(hPad: kHPad),
+                        const SizedBox(height: 24),
+
+                        // Seputar Edukasi & Informasi Lambung (Gastropedia & Berita)
+                        FormalInfoSection(
+                          hPad: kHPad,
+                          onGastropediaTap: () {
+                            Navigator.pushNamed(context, AppRoutes.gastropedia);
+                          },
+                          onBeritaTap: () {
+                            Navigator.pushNamed(context, '/berita');
+                          },
+                        ),
+                        const SizedBox(height: 48), // Bersih, tanpa bottom navigation bar!
+                      ],
                     ),
-                    // Jarak antara kartu Berita Kesehatan dan kepala gadis ≈ 0.05 × lebar layar
-                    SliverToBoxAdapter(
-                      child: SizedBox(height: effectiveWidth * 0.05),
-                    ),
-                    // Ilustrasi gadis: langsung mengikuti konten, lebar penuh, dasar menempel akhir scroll
-                    SliverToBoxAdapter(
-                      child: Image.asset(
-                        'assets/images/beranda_ilustrasi_makan_trim.png',
-                        width: effectiveWidth,
-                        fit: BoxFit.fitWidth,
-                        alignment: Alignment.bottomCenter,
-                      ),
-                    ),
-                    // Pada layar sangat tinggi: SliverFillRemaining HANYA sebagai penyangga kosong
-                    // (tidak berisi gambar gadis, supaya gadis tetap dekat kartu di layar normal)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: const SizedBox.shrink(),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
 
           if (isLargeScreen) {

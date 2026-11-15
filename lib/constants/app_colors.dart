@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Background Gradients
-  static const Color bgGradientTop = Color(0xFFFFF4A8);
-  static const Color bgGradientMiddle = Color(0xFFFAF4C8);
-  static const Color bgGradientBottom = Color(0xFFFFFDE8);
+  // Background Gradients (Formal Warm Off-White LAMON)
+  static const Color bgGradientTop = Color(0xFFFCFBF7);
+  static const Color bgGradientMiddle = Color(0xFFF7F4EB);
+  static const Color bgGradientBottom = Color(0xFFF2EEDB);
   static const Color desktopBackground = Color(0xFFECE7BE);
 
   // Primary Brands
@@ -28,7 +28,7 @@ class AppColors {
   /// Latar kartu glass transparan (alpha ~55% / 0x8CFFFFFF)
   /// Dipakai HANYA di: alur Prediksi Penyakit dan DoctorCard sisi pasien.
   /// Nilai ini sama persis dengan Colors.white.withValues(alpha: 0.55) pada SectionCard Catat Makananmu.
-  static const Color glassCardBackground = Color(0x8CFFFFFF);
+  static const Color glassCardBackground = Color(0xFFFFFFFF);
 
   static const Color lunchCardGradientStart = Color(0xFF639BC6);
   static const Color lunchCardGradientEnd = Color(0xFF80B6DC);

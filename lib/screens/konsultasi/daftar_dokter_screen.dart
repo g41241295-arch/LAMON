@@ -229,7 +229,7 @@ class _DaftarDokterScreenState extends State<DaftarDokterScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           AppHeaderPill(
-            title: 'Chat Dokter',
+            title: 'Konsultasi Dokter',
             rightAction: rightAction,
           ),
           tabBar,
