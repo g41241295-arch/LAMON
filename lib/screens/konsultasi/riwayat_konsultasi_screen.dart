@@ -1,8 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/consultation_constants.dart';
 import '../../models/consultation_model.dart';
 import '../../models/doctor_model.dart';
+import '../../services/consultation_retention_service.dart';
 import '../../services/consultation_service.dart';
 import '../../services/doctor_service.dart';
 import '../../utils/app_date_formatter.dart';
@@ -25,6 +27,19 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
   final ConsultationService _consultationService = ConsultationService();
   final DoctorService _doctorService = DoctorService();
   bool _isNavigating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Trigger pembersihan background 60 hari untuk pasien (Revisi 10 Bagian D)
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null && uid.isNotEmpty) {
+      ConsultationRetentionService.instance.runRetentionCleanup(
+        uid: uid,
+        isDoctor: false,
+      );
+    }
+  }
 
   Future<void> _handleChatUlang(
       BuildContext context, ConsultationModel consultation) async {
@@ -403,6 +418,8 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                             height: 1.4,
                           ),
                         ),
+                        const SizedBox(height: 24),
+                        _buildRetentionInfoBanner(),
                       ],
                     ),
                   ),
@@ -512,12 +529,38 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                       ];
                     }),
                   ],
+                  const SizedBox(height: 8),
+                  _buildRetentionInfoBanner(),
                 ],
               );
             },
           ),
         );
       },
+    );
+  }
+
+  Widget _buildRetentionInfoBanner() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.info_outline_rounded,
+                size: 13, color: AppColors.neutralGray.withValues(alpha: 0.7)),
+            const SizedBox(width: 6),
+            const Text(
+              'Chat dihapus otomatis 60 hari setelah aktivitas terakhir.',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.neutralGray,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

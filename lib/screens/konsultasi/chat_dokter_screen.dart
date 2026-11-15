@@ -1604,16 +1604,10 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     );
   }
 
-  /// Widget strip template pesan cepat (Bagian B - Langsung tampil tanpa tombol petir)
+  /// Widget strip template pesan cepat (Bagian B - Chip melayang tanpa latar rectangle di belakang)
   Widget _buildTemplateSuggestions() {
-    return Container(
+    return SizedBox(
       height: 44,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        border: Border(
-          top: BorderSide(color: Colors.black.withValues(alpha: 0.06)),
-        ),
-      ),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1631,13 +1625,21 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                 _focusNode.requestFocus();
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.2),
+                    color: AppColors.primary.withValues(alpha: 0.35),
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
                 ),
                 child: Text(
                   template.length > 40
@@ -1724,7 +1726,7 @@ class _SelesaikanKonsultasiDialogState
       if (mounted) {
         setState(() {
           _isSubmitting = false;
-          _saveErrorMessage = 'Gagal menyimpan rekomendasi';
+          _saveErrorMessage = 'Gagal menyimpan rekomendasi. Coba lagi.';
           _saveErrorCode = e.toString().replaceAll('Exception: ', '').trim();
         });
       }

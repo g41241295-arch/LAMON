@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../constants/consultation_constants.dart';
 import '../models/consultation_model.dart';
+import 'consultation_retention_service.dart';
 import 'notification_relay_client.dart';
 
 /// Service untuk mengelola data konsultasi dan chat pada Firestore.
@@ -197,6 +198,16 @@ class ConsultationService {
           .get();
       if (groupSnap.docs.isNotEmpty) {
         return ConsultationModel.fromFirestore(groupSnap.docs.first);
+      }
+
+      // Fallback kedua via FieldPath.documentId untuk dokumen lama tanpa field consultationId
+      final docIdSnap = await _db
+          .collectionGroup('consultations')
+          .where(FieldPath.documentId, isEqualTo: consultationId)
+          .limit(1)
+          .get();
+      if (docIdSnap.docs.isNotEmpty) {
+        return ConsultationModel.fromFirestore(docIdSnap.docs.first);
       }
       return null;
     } catch (e) {
@@ -501,7 +512,10 @@ class ConsultationService {
         .map((snap) {
       return snap.docs
           .map((doc) => ConsultationModel.fromFirestore(doc))
-          .where((c) => c.paymentStatus != PaymentStatus.expired && !c.hiddenByPatient)
+          .where((c) =>
+              c.paymentStatus != PaymentStatus.expired &&
+              !c.hiddenByPatient &&
+              !ConsultationRetentionService.isExpired(c))
           .toList();
     });
   }
@@ -523,7 +537,9 @@ class ConsultationService {
         .map((snap) {
       final list = snap.docs
           .map((doc) => ConsultationModel.fromFirestore(doc))
-          .where((c) => !c.hiddenByPatient)
+          .where((c) =>
+              !c.hiddenByPatient &&
+              !ConsultationRetentionService.isExpired(c))
           .toList();
 
       // Urutkan terbaru: completedAt ?? createdAt descending

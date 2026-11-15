@@ -1,6 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/consultation_model.dart';
+import '../../services/consultation_retention_service.dart';
 import '../../services/doctor_service.dart';
 import '../../utils/app_date_formatter.dart';
 import '../konsultasi/chat_dokter_screen.dart';
@@ -46,6 +48,16 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
       });
     }
     _searchController.addListener(() => setState(() {}));
+
+    // Trigger pembersihan background 60 hari (Revisi 10 Bagian D)
+    final docId = widget.doctorId;
+    if (docId != null && docId.isNotEmpty) {
+      ConsultationRetentionService.instance.runRetentionCleanup(
+        uid: FirebaseAuth.instance.currentUser?.uid ?? '',
+        isDoctor: true,
+        doctorId: docId,
+      );
+    }
   }
 
   @override
@@ -74,9 +86,11 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
   Widget _buildContent(List<ConsultationModel> consultations) {
     final query = _searchController.text.trim().toLowerCase();
 
-    // Hanya konsultasi paid
+    // Hanya konsultasi paid dan belum melewati batas retensi 60 hari (Revisi 10 Bagian D)
     final paidConsultations = consultations
-        .where((c) => c.paymentStatus == PaymentStatus.paid)
+        .where((c) =>
+            c.paymentStatus == PaymentStatus.paid &&
+            !ConsultationRetentionService.isExpired(c))
         .toList();
 
     // Filter per tab (E.2):
@@ -208,9 +222,14 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
               ? _buildEmptyState()
               : ListView.separated(
                   padding: EdgeInsets.fromLTRB(20, 6, 20, bottomPadding),
-                  itemCount: filteredList.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemCount: filteredList.length + 1,
+                  separatorBuilder: (_, index) => index < filteredList.length
+                      ? const SizedBox(height: 8)
+                      : const SizedBox.shrink(),
                   itemBuilder: (context, index) {
+                    if (index == filteredList.length) {
+                      return _buildRetentionInfoBanner();
+                    }
                     final item = filteredList[index];
                     return _buildConversationTile(context, item);
                   },
@@ -497,6 +516,32 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            _buildRetentionInfoBanner(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRetentionInfoBanner() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.info_outline_rounded,
+                size: 13, color: AppColors.neutralGray.withValues(alpha: 0.7)),
+            const SizedBox(width: 6),
+            const Text(
+              'Chat dihapus otomatis 60 hari setelah aktivitas terakhir.',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.neutralGray,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),

@@ -11,7 +11,7 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isDoctor() {
+    function isDoctor() {111
       return isSignedIn() && 
              ('role' in userDoc()) && 
              (userDoc().role == 'doctor' || userDoc().role == 'dokter');
@@ -24,10 +24,11 @@ service cloud.firestore {
 
     function isDoctorForDoc(docData) {
       return isDoctor() && (
-        (myDoctorId() != '' && docData.doctorId == myDoctorId()) ||
-        (docData.doctorId == request.auth.uid) ||
+        (myDoctorId() != '' && ('doctorId' in docData) && docData.doctorId == myDoctorId()) ||
+        (('doctorId' in docData) && docData.doctorId == request.auth.uid) ||
         (('doctorUid' in docData) && docData.doctorUid == request.auth.uid) ||
-        (exists(/databases/$(database)/documents/doctors/$(docData.doctorId)) &&
+        (('doctorId' in docData) && docData.doctorId != '' &&
+         exists(/databases/$(database)/documents/doctors/$(docData.doctorId)) &&
          ('uid' in get(/databases/$(database)/documents/doctors/$(docData.doctorId)).data) &&
          get(/databases/$(database)/documents/doctors/$(docData.doctorId)).data.uid == request.auth.uid)
       );
@@ -37,6 +38,13 @@ service cloud.firestore {
       return isSignedIn() && 
              ('role' in userDoc()) && 
              userDoc().role == 'admin';
+    }
+
+    // Helper pemeriksaan batas retensi 60 hari (Revisi 10 Bagian D & E)
+    function isOlderThan60Days(docData) {
+      return ('lastMessageAt' in docData && docData.lastMessageAt != null && request.time > docData.lastMessageAt + duration.value(60, 'd')) ||
+             (!('lastMessageAt' in docData) && 'completedAt' in docData && docData.completedAt != null && request.time > docData.completedAt + duration.value(60, 'd')) ||
+             (!('lastMessageAt' in docData) && !('completedAt' in docData) && 'createdAt' in docData && docData.createdAt != null && request.time > docData.createdAt + duration.value(60, 'd'));
     }
 
     // ── 1. Users Collection & Sub-collections ──────────────────────────────
@@ -76,27 +84,34 @@ service cloud.firestore {
         allow create: if isSignedIn() && request.auth.uid == userId;
 
         // Pasien update: pasien TIDAK BOLEH menandai status completed (hanya dokter yang berwenang)
+        // Pasien boleh mengubah hiddenByPatient, lastReadByPatientAt, chatExpired, dsb.
         allow update: if isSignedIn() && request.auth.uid == userId
                       && (!('status' in request.resource.data.diff(resource.data).affectedKeys()) ||
                           request.resource.data.status != 'completed' ||
                           resource.data.status == 'completed');
 
-        allow delete: if isSignedIn() && request.auth.uid == userId;
+        // Penghapusan fisik konsultasi diizinkan jika sudah melewati batas retensi 60 hari
+        allow delete: if isSignedIn() && (
+          request.auth.uid == userId ||
+          (isDoctorForDoc(resource.data) && isOlderThan60Days(resource.data))
+        );
 
         // Dokter dapat membaca konsultasi yang ditujukan kepadanya
         allow read: if isDoctorForDoc(resource.data);
 
         // Dokter hanya boleh update field-field status dan pesan tertentu,
         // dengan pembatasan transisi status: waiting -> active (konfirmasi) atau active -> completed / waiting -> completed (selesai).
+        // Mendukung penulisan completedAt, doctorRecommendation, lastMessageId, dan chatExpired.
         allow update: if isDoctorForDoc(resource.data)
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                            'status', 'doctorConfirmedAt', 'lastMessageText', 
                            'lastMessageAt', 'lastMessageSenderType', 
                            'unreadForDoctor', 'unreadForPatient', 'lastReadByDoctorAt',
-                           'completedAt', 'doctorRecommendation', 'lastMessageId'
+                           'completedAt', 'doctorRecommendation', 'lastMessageId', 'chatExpired'
                          ])
                       && (
                         !('status' in request.resource.data.diff(resource.data).affectedKeys()) ||
+                        (!('status' in resource.data) && request.resource.data.status == 'completed') ||
                         (resource.data.status == 'waiting' && request.resource.data.status == 'active') ||
                         (resource.data.status == 'active' && request.resource.data.status == 'completed') ||
                         (resource.data.status == 'waiting' && request.resource.data.status == 'completed')
@@ -113,9 +128,13 @@ service cloud.firestore {
           // Dokter terkait dapat membaca pesan
           allow read: if isDoctorForDoc(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data);
 
-          // Dokter dapat membuat pesan jika konsultasi sudah paid dan senderType adalah 'doctor'
+          // Dokter dapat membuat pesan jika konsultasi valid dan senderType adalah 'doctor'
           allow create: if isDoctorForDoc(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data)
-                        && get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data.paymentStatus == 'paid'
+                        && (
+                          !('paymentStatus' in get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data) ||
+                          get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data.paymentStatus == 'paid' ||
+                          request.resource.data.type == 'consultation_summary'
+                        )
                         && request.resource.data.senderType == 'doctor';
 
           // Update pesan oleh Pasien pemilik (Bagian C & E):
@@ -158,8 +177,11 @@ service cloud.firestore {
                           )
                         );
 
-          // Hard delete pesan dilarang dari klien (wajib melalui soft delete / hiddenFor)
-          allow delete: if false;
+          // Hard delete pesan dari klien HANYA diizinkan oleh peserta jika sudah melewati batas retensi 60 hari (Bagian D & E)
+          allow delete: if isSignedIn() && (
+            (request.auth.uid == userId || isDoctorForDoc(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data))
+            && isOlderThan60Days(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data)
+          );
         }
       }
     }

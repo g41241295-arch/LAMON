@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_assets.dart';
 import '../providers/app_state.dart';
+import '../services/consultation_retention_service.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/primary_button.dart';
@@ -222,6 +223,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
         final appState = AppState.of(context);
         appState.loginWithGoogle(userName, email);
+
+        // Reset session dan trigger pembersihan background retensi 60 hari (Revisi 10 Bagian D)
+        ConsultationRetentionService.instance.resetSession();
+        ConsultationRetentionService.instance.runRetentionCleanup(
+          uid: uid,
+          isDoctor: isDoctor,
+          doctorId: (data['doctorId'] ?? data['doctor_id'])?.toString(),
+        );
 
         if (isDoctor) {
           Navigator.pushNamedAndRemoveUntil(context, '/dokter', (route) => false);

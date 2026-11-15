@@ -93,6 +93,7 @@ class ConsultationModel {
   // Bagian A: field tambahan
   final String? lastMessageId;
   final bool hiddenByPatient;
+  final bool chatExpired;
 
   const ConsultationModel({
     required this.id,
@@ -132,6 +133,7 @@ class ConsultationModel {
     this.lastReadByPatientAt,
     this.lastMessageId,
     this.hiddenByPatient = false,
+    this.chatExpired = false,
   });
 
   /// Konsultasi sudah expired batas waktu pembayaran.
@@ -233,6 +235,7 @@ class ConsultationModel {
     DateTime? lastReadByPatientAt,
     String? lastMessageId,
     bool? hiddenByPatient,
+    bool? chatExpired,
   }) {
     return ConsultationModel(
       id: id ?? this.id,
@@ -273,6 +276,7 @@ class ConsultationModel {
       lastReadByPatientAt: lastReadByPatientAt ?? this.lastReadByPatientAt,
       lastMessageId: lastMessageId ?? this.lastMessageId,
       hiddenByPatient: hiddenByPatient ?? this.hiddenByPatient,
+      chatExpired: chatExpired ?? this.chatExpired,
     );
   }
 
@@ -331,6 +335,7 @@ class ConsultationModel {
       lastReadByPatientAt: (data['lastReadByPatientAt'] as Timestamp?)?.toDate(),
       lastMessageId: data['lastMessageId'] as String?,
       hiddenByPatient: data['hiddenByPatient'] as bool? ?? false,
+      chatExpired: data['chatExpired'] as bool? ?? false,
     );
   }
 
@@ -382,6 +387,7 @@ class ConsultationModel {
           'lastReadByPatientAt': Timestamp.fromDate(lastReadByPatientAt!),
         if (lastMessageId != null) 'lastMessageId': lastMessageId,
         'hiddenByPatient': hiddenByPatient,
+        if (chatExpired) 'chatExpired': chatExpired,
       };
 }
 
