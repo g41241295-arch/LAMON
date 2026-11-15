@@ -1,4 +1,4 @@
-11/// Konstanta untuk fitur Konsultasi Dokter.
+/// Konstanta untuk fitur Konsultasi Dokter.
 /// Ubah nilai di sini jika ada perubahan biaya layanan atau format VA.
 class ConsultationConstants {
   ConsultationConstants._();
