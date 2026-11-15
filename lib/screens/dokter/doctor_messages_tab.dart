@@ -99,14 +99,18 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
             !ConsultationRetentionService.isExpired(c))
         .toList();
 
-    // Filter per tab (E.2):
+    // Filter per tab (E.2 & Revisi 12 A.2.6):
     // "Sudah Dibalas" dan "Belum Dibalas" TIDAK lagi memuat consultation completed.
+    // Balasan otomatis dokter (lastMessageIsAutoReply == true) TIDAK memindahkan ke "Sudah Dibalas".
     final sudahDibalas = paidConsultations.where((c) {
-      return !c.isCompleted && c.lastMessageSenderType == 'doctor';
+      return !c.isCompleted &&
+          c.lastMessageSenderType == 'doctor' &&
+          !c.lastMessageIsAutoReply;
     }).toList();
 
     final belumDibalas = paidConsultations.where((c) {
-      return !c.isCompleted && c.lastMessageSenderType != 'doctor';
+      return !c.isCompleted &&
+          (c.lastMessageSenderType != 'doctor' || c.lastMessageIsAutoReply);
     }).toList();
 
     final selesai = paidConsultations.where((c) {

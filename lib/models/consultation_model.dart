@@ -101,6 +101,10 @@ class ConsultationModel {
   final bool hiddenByDoctor;
   final DateTime? hiddenByDoctorAt;
 
+  // Revisi 12: Balasan Otomatis
+  final bool autoReplySent;
+  final bool lastMessageIsAutoReply;
+
   const ConsultationModel({
     required this.id,
     required this.doctorId,
@@ -144,6 +148,8 @@ class ConsultationModel {
     this.ratedAt,
     this.hiddenByDoctor = false,
     this.hiddenByDoctorAt,
+    this.autoReplySent = false,
+    this.lastMessageIsAutoReply = false,
   });
 
   /// Apakah konsultasi ini sudah dinilai oleh pasien
@@ -253,6 +259,8 @@ class ConsultationModel {
     DateTime? ratedAt,
     bool? hiddenByDoctor,
     DateTime? hiddenByDoctorAt,
+    bool? autoReplySent,
+    bool? lastMessageIsAutoReply,
   }) {
     return ConsultationModel(
       id: id ?? this.id,
@@ -298,6 +306,9 @@ class ConsultationModel {
       ratedAt: ratedAt ?? this.ratedAt,
       hiddenByDoctor: hiddenByDoctor ?? this.hiddenByDoctor,
       hiddenByDoctorAt: hiddenByDoctorAt ?? this.hiddenByDoctorAt,
+      autoReplySent: autoReplySent ?? this.autoReplySent,
+      lastMessageIsAutoReply:
+          lastMessageIsAutoReply ?? this.lastMessageIsAutoReply,
     );
   }
 
@@ -361,6 +372,9 @@ class ConsultationModel {
       ratedAt: (data['ratedAt'] as Timestamp?)?.toDate(),
       hiddenByDoctor: data['hiddenByDoctor'] as bool? ?? false,
       hiddenByDoctorAt: (data['hiddenByDoctorAt'] as Timestamp?)?.toDate(),
+      autoReplySent: data['autoReplySent'] as bool? ?? false,
+      lastMessageIsAutoReply:
+          data['lastMessageIsAutoReply'] as bool? ?? false,
     );
   }
 
@@ -418,6 +432,8 @@ class ConsultationModel {
         'hiddenByDoctor': hiddenByDoctor,
         if (hiddenByDoctorAt != null)
           'hiddenByDoctorAt': Timestamp.fromDate(hiddenByDoctorAt!),
+        'autoReplySent': autoReplySent,
+        'lastMessageIsAutoReply': lastMessageIsAutoReply,
       };
 }
 
@@ -429,13 +445,16 @@ class ChatMessage {
   final DateTime sentAt;
   final String type; // "text" | "image" | "file" | "consultation_summary"
   final String? attachmentUrl;
+  final String? attachmentId;
   final String? fileName;
   final int? fileSize;
+  final int? sizeBytes;
   final String? mimeType;
   final DateTime? editedAt;
   final bool deletedForEveryone;
   final DateTime? deletedAt;
   final List<String> hiddenFor;
+  final bool isAutoReply;
 
   const ChatMessage({
     required this.id,
@@ -444,22 +463,28 @@ class ChatMessage {
     required this.sentAt,
     this.type = 'text',
     this.attachmentUrl,
+    this.attachmentId,
     this.fileName,
     this.fileSize,
+    this.sizeBytes,
     this.mimeType,
     this.editedAt,
     this.deletedForEveryone = false,
     this.deletedAt,
     this.hiddenFor = const [],
+    this.isAutoReply = false,
   });
 
   bool get isDoctor => senderType == 'doctor';
   bool get isPatient => senderType == 'patient';
-  bool get hasAttachment => attachmentUrl != null && attachmentUrl!.isNotEmpty;
+  bool get hasAttachment =>
+      (attachmentUrl != null && attachmentUrl!.isNotEmpty) ||
+      (attachmentId != null && attachmentId!.isNotEmpty);
   bool get isImage => type == 'image';
   bool get isFile => type == 'file';
   bool get isEdited => editedAt != null;
   bool get isDeleted => deletedForEveryone;
+  int? get effectiveFileSize => fileSize ?? sizeBytes;
   DateTime get createdAt => sentAt;
 
   ChatMessage copyWith({
@@ -469,13 +494,16 @@ class ChatMessage {
     DateTime? sentAt,
     String? type,
     String? attachmentUrl,
+    String? attachmentId,
     String? fileName,
     int? fileSize,
+    int? sizeBytes,
     String? mimeType,
     DateTime? editedAt,
     bool? deletedForEveryone,
     DateTime? deletedAt,
     List<String>? hiddenFor,
+    bool? isAutoReply,
   }) {
     return ChatMessage(
       id: id ?? this.id,
@@ -484,13 +512,16 @@ class ChatMessage {
       sentAt: sentAt ?? this.sentAt,
       type: type ?? this.type,
       attachmentUrl: attachmentUrl ?? this.attachmentUrl,
+      attachmentId: attachmentId ?? this.attachmentId,
       fileName: fileName ?? this.fileName,
       fileSize: fileSize ?? this.fileSize,
+      sizeBytes: sizeBytes ?? this.sizeBytes,
       mimeType: mimeType ?? this.mimeType,
       editedAt: editedAt ?? this.editedAt,
       deletedForEveryone: deletedForEveryone ?? this.deletedForEveryone,
       deletedAt: deletedAt ?? this.deletedAt,
       hiddenFor: hiddenFor ?? this.hiddenFor,
+      isAutoReply: isAutoReply ?? this.isAutoReply,
     );
   }
 
@@ -502,6 +533,9 @@ class ChatMessage {
             .toList() ??
         const <String>[];
 
+    final int? rawSizeBytes = (data['sizeBytes'] as num?)?.toInt() ??
+        (data['fileSize'] as num?)?.toInt();
+
     return ChatMessage(
       id: doc.id,
       senderType: data['senderType'] as String? ?? 'doctor',
@@ -509,13 +543,16 @@ class ChatMessage {
       sentAt: (data['sentAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       type: data['type'] as String? ?? 'text',
       attachmentUrl: data['attachmentUrl'] as String?,
+      attachmentId: data['attachmentId'] as String?,
       fileName: data['fileName'] as String?,
-      fileSize: (data['fileSize'] as num?)?.toInt(),
+      fileSize: (data['fileSize'] as num?)?.toInt() ?? rawSizeBytes,
+      sizeBytes: rawSizeBytes,
       mimeType: data['mimeType'] as String?,
       editedAt: (data['editedAt'] as Timestamp?)?.toDate(),
       deletedForEveryone: data['deletedForEveryone'] as bool? ?? false,
       deletedAt: (data['deletedAt'] as Timestamp?)?.toDate(),
       hiddenFor: hiddenList,
+      isAutoReply: data['isAutoReply'] as bool? ?? false,
     );
   }
 
@@ -525,12 +562,15 @@ class ChatMessage {
         'sentAt': FieldValue.serverTimestamp(),
         'type': type,
         if (attachmentUrl != null) 'attachmentUrl': attachmentUrl,
+        if (attachmentId != null) 'attachmentId': attachmentId,
         if (fileName != null) 'fileName': fileName,
         if (fileSize != null) 'fileSize': fileSize,
+        if (sizeBytes != null) 'sizeBytes': sizeBytes,
         if (mimeType != null) 'mimeType': mimeType,
         if (editedAt != null) 'editedAt': Timestamp.fromDate(editedAt!),
         'deletedForEveryone': deletedForEveryone,
         if (deletedAt != null) 'deletedAt': Timestamp.fromDate(deletedAt!),
         'hiddenFor': hiddenFor,
+        if (isAutoReply) 'isAutoReply': true,
       };
 }

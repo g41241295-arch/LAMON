@@ -57,6 +57,7 @@ class DoctorModel {
   final String? uid;
   final String? gender;
   final DateTime? updatedAt;
+  final bool autoReplyEnabled;
 
   const DoctorModel({
     required this.id,
@@ -76,6 +77,7 @@ class DoctorModel {
     this.uid,
     this.gender,
     this.updatedAt,
+    this.autoReplyEnabled = true,
   });
 
   /// Formatted specialty + experience string untuk tampilan kartu.
@@ -142,6 +144,7 @@ class DoctorModel {
     String? uid,
     String? gender,
     DateTime? updatedAt,
+    bool? autoReplyEnabled,
   }) {
     return DoctorModel(
       id: id ?? this.id,
@@ -161,6 +164,7 @@ class DoctorModel {
       uid: uid ?? this.uid,
       gender: gender ?? this.gender,
       updatedAt: updatedAt ?? this.updatedAt,
+      autoReplyEnabled: autoReplyEnabled ?? this.autoReplyEnabled,
     );
   }
 
@@ -187,6 +191,7 @@ class DoctorModel {
       uid: data['uid'] as String?,
       gender: data['gender'] as String?,
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      autoReplyEnabled: data['autoReplyEnabled'] as bool? ?? true,
     );
   }
 
@@ -207,5 +212,6 @@ class DoctorModel {
         if (uid != null) 'uid': uid,
         if (gender != null) 'gender': gender,
         if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
+        'autoReplyEnabled': autoReplyEnabled,
       };
 }

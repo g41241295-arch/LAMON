@@ -115,14 +115,15 @@ service cloud.firestore {
         // Dokter hanya boleh update field-field status dan pesan tertentu,
         // dengan pembatasan transisi status: waiting -> active (konfirmasi) atau active -> completed / waiting -> completed (selesai).
         // Mendukung penulisan completedAt, doctorRecommendation, lastMessageId, chatExpired,
-        // serta soft-hide dokter: hiddenByDoctor dan hiddenByDoctorAt (Revisi 11 Bagian B & C).
+        // serta soft-hide dokter: hiddenByDoctor dan hiddenByDoctorAt (Revisi 11 Bagian B & C)
+        // dan lastMessageIsAutoReply (Revisi 12).
         allow update: if isDoctorForDoc(resource.data)
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                            'status', 'doctorConfirmedAt', 'lastMessageText', 
                            'lastMessageAt', 'lastMessageSenderType', 
                            'unreadForDoctor', 'unreadForPatient', 'lastReadByDoctorAt',
                            'completedAt', 'doctorRecommendation', 'lastMessageId', 'chatExpired',
-                           'hiddenByDoctor', 'hiddenByDoctorAt'
+                           'hiddenByDoctor', 'hiddenByDoctorAt', 'lastMessageIsAutoReply'
                          ])
                       && (
                         !('status' in request.resource.data.diff(resource.data).affectedKeys()) ||
@@ -137,8 +138,23 @@ service cloud.firestore {
           // Pasien pemilik dapat membaca pesan
           allow read: if isSignedIn() && request.auth.uid == userId;
 
-          // Pasien pemilik dapat membuat pesan baru (termasuk auto-reply simulasi dokter)
-          allow create: if isSignedIn() && request.auth.uid == userId;
+          // Pasien pemilik dapat membuat pesan baru miliknya (senderType == 'patient'),
+          // ATAU balasan perkenalan dokter otomatis HANYA jika isAutoReply == true
+          // dan consultation.autoReplySent berubah dari belum ada/false menjadi true (Revisi 12 Bagian A & C)
+          allow create: if isSignedIn() && request.auth.uid == userId
+                        && (
+                          request.resource.data.senderType == 'patient' ||
+                          (
+                            request.resource.data.senderType == 'doctor'
+                            && ('isAutoReply' in request.resource.data)
+                            && request.resource.data.isAutoReply == true
+                            && (
+                              !('autoReplySent' in get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data) ||
+                              get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data.autoReplySent != true
+                            )
+                            && getAfter(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data.autoReplySent == true
+                          )
+                        );
 
           // Dokter terkait dapat membaca pesan
           allow read: if isDoctorForDoc(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data);
@@ -166,7 +182,7 @@ service cloud.firestore {
                             resource.data.senderType == 'patient'
                             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                                  'text', 'editedAt', 'deletedForEveryone', 'deletedAt',
-                                 'attachmentUrl', 'fileName', 'fileSize', 'mimeType'
+                                 'attachmentUrl', 'attachmentId', 'fileName', 'fileSize', 'sizeBytes', 'mimeType'
                                ])
                             && request.resource.data.senderType == resource.data.senderType
                           )
@@ -186,13 +202,62 @@ service cloud.firestore {
                             resource.data.senderType == 'doctor'
                             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                                  'text', 'editedAt', 'deletedForEveryone', 'deletedAt',
-                                 'attachmentUrl', 'fileName', 'fileSize', 'mimeType'
+                                 'attachmentUrl', 'attachmentId', 'fileName', 'fileSize', 'sizeBytes', 'mimeType'
                                ])
                             && request.resource.data.senderType == resource.data.senderType
                           )
                         );
 
           // Hard delete pesan dari klien HANYA diizinkan oleh peserta jika sudah melewati batas retensi 60 hari (Bagian D & E)
+          allow delete: if isSignedIn() && (
+            (request.auth.uid == userId || isDoctorForDoc(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data))
+            && isOlderThan60Days(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data)
+          );
+        }
+
+        // ── Sub-koleksi Lampiran Berkas/PDF di Firestore (Revisi 12 Bagian B & C) ──
+        // Menyimpan binary berkas sebagai base64 terpisah dari dokumen pesan
+        match /attachments/{attachmentId} {
+          // Pasien pemilik dan dokter yang ditunjuk dapat membaca pada semua status
+          allow read: if isSignedIn() && (
+            request.auth.uid == userId ||
+            isDoctorForDoc(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data)
+          );
+
+          // Create hanya diizinkan oleh pengirim saat konsultasi waiting atau active,
+          // dengan validasi ketat field keys dan batas ukuran berkas < 1 MiB (1.048.576 bytes)
+          allow create: if isSignedIn() && (
+            (
+              request.auth.uid == userId &&
+              request.resource.data.senderType == 'patient'
+            ) ||
+            (
+              isDoctorForDoc(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data) &&
+              request.resource.data.senderType == 'doctor'
+            )
+          )
+          && (
+            get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data.status in ['waiting', 'active']
+          )
+          && request.resource.data.keys().hasOnly(['data', 'fileName', 'mimeType', 'sizeBytes', 'senderType', 'createdAt'])
+          && request.resource.data.data is string
+          && request.resource.data.data.size() < 1048576;
+
+          // Update oleh pengirim HANYA untuk mengosongkan data berkas (fitur hapus untuk semua orang)
+          allow update: if isSignedIn() && (
+            (
+              request.auth.uid == userId &&
+              resource.data.senderType == 'patient'
+            ) ||
+            (
+              isDoctorForDoc(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data) &&
+              resource.data.senderType == 'doctor'
+            )
+          )
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['data'])
+          && (request.resource.data.data == '' || !('data' in request.resource.data));
+
+          // Delete fisik dokumen lampiran hanya lewat batas retensi 60 hari
           allow delete: if isSignedIn() && (
             (request.auth.uid == userId || isDoctorForDoc(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data))
             && isOlderThan60Days(get(/databases/$(database)/documents/users/$(userId)/consultations/$(consultationId)).data)
@@ -276,7 +341,7 @@ service cloud.firestore {
                       )
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                            'name', 'strNumber', 'gender', 'updatedAt', 'photoUrl',
-                           'photoBase64', 'photoUpdatedAt', 'consultationsHandled', 'experienceYears'
+                           'photoBase64', 'photoUpdatedAt', 'consultationsHandled', 'experienceYears', 'autoReplyEnabled'
                          ])
                     ) ||
                     (
