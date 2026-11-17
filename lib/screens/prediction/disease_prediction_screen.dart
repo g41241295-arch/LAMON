@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/reflux_prediction_model.dart';
 import '../../services/reflux_prediction_service.dart';
+import '../../widgets/app_background.dart';
 import 'widgets/step_progress_bar.dart';
 import 'widgets/discrete_level_slider.dart';
 import 'widgets/diet_selection_card.dart';
@@ -173,62 +174,52 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
         if (didPop) return;
         _onBack();
       },
-      child: Scaffold(
-        backgroundColor: AppColors.desktopBackground,
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            final isLargeScreen = constraints.maxWidth > 520;
-            final contentWidget = _buildScreenBody(context);
+      child: AppBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              final isLargeScreen = constraints.maxWidth > 520;
+              final contentWidget = _buildScreenBody(context);
 
-            if (isLargeScreen) {
-              final maxH = constraints.maxHeight.isFinite
-                  ? constraints.maxHeight.clamp(0.0, 920.0)
-                  : 880.0;
-              return Center(
-                child: Container(
-                  width: 420,
-                  height: maxH,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(36),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 30,
-                        offset: const Offset(0, 10),
+              if (isLargeScreen) {
+                final maxH = constraints.maxHeight.isFinite
+                    ? constraints.maxHeight.clamp(0.0, 920.0)
+                    : 880.0;
+                return Center(
+                  child: Container(
+                    width: 420,
+                    height: maxH,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(36),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 30,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        width: 3,
                       ),
-                    ],
-                    border: Border.all(
-                      color: Colors.black.withValues(alpha: 0.12),
-                      width: 3,
                     ),
+                    child: contentWidget,
                   ),
-                  child: contentWidget,
-                ),
-              );
-            }
+                );
+              }
 
-            return contentWidget;
-          },
+              return contentWidget;
+            },
+          ),
         ),
       ),
     );
   }
 
   Widget _buildScreenBody(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.bgGradientTop,
-            AppColors.bgGradientMiddle,
-            AppColors.bgGradientBottom,
-          ],
-        ),
-      ),
-      child: SafeArea(
+    return SafeArea(
         child: Column(
           children: [
             // =========================================================
@@ -276,8 +267,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
             _buildBottomActionBar(),
           ],
         ),
-      ),
-    );
+      );
   }
 
   /// Header dengan tombol back dan badge pill "Prediksi Penyakit"

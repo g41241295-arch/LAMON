@@ -3,6 +3,7 @@ import 'package:lamon/constants/consultation_constants.dart';
 import 'package:lamon/constants/practice_slot_constants.dart';
 import 'package:lamon/models/consultation_model.dart';
 import 'package:lamon/models/doctor_model.dart';
+import 'package:lamon/services/consultation_service.dart';
 import 'package:lamon/utils/app_date_formatter.dart';
 
 void main() {
@@ -14,8 +15,10 @@ void main() {
       expect(ConsultationConstants.vaPrefix, '88099');
       expect(
         ConsultationConstants.paymentDeadlineDuration,
-        const Duration(hours: 24),
+        ConsultationConstants.kPaymentWindow,
       );
+      expect(ConsultationConstants.kMaxAttachmentBytes, 700000);
+      expect(ConsultationConstants.kShowAutoReplyLabel, true);
     });
 
     test('DoctorModel and OperatingHour serialization', () {
@@ -179,6 +182,98 @@ void main() {
       expect(AppDateFormatter.getGreetingWord(afternoon), 'Selamat siang,');
       expect(AppDateFormatter.getGreetingWord(evening), 'Selamat sore,');
       expect(AppDateFormatter.getGreetingWord(night), 'Selamat malam,');
+    });
+
+    test('Revisi 12: generateDoctorAutoReplyText generates correct greeting and name/specialty formatting', () {
+      // 1. Dr. Oggy Agustin (Dokter Umum) di pagi hari (09.00)
+      final oggyMorning = ConsultationService.generateDoctorAutoReplyText(
+        doctorName: 'Dr. Oggy Agustin',
+        doctorSpecialty: 'Dokter Umum',
+        now: DateTime(2026, 11, 15, 9, 0),
+      );
+      expect(
+        oggyMorning,
+        'Halo selamat pagi. Perkenalkan saya dokter umum Oggy. Apa keluhan yang anda alami?',
+      );
+      expect(oggyMorning.contains('Perkenalkan saya dokter umum Oggy.'), true);
+
+      // 2. Dr. Ketut Maulana (Dokter Umum) di siang hari (12.30)
+      final ketutSiang = ConsultationService.generateDoctorAutoReplyText(
+        doctorName: 'Dr. Ketut Maulana',
+        doctorSpecialty: 'Dokter Umum',
+        now: DateTime(2026, 11, 15, 12, 30),
+      );
+      expect(
+        ketutSiang,
+        'Halo selamat siang. Perkenalkan saya dokter umum Ketut. Apa keluhan yang anda alami?',
+      );
+
+      // 3. Dr. Dandi Wijaya (Spesialis Penyakit Dalam) di sore hari (16.00)
+      final dandiSore = ConsultationService.generateDoctorAutoReplyText(
+        doctorName: 'Dr. Dandi Wijaya',
+        doctorSpecialty: 'Spesialis Penyakit Dalam',
+        now: DateTime(2026, 11, 15, 16, 0),
+      );
+      expect(
+        dandiSore,
+        'Halo selamat sore. Perkenalkan saya dokter spesialis penyakit dalam Dandi. Apa keluhan yang anda alami?',
+      );
+
+      // 4. Dokter Spesialis dengan gelar belakang dan jam malam (20.00)
+      final rinaMalam = ConsultationService.generateDoctorAutoReplyText(
+        doctorName: 'dr. Rina Suryani, Sp.A',
+        doctorSpecialty: 'Spesialis Anak',
+        now: DateTime(2026, 11, 15, 20, 0),
+      );
+      expect(
+        rinaMalam,
+        'Halo selamat malam. Perkenalkan saya dokter spesialis anak Rina. Apa keluhan yang anda alami?',
+      );
+
+      // 5. Fallback tanpa spesialisasi
+      final fallbackReply = ConsultationService.generateDoctorAutoReplyText(
+        doctorName: 'drg. Maya',
+        doctorSpecialty: '',
+        now: DateTime(2026, 11, 15, 8, 0),
+      );
+      expect(
+        fallbackReply,
+        'Halo selamat pagi. Perkenalkan saya dokter Maya. Apa keluhan yang anda alami?',
+      );
+
+      // 6. Bebas dari nama obat, diagnosis, atau penyakit
+      final textLower = oggyMorning.toLowerCase();
+      expect(textLower.contains('obat'), false);
+      expect(textLower.contains('maag'), false);
+      expect(textLower.contains('gerd'), false);
+      expect(textLower.contains('antasida'), false);
+    });
+
+    test('Revisi 12: ChatMessage and ConsultationModel fields serialization', () {
+      final msg = ChatMessage(
+        id: 'msg_123',
+        senderType: 'doctor',
+        text: 'Halo selamat pagi. Perkenalkan saya dokter umum Oggy. Apa keluhan yang anda alami?',
+        sentAt: DateTime(2026, 11, 15, 9, 0),
+        type: 'file',
+        attachmentId: 'att_123_456',
+        fileName: 'hasil_lab.pdf',
+        sizeBytes: 250000,
+        mimeType: 'application/pdf',
+        isAutoReply: true,
+      );
+
+      expect(msg.isAutoReply, true);
+      expect(msg.isFile, true);
+      expect(msg.hasAttachment, true);
+      expect(msg.attachmentId, 'att_123_456');
+      expect(msg.effectiveFileSize, 250000);
+
+      final map = msg.toFirestore();
+      expect(map['isAutoReply'], true);
+      expect(map['attachmentId'], 'att_123_456');
+      expect(map['sizeBytes'], 250000);
+      expect(map['fileName'], 'hasil_lab.pdf');
     });
   });
 }

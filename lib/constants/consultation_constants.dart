@@ -29,10 +29,15 @@ class ConsultationConstants {
   static const Duration kOldChatAge = Duration(days: 30);
 
   /// Delay simulasi balasan dokter (3 detik setelah pasien kirim pesan).
-  /// TODO(chat-realtime): Hapus simulasi ini dan ganti dengan sistem
-  /// notifikasi push / WebSocket / Firebase Cloud Messaging untuk
-  /// menghubungkan dokter sungguhan.
   static const Duration doctorReplyDelay = Duration(seconds: 3);
+
+  /// Batas ukuran lampiran dokumen/file di Firestore (Revisi 12: default 700.000 byte / ~683 KB).
+  /// Menjamin dokumen Firestore beserta base64 (~+33%) tetap aman di bawah limit 1 MiB Spark.
+  static const int kMaxAttachmentBytes = 700000;
+
+  /// Konstanta saklar tampilan label "Balasan otomatis" pada bubble chat (Revisi 12).
+  /// Dapat diatur menjadi false jika ingin mematikan label tanpa mengubah data.
+  static const bool kShowAutoReplyLabel = true;
 
   /// Daftar metode pembayaran yang tersedia.
   static const List<PaymentMethodData> paymentMethods = [

@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../constants/app_colors.dart';
+import '../../../constants/consultation_constants.dart';
 import '../../../models/consultation_model.dart';
+import '../../../services/attachment_service.dart';
 import 'doctor_avatar.dart';
 
 /// Widget bubble pesan chat yang mendukung peran Pasien maupun Dokter.
@@ -19,6 +22,8 @@ class ChatBubble extends StatelessWidget {
   final bool isSelected;
   final VoidCallback? onLongPress;
   final VoidCallback? onTap;
+  final String consultationId;
+  final String patientUid;
 
   const ChatBubble({
     super.key,
@@ -30,6 +35,8 @@ class ChatBubble extends StatelessWidget {
     this.isSelected = false,
     this.onLongPress,
     this.onTap,
+    this.consultationId = '',
+    this.patientUid = '',
   });
 
   @override
@@ -302,12 +309,41 @@ class ChatBubble extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Text(
-                    statusText,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.neutralGray,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        statusText,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.neutralGray,
+                        ),
+                      ),
+                      if (ConsultationConstants.kShowAutoReplyLabel &&
+                          message.isAutoReply) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.3),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: const Text(
+                            'Balasan otomatis',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -427,7 +463,7 @@ class ChatBubble extends StatelessWidget {
 
   Widget _buildFileAttachment(BuildContext context, bool isMe) {
     final fileName = message.fileName ?? 'Dokumen.pdf';
-    final fileSize = _formatFileSize(message.fileSize);
+    final fileSize = _formatFileSize(message.effectiveFileSize);
 
     return InkWell(
       onTap: () => _openDocument(context),
@@ -510,6 +546,72 @@ class ChatBubble extends StatelessWidget {
   }
 
   Future<void> _openDocument(BuildContext context) async {
+    // 1. Jika dokumen disimpan secara base64 di subkoleksi attachments Firestore (Revisi 12)
+    if (message.attachmentId != null && message.attachmentId!.isNotEmpty) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  ),
+                  SizedBox(width: 16),
+                  Text('Memuat dokumen...', style: TextStyle(fontSize: 14)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      try {
+        final data = await AttachmentService.instance.loadAttachment(
+          patientUid: patientUid,
+          consultationId: consultationId,
+          attachmentId: message.attachmentId!,
+        );
+
+        if (context.mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+
+        if (data == null) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Dokumen tidak ditemukan atau telah dihapus.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+          return;
+        }
+
+        if (!context.mounted) return;
+        _showAttachmentDetailsSheet(context, data);
+      } catch (e) {
+        if (context.mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal memuat dokumen: $e'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+      return;
+    }
+
+    // 2. Fallback untuk pesan lama dengan URL eksternal / storage
     final url = message.attachmentUrl;
     if (url == null || url.isEmpty) return;
 
@@ -526,6 +628,123 @@ class ChatBubble extends StatelessWidget {
         );
       }
     }
+  }
+
+  void _showAttachmentDetailsSheet(BuildContext context, AttachmentData data) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEBEE),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.picture_as_pdf_rounded,
+                        color: Color(0xFFD32F2F),
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            data.fileName,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primaryText,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            _formatFileSize(data.sizeBytes),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.neutralGray,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Dokumen medis/hasil lab ini disimpan secara aman di Firestore (paket Spark tanpa Firebase Storage).',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.neutralGray,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(sheetCtx);
+                    try {
+                      final savedPath = await FilePicker.platform.saveFile(
+                        dialogTitle: 'Simpan Dokumen PDF',
+                        fileName: data.fileName,
+                        type: FileType.custom,
+                        allowedExtensions: ['pdf'],
+                        bytes: data.bytes,
+                      );
+                      if (savedPath != null && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Berkas berhasil disimpan: $savedPath'),
+                            backgroundColor: AppColors.successGreen,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    } catch (saveErr) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Gagal menyimpan berkas: $saveErr'),
+                            backgroundColor: Colors.red,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.download_rounded),
+                  label: const Text('Simpan ke Perangkat'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   String _formatFileSize(int? bytes) {

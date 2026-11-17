@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/consultation_constants.dart';
 import '../../models/consultation_model.dart';
+import '../../services/attachment_service.dart';
 import '../../services/consultation_service.dart';
 import '../../services/notification_service.dart';
 import '../../utils/app_date_formatter.dart';
@@ -57,6 +58,24 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
   bool _hasLoadedConsultation = false;
   int _previousMessageCount = 0;
   bool _hasShownPatientPopup = false;
+
+  // Status kirim lampiran gagal & tombol coba lagi (Revisi 12 Bagian B.2.5)
+  Map<String, dynamic>? _failedAttachment;
+
+  Future<void> _retryFailedAttachment() async {
+    if (_failedAttachment == null) return;
+    final failed = Map<String, dynamic>.from(_failedAttachment!);
+    setState(() {
+      _attachmentBytes = failed['bytes'] as Uint8List?;
+      _attachmentName = failed['name'] as String?;
+      _attachmentType = failed['type'] as String?;
+      _attachmentMimeType = failed['mime'] as String?;
+      _attachmentSize = failed['size'] as int?;
+      _inputController.text = failed['text'] as String? ?? '';
+      _failedAttachment = null;
+    });
+    await _sendMessage();
+  }
 
   // Selected & Edit Message state (Bagian C)
   ChatMessage? _selectedMessage;
@@ -434,8 +453,11 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
       final bytes = file.bytes;
       if (bytes == null) return;
 
-      if (bytes.lengthInBytes > 5 * 1024 * 1024) {
-        _showAppSnackBar('Ukuran dokumen maksimal 5 MB.', isError: true);
+      if (bytes.lengthInBytes > ConsultationConstants.kMaxAttachmentBytes) {
+        _showAppSnackBar(
+          'Ukuran file melebihi 700 KB. Kompres atau kirim file yang lebih kecil.',
+          isError: true,
+        );
         return;
       }
 
@@ -445,6 +467,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
         _attachmentType = 'file';
         _attachmentMimeType = 'application/pdf';
         _attachmentSize = bytes.lengthInBytes;
+        _failedAttachment = null;
       });
     } catch (e) {
       _showAppSnackBar('Gagal memilih dokumen: $e', isError: true);
@@ -554,34 +577,56 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     });
 
     String? uploadedUrl;
+    String? attachmentId;
     final attachBytes = _attachmentBytes;
-    final attachName = _attachmentName;
+    String? attachName = _attachmentName;
     final attachType = _attachmentType ?? 'text';
-    final attachMime = _attachmentMimeType ?? 'text/plain';
-    final attachSize = _attachmentSize;
+    String attachMime = _attachmentMimeType ?? 'text/plain';
+    int? attachSize = _attachmentSize;
 
     if (hasAttachment && attachBytes != null) {
-      try {
-        uploadedUrl = await _consultationService.uploadAttachment(
-          consultationId: widget.consultationId,
-          bytes: attachBytes,
-          fileName: attachName ?? 'file',
-          mimeType: attachMime,
-          patientUid: _effectivePatientUid,
-        );
-      } catch (e) {
-        debugPrint('[ChatDokterScreen] Upload Storage gagal: $e');
-        if (attachType == 'image') {
-          final base64Data = base64Encode(attachBytes);
-          uploadedUrl = 'data:$attachMime;base64,$base64Data';
-        } else {
-          _showAppSnackBar(
-              'Penyimpanan dokumen PDF membutuhkan Firebase Storage aktif: $e',
-              isError: true);
+      if (attachType == 'image') {
+        // Alur gambar tetap base64 data URL seperti sebelumnya
+        final base64Data = base64Encode(attachBytes);
+        uploadedUrl = 'data:$attachMime;base64,$base64Data';
+      } else {
+        // Alur dokumen PDF: simpan berkas di Firestore via AttachmentService (tanpa Firebase Storage)
+        try {
+          final meta = await AttachmentService.instance.saveAttachment(
+            patientUid: _effectivePatientUid!,
+            consultationId: widget.consultationId,
+            bytes: attachBytes,
+            fileName: attachName ?? 'Dokumen.pdf',
+            mimeType: attachMime,
+            senderType: widget.isDoctor ? 'doctor' : 'patient',
+          );
+          attachmentId = meta.attachmentId;
+          attachName = meta.fileName;
+          attachMime = meta.mimeType;
+          attachSize = meta.sizeBytes;
+        } on AttachmentSizeException catch (sizeErr) {
+          _showAppSnackBar(sizeErr.message, isError: true);
           setState(() {
             _isSending = false;
             _isUploading = false;
           });
+          return;
+        } catch (e) {
+          debugPrint('[ChatDokterScreen] Upload dokumen Firestore gagal: $e');
+          setState(() {
+            _isSending = false;
+            _isUploading = false;
+            _failedAttachment = {
+              'bytes': attachBytes,
+              'name': attachName,
+              'type': attachType,
+              'mime': attachMime,
+              'size': attachSize,
+              'text': text,
+              'error': e.toString(),
+            };
+          });
+          _showAppSnackBar('Gagal mengirim file. Coba lagi.', isError: true);
           return;
         }
       }
@@ -598,14 +643,34 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
         patientUid: _effectivePatientUid,
         type: hasAttachment ? attachType : 'text',
         attachmentUrl: uploadedUrl,
+        attachmentId: attachmentId,
         fileName: attachName,
         fileSize: attachSize,
+        sizeBytes: attachSize,
         mimeType: attachMime,
         doctorId: _consultation?.doctorId,
       );
+      setState(() {
+        _failedAttachment = null;
+      });
       _scrollToBottom();
     } catch (e) {
-      _showAppSnackBar('Gagal mengirim pesan: $e', isError: true);
+      if (hasAttachment) {
+        setState(() {
+          _failedAttachment = {
+            'bytes': attachBytes,
+            'name': attachName,
+            'type': attachType,
+            'mime': attachMime,
+            'size': attachSize,
+            'text': text,
+            'error': e.toString(),
+          };
+        });
+        _showAppSnackBar('Gagal mengirim file. Coba lagi.', isError: true);
+      } else {
+        _showAppSnackBar('Gagal mengirim pesan: $e', isError: true);
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -1279,6 +1344,8 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                                       _buildDateSeparator(msg.createdAt),
                                     ChatBubble(
                                       message: msg,
+                                      consultationId: widget.consultationId,
+                                      patientUid: _effectivePatientUid ?? '',
                                       currentUserRole: widget.isDoctor
                                           ? 'doctor'
                                           : 'patient',
@@ -1306,6 +1373,12 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                           },
                         ),
                 ),
+
+                // ── Indikator Upload Lampiran (Revisi 12 Bagian B.2.5) ──
+                if (_isUploading) _buildUploadingIndicatorBar(),
+
+                // ── Banner Gagal Kirim Lampiran & Tombol Coba Lagi (Revisi 12 Bagian B.2.5) ──
+                if (_failedAttachment != null) _buildFailedAttachmentBar(),
 
                 // ── Bar Pratinjau Lampiran (jika ada yang dipilih) ──
                 if (_attachmentBytes != null) _buildAttachmentPreviewBar(),
@@ -1374,6 +1447,90 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
         }
         return chatContent;
       },
+    );
+  }
+
+  Widget _buildUploadingIndicatorBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: AppColors.primary.withValues(alpha: 0.08),
+      child: const Row(
+        children: [
+          SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Mengirim file...',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFailedAttachmentBar() {
+    final fileName = _failedAttachment?['name'] as String? ?? 'Berkas';
+    final errStr = _failedAttachment?['error'] as String? ?? '';
+    final shortErr = errStr.length > 50 ? '${errStr.substring(0, 50)}...' : errStr;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: Colors.red.shade50,
+      child: Row(
+        children: [
+          Icon(Icons.error_outline_rounded, color: Colors.red.shade700, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Gagal mengirim $fileName. Coba lagi.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.red.shade900,
+                  ),
+                ),
+                if (shortErr.isNotEmpty)
+                  Text(
+                    shortErr,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.red.shade700,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: _retryFailedAttachment,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: const Size(50, 30),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('Coba Lagi', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          IconButton(
+            onPressed: () => setState(() => _failedAttachment = null),
+            icon: const Icon(Icons.close_rounded, size: 16),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            color: Colors.red.shade700,
+          ),
+        ],
+      ),
     );
   }
 
@@ -1604,16 +1761,10 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     );
   }
 
-  /// Widget strip template pesan cepat (Bagian B - Langsung tampil tanpa tombol petir)
+  /// Widget strip template pesan cepat (Bagian B - Chip melayang tanpa latar rectangle di belakang)
   Widget _buildTemplateSuggestions() {
-    return Container(
+    return SizedBox(
       height: 44,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        border: Border(
-          top: BorderSide(color: Colors.black.withValues(alpha: 0.06)),
-        ),
-      ),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1631,13 +1782,21 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                 _focusNode.requestFocus();
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.2),
+                    color: AppColors.primary.withValues(alpha: 0.35),
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
                 ),
                 child: Text(
                   template.length > 40
@@ -1724,7 +1883,7 @@ class _SelesaikanKonsultasiDialogState
       if (mounted) {
         setState(() {
           _isSubmitting = false;
-          _saveErrorMessage = 'Gagal menyimpan rekomendasi';
+          _saveErrorMessage = 'Gagal menyimpan rekomendasi. Coba lagi.';
           _saveErrorCode = e.toString().replaceAll('Exception: ', '').trim();
         });
       }

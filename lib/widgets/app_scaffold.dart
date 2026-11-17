@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import 'app_background.dart';
 
 class AppScaffold extends StatelessWidget {
   final Widget body;
@@ -25,32 +26,43 @@ class AppScaffold extends StatelessWidget {
       builder: (context, constraints) {
         final isLargeScreen = constraints.maxWidth > 520;
 
-        Widget content = Container(
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            gradient: backgroundColor != null
-                ? null
-                : (backgroundGradient ??
-                    const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        AppColors.bgGradientTop,
-                        AppColors.bgGradientMiddle,
-                        AppColors.bgGradientBottom,
-                      ],
-                    )),
+        final scaffoldWidget = Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: appBar,
+          resizeToAvoidBottomInset: resizeToAvoidBottomInset,
+          body: SafeArea(
+            child: body,
           ),
-          child: Scaffold(
-            backgroundColor: Colors.transparent,
-            appBar: appBar,
-            resizeToAvoidBottomInset: resizeToAvoidBottomInset,
-            body: SafeArea(
-              child: body,
-            ),
-            bottomNavigationBar: bottomNavigationBar,
-          ),
+          bottomNavigationBar: bottomNavigationBar,
         );
+
+        Widget content;
+        if (backgroundColor != null || backgroundGradient != null) {
+          content = Container(
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              gradient: backgroundColor != null
+                  ? null
+                  : (backgroundGradient ??
+                      const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.bgGradientTop,
+                          AppColors.bgGradientMiddle,
+                          AppColors.bgGradientBottom,
+                        ],
+                      )),
+            ),
+            child: scaffoldWidget,
+          );
+        } else {
+          // Latar bg_beranda_polos.png menggantikan gradient kuning polos lama.
+          // Scaffold di dalamnya tetap transparan agar latar tembus.
+          content = AppBackground(
+            child: scaffoldWidget,
+          );
+        }
 
         if (isLargeScreen) {
           final maxH = constraints.maxHeight.isFinite

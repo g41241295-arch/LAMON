@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../constants/consultation_constants.dart';
 import '../models/consultation_model.dart';
+import 'attachment_service.dart';
+import 'consultation_retention_service.dart';
 import 'notification_relay_client.dart';
 
 /// Service untuk mengelola data konsultasi dan chat pada Firestore.
@@ -197,6 +199,16 @@ class ConsultationService {
           .get();
       if (groupSnap.docs.isNotEmpty) {
         return ConsultationModel.fromFirestore(groupSnap.docs.first);
+      }
+
+      // Fallback kedua via FieldPath.documentId untuk dokumen lama tanpa field consultationId
+      final docIdSnap = await _db
+          .collectionGroup('consultations')
+          .where(FieldPath.documentId, isEqualTo: consultationId)
+          .limit(1)
+          .get();
+      if (docIdSnap.docs.isNotEmpty) {
+        return ConsultationModel.fromFirestore(docIdSnap.docs.first);
       }
       return null;
     } catch (e) {
@@ -501,7 +513,10 @@ class ConsultationService {
         .map((snap) {
       return snap.docs
           .map((doc) => ConsultationModel.fromFirestore(doc))
-          .where((c) => c.paymentStatus != PaymentStatus.expired && !c.hiddenByPatient)
+          .where((c) =>
+              c.paymentStatus != PaymentStatus.expired &&
+              !c.hiddenByPatient &&
+              !ConsultationRetentionService.isExpired(c))
           .toList();
     });
   }
@@ -523,7 +538,9 @@ class ConsultationService {
         .map((snap) {
       final list = snap.docs
           .map((doc) => ConsultationModel.fromFirestore(doc))
-          .where((c) => !c.hiddenByPatient)
+          .where((c) =>
+              !c.hiddenByPatient &&
+              !ConsultationRetentionService.isExpired(c))
           .toList();
 
       // Urutkan terbaru: completedAt ?? createdAt descending
@@ -590,6 +607,121 @@ class ConsultationService {
     }
 
     debugPrint('[ConsultationService] Berhasil menyembunyikan ${toHide.length} konsultasi lama.');
+    return toHide.length;
+  }
+
+  /// Mengirim penilaian (rating 1-5) dari pasien untuk konsultasi yang sudah completed (Revisi 11 Bagian A).
+  /// Operasi dilakukan atomik dalam satu batch/transaksi:
+  /// - consultation.rating = rating (1-5)
+  /// - consultation.ratedAt = serverTimestamp()
+  /// - doctors/{doctorId}.ratingSum += rating
+  /// - doctors/{doctorId}.ratingCount += 1
+  Future<void> submitConsultationRating({
+    required String consultationId,
+    required String doctorId,
+    required int rating,
+    String? patientUid,
+  }) async {
+    final uid = patientUid ?? _uid;
+    if (uid == null || uid.isEmpty) {
+      throw Exception('User belum login.');
+    }
+    if (rating < 1 || rating > 5) {
+      throw Exception('Rating harus bernilai antara 1 dan 5.');
+    }
+
+    final consultationRef = _db
+        .collection('users')
+        .doc(uid)
+        .collection('consultations')
+        .doc(consultationId);
+
+    final cleanDoctorId = doctorId.trim();
+    if (cleanDoctorId.isEmpty) {
+      throw Exception('ID Dokter tidak valid.');
+    }
+    final doctorRef = _db.collection('doctors').doc(cleanDoctorId);
+
+    // Lakukan secara atomik menggunakan WriteBatch
+    final batch = _db.batch();
+    batch.update(consultationRef, {
+      'rating': rating,
+      'ratedAt': FieldValue.serverTimestamp(),
+    });
+    batch.update(doctorRef, {
+      'ratingSum': FieldValue.increment(rating),
+      'ratingCount': FieldValue.increment(1),
+    });
+
+    await batch.commit();
+    debugPrint('[ConsultationService] Sukses submit rating $rating untuk konsultasi $consultationId dan dokter $cleanDoctorId.');
+  }
+
+  /// Sembunyikan atau pulihkan konsultasi dari daftar pesan dokter (Revisi 11 Bagian B).
+  /// Menggunakan soft-hide `hiddenByDoctor` sehingga riwayat pasien tetap utuh.
+  Future<void> hideConsultationByDoctor({
+    required String patientUid,
+    required String consultationId,
+    bool hidden = true,
+  }) async {
+    final cleanPatientUid = patientUid.trim();
+    if (cleanPatientUid.isEmpty) {
+      throw Exception('Patient UID tidak valid.');
+    }
+    final docRef = _db
+        .collection('users')
+        .doc(cleanPatientUid)
+        .collection('consultations')
+        .doc(consultationId);
+
+    await docRef.update({
+      'hiddenByDoctor': hidden,
+      if (hidden) 'hiddenByDoctorAt': FieldValue.serverTimestamp()
+      else 'hiddenByDoctorAt': FieldValue.delete(),
+    });
+    debugPrint('[ConsultationService] Konsultasi $consultationId hiddenByDoctor = $hidden.');
+  }
+
+  /// Membersihkan chat lama dokter (> 30 hari secara default) dengan soft-hide (Revisi 11 Bagian B).
+  /// Hanya menyembunyikan konsultasi berstatus completed atau expired.
+  Future<int> cleanOldDoctorConsultations({
+    required String doctorId,
+    required List<ConsultationModel> consultations,
+    Duration olderThan = ConsultationConstants.kOldChatAge,
+  }) async {
+    if (doctorId.isEmpty) return 0;
+
+    final cutoff = DateTime.now().subtract(olderThan);
+    final toHide = consultations.where((c) {
+      if (c.hiddenByDoctor) return false;
+      if (!c.isCompleted && !c.isExpired) return false;
+      final time = c.completedAt ?? c.createdAt;
+      return time.isBefore(cutoff);
+    }).toList();
+
+    if (toHide.isEmpty) return 0;
+
+    const int chunkSize = 400;
+    for (int i = 0; i < toHide.length; i += chunkSize) {
+      final chunk = toHide.skip(i).take(chunkSize);
+      final batch = _db.batch();
+      for (final item in chunk) {
+        if (item.patientUid.isNotEmpty) {
+          final ref = _db
+              .collection('users')
+              .doc(item.patientUid)
+              .collection('consultations')
+              .doc(item.id);
+          batch.update(ref, {
+            'hiddenByDoctor': true,
+            'hiddenByDoctorAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+      await batch.commit();
+    }
+
+    debugPrint('[ConsultationService] Berhasil menyembunyikan ${toHide.length} chat lama untuk dokter $doctorId.');
     return toHide.length;
   }
 
@@ -670,8 +802,10 @@ class ConsultationService {
     String? patientUid,
     String type = 'text',
     String? attachmentUrl,
+    String? attachmentId,
     String? fileName,
     int? fileSize,
+    int? sizeBytes,
     String? mimeType,
     String? doctorId,
   }) async {
@@ -701,22 +835,28 @@ class ConsultationService {
     }
 
     final trimmedText = text.trim();
-    if (trimmedText.isEmpty && (attachmentUrl == null || attachmentUrl.isEmpty)) {
+    final hasAttachUrl = attachmentUrl != null && attachmentUrl.isNotEmpty;
+    final hasAttachId = attachmentId != null && attachmentId.isNotEmpty;
+    if (trimmedText.isEmpty && !hasAttachUrl && !hasAttachId) {
       return;
     }
 
+    final effectiveSize = sizeBytes ?? fileSize;
     final messageDoc = messagesRef.doc();
-    final messageData = {
+    final messageData = <String, dynamic>{
       'senderType': senderType,
       'text': trimmedText,
       'sentAt': FieldValue.serverTimestamp(),
       'type': type,
       'deletedForEveryone': false,
       'hiddenFor': <String>[],
-      'attachmentUrl': ?attachmentUrl,
-      'fileName': ?fileName,
-      'fileSize': ?fileSize,
-      'mimeType': ?mimeType,
+      if (hasAttachUrl) 'attachmentUrl': attachmentUrl,
+      if (hasAttachId) 'attachmentId': attachmentId,
+      if (fileName != null && fileName.isNotEmpty) 'fileName': fileName,
+      'fileSize': ?effectiveSize,
+      'sizeBytes': ?effectiveSize,
+      if (mimeType != null && mimeType.isNotEmpty) 'mimeType': mimeType,
+      'isAutoReply': false,
     };
 
     String previewText = trimmedText;
@@ -732,6 +872,7 @@ class ConsultationService {
         'lastMessageText': previewText,
         'lastMessageAt': FieldValue.serverTimestamp(),
         'lastMessageSenderType': 'patient',
+        'lastMessageIsAutoReply': false,
         'lastMessageId': messageDoc.id,
         'unreadForDoctor': FieldValue.increment(1),
       });
@@ -740,6 +881,7 @@ class ConsultationService {
         'lastMessageText': previewText,
         'lastMessageAt': FieldValue.serverTimestamp(),
         'lastMessageSenderType': 'doctor',
+        'lastMessageIsAutoReply': false,
         'lastMessageId': messageDoc.id,
         'unreadForPatient': FieldValue.increment(1),
       });
@@ -754,12 +896,13 @@ class ConsultationService {
       consultationId: consultationId,
     );
 
-    // Jika pengirim adalah pasien, cek apakah dokter punya akun nyata
+    // Jika pengirim adalah pasien, picu balasan perkenalan otomatis (Revisi 12)
     if (senderType == 'patient') {
       _checkAndTriggerSimulatedReply(
         consultationId: consultationId,
         doctorId: doctorId,
         patientText: trimmedText,
+        patientUid: effectivePatientUid,
       );
     }
   }
@@ -770,8 +913,10 @@ class ConsultationService {
     required String text,
     String type = 'text',
     String? attachmentUrl,
+    String? attachmentId,
     String? fileName,
     int? fileSize,
+    int? sizeBytes,
     String? mimeType,
     String? doctorId,
   }) async {
@@ -781,8 +926,10 @@ class ConsultationService {
       text: text,
       type: type,
       attachmentUrl: attachmentUrl,
+      attachmentId: attachmentId,
       fileName: fileName,
       fileSize: fileSize,
+      sizeBytes: sizeBytes,
       mimeType: mimeType,
       doctorId: doctorId,
     );
@@ -898,12 +1045,20 @@ class ConsultationService {
       throw Exception('Referensi dokumen tidak valid.');
     }
 
-    // Coba bersihkan file storage jika ada attachment URL non-base64
+    // Bersihkan data attachment jika ada
     try {
       final snap = await messageDocRef.get();
       if (snap.exists) {
         final data = snap.data() ?? {};
         final attachUrl = data['attachmentUrl'] as String?;
+        final attachId = data['attachmentId'] as String?;
+        if (attachId != null && attachId.isNotEmpty) {
+          await AttachmentService.instance.clearAttachmentData(
+            patientUid: effectivePatientUid,
+            consultationId: consultationId,
+            attachmentId: attachId,
+          );
+        }
         if (attachUrl != null && (attachUrl.startsWith('http://') || attachUrl.startsWith('https://'))) {
           try {
             await _storage.refFromURL(attachUrl).delete();
@@ -920,8 +1075,10 @@ class ConsultationService {
       'deletedAt': FieldValue.serverTimestamp(),
       'text': '',
       'attachmentUrl': FieldValue.delete(),
+      'attachmentId': FieldValue.delete(),
       'fileName': FieldValue.delete(),
       'fileSize': FieldValue.delete(),
+      'sizeBytes': FieldValue.delete(),
       'mimeType': FieldValue.delete(),
     });
 
@@ -935,75 +1092,173 @@ class ConsultationService {
     debugPrint('[ConsultationService] Pesan $messageId berhasil dihapus untuk semua orang.');
   }
 
-  /// [SIMULASI] Cek apakah dokter punya akun nyata.
-  /// Jika dokter punya akun nyata (`uid` tidak kosong), balasan simulasi DIMATIKAN.
+  /// Menghasilkan template balasan perkenalan otomatis dokter (Revisi 12 Bagian A.2.3).
+  /// Format: "Halo selamat {pagi/siang/sore/malam}. Perkenalkan saya dokter {spesialisasi} {nama}. Apa keluhan yang anda alami?"
+  ///
+  /// Mematuhi aturan Revisi 5 Bagian R: bebas dari nama penyakit, nama obat, diagnosis, atau saran pengobatan.
+  static String generateDoctorAutoReplyText({
+    required String doctorName,
+    required String doctorSpecialty,
+    DateTime? now,
+  }) {
+    final effectiveNow = now ?? DateTime.now();
+    final hour = effectiveNow.hour;
+
+    // Salam menurut jam lokal perangkat:
+    // pagi 04.00-10.59, siang 11.00-14.59, sore 15.00-17.59, malam 18.00-03.59
+    final String greeting;
+    if (hour >= 4 && hour < 11) {
+      greeting = 'pagi';
+    } else if (hour >= 11 && hour < 15) {
+      greeting = 'siang';
+    } else if (hour >= 15 && hour < 18) {
+      greeting = 'sore';
+    } else {
+      greeting = 'malam';
+    }
+
+    // Nama panggilan: nama depan setelah membuang awalan "Dr."/"dr."/"drg."/"Dokter" dan gelar belakang
+    String cleanName = doctorName.trim();
+    if (cleanName.contains(',')) {
+      cleanName = cleanName.split(',').first.trim();
+    }
+    cleanName = cleanName.replaceFirst(
+      RegExp(r'^(drg\.|drg\s+|dr\.|dr\s+|dokter\s+)', caseSensitive: false),
+      '',
+    ).trim();
+    final nickname = cleanName.isNotEmpty ? cleanName.split(RegExp(r'\s+')).first : '';
+
+    // Spesialisasi: field spesialisasi tanpa kata awal "Dokter", huruf kecil.
+    // Contoh: "Dokter Umum" -> "umum", "Spesialis Penyakit Dalam" -> "spesialis penyakit dalam".
+    String cleanSpecialty = doctorSpecialty.trim();
+    cleanSpecialty = cleanSpecialty.replaceFirst(
+      RegExp(r'^(dokter\s+)', caseSensitive: false),
+      '',
+    ).trim().toLowerCase();
+
+    // Template balasan
+    if (cleanSpecialty.isNotEmpty && nickname.isNotEmpty) {
+      return 'Halo selamat $greeting. Perkenalkan saya dokter $cleanSpecialty $nickname. Apa keluhan yang anda alami?';
+    } else if (nickname.isNotEmpty) {
+      return 'Halo selamat $greeting. Perkenalkan saya dokter $nickname. Apa keluhan yang anda alami?';
+    } else {
+      return 'Halo selamat $greeting. Perkenalkan saya dokter. Apa keluhan yang anda alami?';
+    }
+  }
+
+  /// [AUTO-REPLY] Memeriksa kelayakan dan menjadwalkan balasan otomatis perkenalan dokter (Revisi 12).
+  ///
+  /// Kriteria:
+  /// 1. Idempoten: hanya 1 kali per sesi konsultasi (consultation.autoReplySent == true membatalkan).
+  /// 2. Berlaku untuk SEMUA dokter (tidak dibatasi Oggy atau keberadaan akun nyata dokter).
+  /// 3. Memeriksa doctors/{id}.autoReplyEnabled (jika false, jangan kirim).
+  /// 4. Jika konsultasi sudah memiliki pesan dokter (senderType doctor) non-bot, tandai autoReplySent dan batalkan.
   Future<void> _checkAndTriggerSimulatedReply({
     required String consultationId,
     required String? doctorId,
     required String patientText,
+    String? patientUid,
   }) async {
-    if (doctorId == null || doctorId.isEmpty) {
+    final effectivePatientUid = patientUid ?? _uid;
+    if (effectivePatientUid == null || effectivePatientUid.isEmpty) {
       return;
     }
 
     try {
-      // 1. Cek status konsultasi: jika sudah aktif atau dikonfirmasi dokter nyata, jangan kirim simulasi
-      final docRef = _consultationDocRef(consultationId);
-      if (docRef != null) {
-        final consultDoc = await docRef.get();
-        if (consultDoc.exists) {
-          final data = consultDoc.data() ?? {};
-          final status = data['status'] as String?;
-          final confirmedAt = data['doctorConfirmedAt'];
-          if (status == 'active' || confirmedAt != null) {
-            debugPrint('[ConsultationService] Konsultasi $consultationId aktif/dikonfirmasi dokter nyata. Simulasi auto-reply dinonaktifkan.');
+      final docRef = _consultationDocRef(consultationId, effectivePatientUid);
+      if (docRef == null) return;
+
+      final consultDoc = await docRef.get();
+      if (!consultDoc.exists) return;
+
+      final data = consultDoc.data() ?? {};
+      final autoReplySent = data['autoReplySent'] as bool? ?? false;
+      if (autoReplySent) {
+        debugPrint('[ConsultationService] autoReplySent sudah true untuk $consultationId. Abaikan bot.');
+        return;
+      }
+
+      final effectiveDoctorId = (doctorId != null && doctorId.isNotEmpty)
+          ? doctorId
+          : (data['doctorId'] as String? ?? '');
+      if (effectiveDoctorId.isEmpty) return;
+
+      String doctorName = data['doctorName'] as String? ?? '';
+      String doctorSpecialty = data['doctorSpecialty'] as String? ?? '';
+
+      // Cek field opsional doctors/{id}.autoReplyEnabled (null dianggap true)
+      final docSnap = await _db.collection('doctors').doc(effectiveDoctorId).get();
+      if (docSnap.exists) {
+        final docData = docSnap.data() ?? {};
+        final autoReplyEnabled = docData['autoReplyEnabled'] as bool? ?? true;
+        if (!autoReplyEnabled) {
+          debugPrint('[ConsultationService] Dokter $effectiveDoctorId autoReplyEnabled = false. Abaikan bot.');
+          return;
+        }
+        if (doctorName.isEmpty) {
+          doctorName = docData['name'] as String? ?? '';
+        }
+        if (doctorSpecialty.isEmpty) {
+          doctorSpecialty = docData['specialty'] as String? ?? '';
+        }
+      }
+
+      // Cek apakah sudah ada pesan dokter sungguhan (non-bot)
+      final messagesRef = _messagesRef(consultationId, effectivePatientUid);
+      if (messagesRef != null) {
+        final doctorMsgQuery = await messagesRef
+            .where('senderType', isEqualTo: 'doctor')
+            .limit(1)
+            .get();
+        if (doctorMsgQuery.docs.isNotEmpty) {
+          final firstDocMsg = doctorMsgQuery.docs.first.data();
+          if (firstDocMsg['isAutoReply'] != true) {
+            debugPrint('[ConsultationService] Sudah ada pesan dokter sungguhan di $consultationId. Set autoReplySent = true.');
+            await docRef.update({'autoReplySent': true});
             return;
           }
         }
       }
 
-      // 2. Cek apakah dokter memiliki UID di koleksi doctors
-      final doc = await _db.collection('doctors').doc(doctorId).get();
-      if (doc.exists) {
-        final doctorUid = doc.data()?['uid'] as String?;
-        if (doctorUid != null && doctorUid.trim().isNotEmpty) {
-          debugPrint('[ConsultationService] Dokter memiliki akun nyata (uid: $doctorUid). Simulasi auto-reply dinonaktifkan.');
-          return;
-        }
-      }
-
-      // 3. Cek apakah ada akun pengguna terdaftar dengan role dokter untuk doctorId ini
-      final userQuery = await _db
-          .collection('users')
-          .where('doctorId', isEqualTo: doctorId)
-          .limit(1)
-          .get();
-      if (userQuery.docs.isNotEmpty) {
-        debugPrint('[ConsultationService] Akun dokter terdaftar di users. Simulasi auto-reply dinonaktifkan.');
-        return;
-      }
+      // Jadwalkan balasan perkenalan otomatis setelah jeda waktu yang sama
+      _scheduleSimulatedDoctorReply(
+        consultationId: consultationId,
+        patientUid: effectivePatientUid,
+        doctorName: doctorName,
+        doctorSpecialty: doctorSpecialty,
+      );
     } catch (e) {
-      debugPrint('[ConsultationService] Gagal cek akun dokter: $e');
+      debugPrint('[ConsultationService] Gagal memeriksa auto-reply: $e');
     }
-
-    // Fallback: jalankan simulasi jika dokter benar-benar dummy tanpa akun
-    _scheduleSimulatedDoctorReply(consultationId, patientText);
   }
 
-  /// [SIMULASI] Mengirim balasan dokter otomatis setelah delay jika dokter belum punya akun nyata.
-  void _scheduleSimulatedDoctorReply(String consultationId, String patientText) {
+  /// Mengirim pesan balasan perkenalan dokter otomatis dalam batch atomik (Revisi 12).
+  void _scheduleSimulatedDoctorReply({
+    required String consultationId,
+    required String patientUid,
+    required String doctorName,
+    required String doctorSpecialty,
+  }) {
     Future.delayed(ConsultationConstants.doctorReplyDelay, () async {
       try {
-        final messagesRef = _messagesRef(consultationId);
-        final consultationDocRef = _consultationDocRef(consultationId);
+        final messagesRef = _messagesRef(consultationId, patientUid);
+        final consultationDocRef = _consultationDocRef(consultationId, patientUid);
         if (messagesRef == null || consultationDocRef == null) return;
 
-        final replies = ConsultationConstants.simulatedDoctorReplies;
-        final idx = _random.nextInt(replies.length);
-        final replyText = replies[idx];
+        // Re-check idempoten sebelum batch commit
+        final freshDoc = await consultationDocRef.get();
+        if (!freshDoc.exists || (freshDoc.data()?['autoReplySent'] == true)) {
+          return;
+        }
+
+        final replyText = generateDoctorAutoReplyText(
+          doctorName: doctorName,
+          doctorSpecialty: doctorSpecialty,
+        );
 
         final messageDoc = messagesRef.doc();
         final batch = _db.batch();
+
         batch.set(messageDoc, {
           'senderType': 'doctor',
           'text': replyText,
@@ -1011,18 +1266,34 @@ class ConsultationService {
           'type': 'text',
           'deletedForEveryone': false,
           'hiddenFor': <String>[],
+          'isAutoReply': true,
         });
+
+        // Balasan otomatis BUKAN balasan dokter sungguhan (A2.6):
+        // - autoReplySent = true
+        // - lastMessageIsAutoReply = true (agar tetap di 'Belum Dibalas')
+        // - unreadForPatient increment 1 (pasien mendapat notifikasi/banner pesan masuk)
+        // - TIDAK mengisi doctorConfirmedAt, TIDAK mengubah unreadForDoctor, TIDAK menaikkan consultationsHandled
         batch.update(consultationDocRef, {
+          'autoReplySent': true,
           'lastMessageText': replyText,
           'lastMessageAt': FieldValue.serverTimestamp(),
           'lastMessageSenderType': 'doctor',
+          'lastMessageIsAutoReply': true,
           'lastMessageId': messageDoc.id,
           'unreadForPatient': FieldValue.increment(1),
         });
+
         await batch.commit();
-        debugPrint('[ConsultationService] Balasan simulasi dokter terkirim via batch.');
+        debugPrint('[ConsultationService] Balasan otomatis dokter berhasil terkirim via batch atomik.');
+
+        // Panggil relay notifikasi untuk pasien
+        NotificationRelayClient.instance.notify(
+          patientUid: patientUid,
+          consultationId: consultationId,
+        );
       } catch (e) {
-        debugPrint('[ConsultationService] Gagal kirim simulasi dokter: $e');
+        debugPrint('[ConsultationService] Gagal kirim balasan otomatis dokter: $e');
       }
     });
   }

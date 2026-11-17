@@ -6,6 +6,7 @@ import '../constants/practice_slot_constants.dart';
 import '../models/consultation_model.dart';
 import '../models/doctor_model.dart';
 import '../utils/app_date_formatter.dart';
+import 'consultation_retention_service.dart';
 import 'consultation_service.dart';
 
 /// Service untuk mengelola data dan operasi dokter:
@@ -131,6 +132,7 @@ class DoctorService {
       final list = snap.docs
           .map((doc) => ConsultationModel.fromFirestore(
               doc as DocumentSnapshot<Map<String, dynamic>>))
+          .where((c) => !ConsultationRetentionService.isExpired(c))
           .toList();
 
       // Urutkan terbaru: lastMessageAt ?? createdAt descending

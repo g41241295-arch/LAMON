@@ -1,8 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/consultation_constants.dart';
 import '../../models/consultation_model.dart';
 import '../../models/doctor_model.dart';
+import '../../services/consultation_retention_service.dart';
 import '../../services/consultation_service.dart';
 import '../../services/doctor_service.dart';
 import '../../utils/app_date_formatter.dart';
@@ -25,6 +27,19 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
   final ConsultationService _consultationService = ConsultationService();
   final DoctorService _doctorService = DoctorService();
   bool _isNavigating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Trigger pembersihan background 60 hari untuk pasien (Revisi 10 Bagian D)
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null && uid.isNotEmpty) {
+      ConsultationRetentionService.instance.runRetentionCleanup(
+        uid: uid,
+        isDoctor: false,
+      );
+    }
+  }
 
   Future<void> _handleChatUlang(
       BuildContext context, ConsultationModel consultation) async {
@@ -403,6 +418,8 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                             height: 1.4,
                           ),
                         ),
+                        const SizedBox(height: 24),
+                        _buildRetentionInfoBanner(),
                       ],
                     ),
                   ),
@@ -512,12 +529,38 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                       ];
                     }),
                   ],
+                  const SizedBox(height: 8),
+                  _buildRetentionInfoBanner(),
                 ],
               );
             },
           ),
         );
       },
+    );
+  }
+
+  Widget _buildRetentionInfoBanner() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.info_outline_rounded,
+                size: 13, color: AppColors.neutralGray.withValues(alpha: 0.7)),
+            const SizedBox(width: 6),
+            const Text(
+              'Chat dihapus otomatis 60 hari setelah aktivitas terakhir.',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.neutralGray,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1105,30 +1148,8 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
           ),
           const SizedBox(height: 8),
 
-          // Rating UI Statis (Placeholder non-fungsional sesuai Keputusan Audit b & Kriteria 5)
-          Row(
-            children: [
-              Row(
-                children: List.generate(
-                  5,
-                  (index) => const Icon(
-                    Icons.star_rounded,
-                    size: 17,
-                    color: Color(0xFFFFB300),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              const Text(
-                'Belum dinilai (Segera Hadir)',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontStyle: FontStyle.italic,
-                  color: AppColors.neutralGray,
-                ),
-              ),
-            ],
-          ),
+          // Penilaian Konsultasi (Revisi 11 Bagian A)
+          _buildRatingSection(context, item),
 
           const SizedBox(height: 14),
 
@@ -1155,5 +1176,369 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
     ),
   ),
 );
+  }
+
+  /// Menampilkan status penilaian pada kartu konsultasi selesai (Revisi 11 Bagian A)
+  Widget _buildRatingSection(BuildContext context, ConsultationModel item) {
+    if (item.isRated) {
+      final rating = item.rating!;
+      return Row(
+        children: [
+          Row(
+            children: List.generate(
+              5,
+              (index) => Icon(
+                index < rating
+                    ? Icons.star_rounded
+                    : Icons.star_outline_rounded,
+                size: 18,
+                color: index < rating
+                    ? const Color(0xFFFFB300)
+                    : const Color(0xFFBDBDBD),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Penilaian Anda: $rating/5',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primaryText,
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Belum dinilai: 5 bintang KOSONG (outline/abu), teks "Beri penilaian", bisa diketuk
+    return InkWell(
+      onTap: () => _showRatingBottomSheet(context, item),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: List.generate(
+                5,
+                (index) => const Icon(
+                  Icons.star_outline_rounded,
+                  size: 18,
+                  color: Color(0xFFBDBDBD),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Beri penilaian',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Menampilkan bottom sheet interaktif untuk memberi penilaian (Revisi 11 Bagian A.2)
+  void _showRatingBottomSheet(BuildContext context, ConsultationModel item) {
+    if (item.isRated) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (bottomSheetContext) {
+        int selectedRating = 0;
+        bool isSubmitting = false;
+        String? errorMessage;
+        String? errorCode;
+
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final bottomInset = MediaQuery.viewInsetsOf(ctx).bottom;
+
+            return Container(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + bottomInset),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Info Dokter: foto, nama, spesialisasi
+                    Row(
+                      children: [
+                        DoctorAvatar(
+                          photoUrl: item.effectiveDoctorPhotoUrl,
+                          doctorId: item.doctorId,
+                          doctorName: item.doctorName,
+                          size: 52,
+                          borderRadius: 14,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.doctorName,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryText,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                item.doctorSpecialty,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.summaryCardSubtext,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    const Divider(height: 1, color: Color(0xFFE8EFF5)),
+                    const SizedBox(height: 16),
+
+                    const Center(
+                      child: Text(
+                        'Beri Penilaian Konsultasi',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primaryText,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // 5 Bintang Besar Interaktif (1-5)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(5, (index) {
+                        final starNumber = index + 1;
+                        final isFilled = starNumber <= selectedRating;
+                        return GestureDetector(
+                          onTap: isSubmitting
+                              ? null
+                              : () {
+                                  setSheetState(() {
+                                    selectedRating = starNumber;
+                                    errorMessage = null;
+                                    errorCode = null;
+                                  });
+                                },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: Icon(
+                              isFilled
+                                  ? Icons.star_rounded
+                                  : Icons.star_outline_rounded,
+                              size: 42,
+                              color: isFilled
+                                  ? const Color(0xFFFFB300)
+                                  : const Color(0xFFBDBDBD),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Keterangan sekali kirim dan tidak bisa diedit
+                    const Center(
+                      child: Text(
+                        'Penilaian tidak dapat diubah setelah dikirim.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: AppColors.neutralGray,
+                        ),
+                      ),
+                    ),
+
+                    if (errorMessage != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFEBEE),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFFFCDD2)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              errorMessage!,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFFD32F2F),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (errorCode != null && errorCode!.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  'Kode: $errorCode',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.red.shade800,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 20),
+
+                    // Tombol Batal & Kirim penilaian
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: isSubmitting
+                                ? null
+                                : () => Navigator.pop(bottomSheetContext),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.neutralGray,
+                              side: const BorderSide(
+                                  color: AppColors.inputBorder),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 13),
+                            ),
+                            child: const Text('Batal'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: (selectedRating == 0 || isSubmitting)
+                                ? null
+                                : () async {
+                                    setSheetState(() {
+                                      isSubmitting = true;
+                                      errorMessage = null;
+                                      errorCode = null;
+                                    });
+
+                                    try {
+                                      await _consultationService
+                                          .submitConsultationRating(
+                                        consultationId: item.id,
+                                        doctorId: item.doctorId,
+                                        rating: selectedRating,
+                                        patientUid: item.patientUid,
+                                      );
+
+                                      if (bottomSheetContext.mounted) {
+                                        Navigator.pop(bottomSheetContext);
+                                      }
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                                'Terima kasih atas penilaiannya'),
+                                            backgroundColor:
+                                                AppColors.successGreen,
+                                            behavior: SnackBarBehavior.floating,
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      debugPrint('[RiwayatKonsultasiScreen] Error submit rating: $e');
+                                      if (bottomSheetContext.mounted) {
+                                        setSheetState(() {
+                                          isSubmitting = false;
+                                          errorMessage =
+                                              'Gagal mengirim penilaian. Coba lagi.';
+                                          errorCode = e.toString().length > 60
+                                              ? e.toString().substring(0, 60)
+                                              : e.toString();
+                                        });
+                                      }
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor:
+                                  AppColors.primary.withValues(alpha: 0.35),
+                              disabledForegroundColor: Colors.white70,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 13),
+                            ),
+                            child: isSubmitting
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Kirim penilaian',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 }

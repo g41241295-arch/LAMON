@@ -172,6 +172,23 @@ class ConsultationRetentionService {
   Future<void> _cleanupSingleConsultation(
     QueryDocumentSnapshot<Map<String, dynamic>> consultDoc,
   ) async {
+    // 0. Bersihkan subkoleksi attachments Firestore (Revisi 12 Bagian B.2.9)
+    try {
+      final attachmentsRef = consultDoc.reference.collection('attachments');
+      final attachmentsSnap = await attachmentsRef.limit(400).get();
+      if (attachmentsSnap.docs.isNotEmpty) {
+        final attBatch = _db.batch();
+        for (final attDoc in attachmentsSnap.docs) {
+          attBatch.delete(attDoc.reference);
+        }
+        await attBatch.commit();
+        debugPrint(
+            '[RetentionService] ${attachmentsSnap.docs.length} attachments dihapus untuk konsultasi ${consultDoc.id}');
+      }
+    } catch (e) {
+      debugPrint('[RetentionService] Gagal membersihkan attachments: $e');
+    }
+
     final messagesRef = consultDoc.reference.collection('messages');
     final messagesSnap = await messagesRef.limit(400).get();
 

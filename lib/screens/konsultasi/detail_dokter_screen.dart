@@ -153,6 +153,34 @@ class _DetailDokterScreenState extends State<DetailDokterScreen> {
               fontWeight: FontWeight.w500,
             ),
           ),
+          const SizedBox(height: 6),
+
+          // ── Rating Dokter (Revisi 11 Bagian A.4) ──
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.star_rounded,
+                size: 18,
+                color: Color(0xFFFFB300),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                doctor.ratingCount > 0
+                    ? '${doctor.averageRating.toStringAsFixed(1)} • ${doctor.ratingCount} penilaian'
+                    : 'Belum ada penilaian',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: doctor.ratingCount > 0
+                      ? FontWeight.w700
+                      : FontWeight.w500,
+                  color: doctor.ratingCount > 0
+                      ? AppColors.primaryText
+                      : AppColors.neutralGray,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
 
           // ── Jam Operasional ──
