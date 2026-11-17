@@ -34,12 +34,14 @@ class AdminScaffold extends StatelessWidget {
   final Widget? header;
   final Widget body;
   final Widget? floatingActionButton;
+  final Color? backgroundColor;
 
   const AdminScaffold({
     super.key,
     this.header,
     required this.body,
     this.floatingActionButton,
+    this.backgroundColor,
   });
 
   @override
@@ -54,7 +56,7 @@ class AdminScaffold extends StatelessWidget {
         systemNavigationBarContrastEnforced: false,
       ),
       child: Scaffold(
-        backgroundColor: Colors.transparent,
+        backgroundColor: backgroundColor ?? Colors.transparent,
         extendBody: true,
         extendBodyBehindAppBar: true,
         resizeToAvoidBottomInset: true,
@@ -62,11 +64,14 @@ class AdminScaffold extends StatelessWidget {
         body: Stack(
           children: [
             Positioned.fill(
-              child: Image.asset(
-                'assets/images/bg_admin_beranda.png',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(color: const Color(0xFFFBFAE6)),
-              ),
+              child: backgroundColor != null
+                  ? ColoredBox(color: backgroundColor!)
+                  : Image.asset(
+                      'assets/images/bg_admin_beranda.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          Container(color: const Color(0xFFFBFAE6)),
+                    ),
             ),
             SafeArea(
               child: Column(
