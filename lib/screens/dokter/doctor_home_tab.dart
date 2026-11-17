@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/doctor_theme.dart';
 import '../../constants/practice_slot_constants.dart';
 import '../../models/consultation_model.dart';
@@ -12,6 +13,8 @@ import '../konsultasi/chat_dokter_screen.dart';
 import '../konsultasi/widgets/doctor_avatar.dart';
 import '../../services/profile_photo_service.dart';
 import 'widgets/doctor_calendar_card.dart';
+import 'doctor_notifications_screen.dart';
+import 'doctor_waiting_confirmation_screen.dart';
 
 /// Tab 1: Beranda Dokter (Design System Formal Konsisten dengan Area Pasien)
 class DoctorHomeTab extends StatelessWidget {
@@ -120,7 +123,7 @@ class DoctorHomeTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── 1. Header Bar: Logo LAMON + Avatar Bulat + Tanggal Hari Ini ──
-          _buildHeaderBar(context, now),
+          _buildHeaderBar(context, now, consultations),
           const SizedBox(height: 18),
 
           // ── 2. Kartu Sambutan Formal (Menggunakan FormalSapaanCard dengan Maskot Lambung) ──
@@ -210,7 +213,7 @@ class DoctorHomeTab extends StatelessWidget {
           _buildMessagesCard(context, consultations, totalUnreadMessages),
           const SizedBox(height: 24),
 
-          // ── 8. Section Menunggu Konfirmasi ──
+          // ── 8. Section Menunggu Konfirmasi (Dengan Link "Lihat semua ›") ──
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -218,24 +221,30 @@ class DoctorHomeTab extends StatelessWidget {
                 icon: Icons.hourglass_top_rounded,
                 label: 'Menunggu Konfirmasi',
               ),
-              if (waitingConfirmationList.isNotEmpty)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: DoctorTheme.alertRedBg,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: DoctorTheme.alertRedBorder),
-                  ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DoctorWaitingConfirmationScreen(
+                        doctorId: doctor.id,
+                        initialConsultations: consultations,
+                      ),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
                   child: Text(
-                    '${waitingConfirmationList.length}',
-                    style: const TextStyle(
+                    'Lihat semua ›',
+                    style: GoogleFonts.poppins(
                       fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: DoctorTheme.alertRed,
+                      fontWeight: FontWeight.w600,
+                      color: DoctorTheme.primaryLight,
                     ),
                   ),
                 ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -258,44 +267,51 @@ class DoctorHomeTab extends StatelessWidget {
     );
   }
 
-  // ── Header Bar: Logo LAMON + Avatar Dokter Dinamis + Tanggal Hari Ini ──
-  Widget _buildHeaderBar(BuildContext context, DateTime now) {
+  // ── Header Bar: Avatar Bulat 46px + Teks LAMON + Tanggal Hari Ini + Lonceng 46px ──
+  Widget _buildHeaderBar(
+    BuildContext context,
+    DateTime now,
+    List<ConsultationModel> liveConsultations,
+  ) {
     return Row(
       children: [
-        // Avatar Dokter + Logo LAMON (Tap untuk buka profil dokter)
+        // Avatar Dokter (46px bulat) + Teks LAMON (Tap untuk buka profil dokter)
         GestureDetector(
           onTap: onTapProfile,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              RealtimeHeaderAvatar(
-                collection: 'doctors',
-                docId: doctor.id,
-                size: 38,
-                borderRadius: 19,
-                fallback: DoctorAvatar(
-                  photoUrl: doctor.effectivePhotoUrl,
-                  doctorId: doctor.id,
-                  doctorName: doctor.name,
-                  size: 38,
-                  borderRadius: 19,
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: DoctorTheme.cardBorder, width: 1.2),
+                ),
+                child: ClipOval(
+                  child: RealtimeHeaderAvatar(
+                    collection: 'doctors',
+                    docId: doctor.id,
+                    size: 46,
+                    borderRadius: 23,
+                    fallback: DoctorAvatar(
+                      photoUrl: doctor.effectivePhotoUrl,
+                      doctorId: doctor.id,
+                      doctorName: doctor.name,
+                      size: 46,
+                      borderRadius: 23,
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: 8),
-              Image.asset(
-                'assets/images/lamon-logo.png',
-                width: 26,
-                height: 26,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(width: 5),
+              const SizedBox(width: 10),
               Text(
                 'LAMON',
                 style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
                   color: DoctorTheme.primary,
-                  letterSpacing: 0.8,
+                  letterSpacing: 0.5,
                 ),
               ),
             ],
@@ -304,7 +320,7 @@ class DoctorHomeTab extends StatelessWidget {
 
         const Spacer(),
 
-        // Date Navigator Pill ala Halaman Pasien: Hari Ini, 17 Nov
+        // Chip Tanggal "Hari Ini, 17 Nov"
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
@@ -322,25 +338,23 @@ class DoctorHomeTab extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.calendar_today_rounded,
-                size: 13,
-                color: DoctorTheme.primary,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                _formatDate(now),
-                style: GoogleFonts.poppins(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
-                  color: DoctorTheme.primaryText,
-                ),
-              ),
-            ],
+          child: Text(
+            _formatDate(now),
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: DoctorTheme.primaryText,
+            ),
           ),
+        ),
+
+        const SizedBox(width: 8),
+
+        // Lonceng Notifikasi 46px Bulat
+        _DoctorNotificationBellButton(
+          doctorId: doctor.id,
+          consultations: liveConsultations,
+          scheduleMap: scheduleMap,
         ),
       ],
     );
@@ -488,17 +502,19 @@ class DoctorHomeTab extends StatelessWidget {
                           color: Colors.white,
                           size: 18,
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
                         Text(
                           parsed.label,
                           style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: isOngoing ? FontWeight.w800 : FontWeight.w600,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
+                          maxLines: 1,
+                          softWrap: false,
                         ),
                         if (isOngoing) ...[
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
@@ -508,33 +524,29 @@ class DoctorHomeTab extends StatelessWidget {
                             child: Text(
                               'Sekarang',
                               style: GoogleFonts.poppins(
-                                fontSize: 10,
+                                fontSize: 10.5,
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFF4A3200),
                               ),
                             ),
                           ),
                         ],
-                        const SizedBox(width: 8),
                         const Spacer(),
-                        Flexible(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                timeDisplay,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFFE3EEF5),
-                                ),
-                              ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            timeDisplay,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFFE3EEF5),
                             ),
+                            maxLines: 1,
+                            softWrap: false,
                           ),
                         ),
                       ],
@@ -1273,5 +1285,154 @@ class DoctorHomeTab extends StatelessWidget {
       ],
     );
   }
+}
 
+/// Tombol Lonceng Notifikasi Bulat 46px dengan Titik Oranye Realtime
+class _DoctorNotificationBellButton extends StatefulWidget {
+  final String doctorId;
+  final List<ConsultationModel> consultations;
+  final Map<String, List<String>> scheduleMap;
+
+  const _DoctorNotificationBellButton({
+    required this.doctorId,
+    required this.consultations,
+    required this.scheduleMap,
+  });
+
+  @override
+  State<_DoctorNotificationBellButton> createState() =>
+      _DoctorNotificationBellButtonState();
+}
+
+class _DoctorNotificationBellButtonState
+    extends State<_DoctorNotificationBellButton> {
+  bool _hasUnread = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkUnread();
+  }
+
+  @override
+  void didUpdateWidget(covariant _DoctorNotificationBellButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.consultations != widget.consultations ||
+        oldWidget.doctorId != widget.doctorId) {
+      _checkUnread();
+    }
+  }
+
+  Future<void> _checkUnread() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final readIds =
+          (prefs.getStringList('doctor_read_notifs_${widget.doctorId}') ?? [])
+              .toSet();
+
+      // Periksa pesan baru yang belum dibaca dokter
+      final unreadChats = widget.consultations.where((c) {
+        return c.paymentStatus == PaymentStatus.paid &&
+            !c.isCompleted &&
+            (c.unreadForDoctor > 0 || c.lastMessageSenderType == 'patient');
+      }).toList();
+
+      for (final c in unreadChats) {
+        final lastTime = c.lastMessageAt ?? c.createdAt;
+        final id = 'msg_${c.id}_${lastTime.millisecondsSinceEpoch}';
+        if (!readIds.contains(id)) {
+          if (mounted) setState(() => _hasUnread = true);
+          return;
+        }
+      }
+
+      // Periksa konsultasi menunggu konfirmasi
+      final waiting = widget.consultations.where((c) {
+        return c.paymentStatus == PaymentStatus.paid && c.isWaiting;
+      }).toList();
+
+      for (final c in waiting) {
+        final id = 'wait_${c.id}';
+        if (!readIds.contains(id)) {
+          if (mounted) setState(() => _hasUnread = true);
+          return;
+        }
+      }
+
+      if (mounted) setState(() => _hasUnread = false);
+    } catch (_) {
+      final fallbackUnread = widget.consultations.any((c) =>
+          c.paymentStatus == PaymentStatus.paid &&
+          (!c.isCompleted &&
+              (c.unreadForDoctor > 0 ||
+                  c.lastMessageSenderType == 'patient' ||
+                  c.isWaiting)));
+      if (mounted) setState(() => _hasUnread = fallbackUnread);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DoctorNotificationsScreen(
+              doctorId: widget.doctorId,
+              initialConsultations: widget.consultations,
+              scheduleMap: widget.scheduleMap,
+            ),
+          ),
+        );
+        _checkUnread();
+      },
+      child: Container(
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: DoctorTheme.cardBorder,
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            const Icon(
+              Icons.notifications_none_rounded,
+              size: 22,
+              color: DoctorTheme.primary,
+            ),
+            if (_hasUnread)
+              Positioned(
+                top: 9,
+                right: 9,
+                child: Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    color: DoctorTheme.notifOrange,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }

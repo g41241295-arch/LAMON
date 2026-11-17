@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../constants/consultation_constants.dart';
 import '../../constants/doctor_theme.dart';
 import '../../models/consultation_model.dart';
 import '../../services/consultation_retention_service.dart';
@@ -167,10 +166,6 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
           (c.unreadForDoctor > 0 || c.lastMessageSenderType != 'doctor');
     }).toList();
 
-    final aktifList = paidConsultations.where((c) {
-      return c.status == 'active' && !c.isCompleted;
-    }).toList();
-
     final selesaiList = paidConsultations.where((c) {
       return c.isCompleted;
     }).toList();
@@ -184,8 +179,6 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
     if (_selectedFilterIndex == 1) {
       activeCategoryList = belumDibacaList;
     } else if (_selectedFilterIndex == 2) {
-      activeCategoryList = aktifList;
-    } else if (_selectedFilterIndex == 3) {
       activeCategoryList = selesaiList;
     } else {
       activeCategoryList = paidConsultations;
@@ -269,35 +262,26 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
               ),
               const SizedBox(height: 12),
 
-              // Chip Filter ("Semua", "Belum dibaca · N", "Aktif", "Selesai")
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  children: [
-                    _buildFilterChip(
-                      index: 0,
-                      label: 'Semua',
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(
-                      index: 1,
-                      label: belumDibacaList.isNotEmpty
-                          ? 'Belum dibaca · ${belumDibacaList.length}'
-                          : 'Belum dibaca',
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(
-                      index: 2,
-                      label: 'Aktif',
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(
-                      index: 3,
-                      label: 'Selesai',
-                    ),
-                  ],
-                ),
+              // Chip Filter ("Semua", "Belum dibaca · N", "Selesai")
+              Row(
+                children: [
+                  _buildFilterChip(
+                    index: 0,
+                    label: 'Semua',
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(
+                    index: 1,
+                    label: belumDibacaList.isNotEmpty
+                        ? 'Belum dibaca · ${belumDibacaList.length}'
+                        : 'Belum dibaca',
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(
+                    index: 2,
+                    label: 'Selesai',
+                  ),
+                ],
               ),
             ],
           ),
@@ -367,29 +351,6 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
                 fontWeight: FontWeight.bold,
                 color: DoctorTheme.primary,
               ),
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: DoctorTheme.cardBorder, width: 1.2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: IconButton(
-              icon: const Icon(
-                Icons.delete_sweep_outlined,
-                color: DoctorTheme.primary,
-                size: 20,
-              ),
-              tooltip: 'Bersihkan chat lama (>30 hari)',
-              onPressed: () => _handleCleanOldChats(consultations),
             ),
           ),
         ],
@@ -624,6 +585,23 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
                           ),
                         ),
                       )
+                    else if (item.isCompleted)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: DoctorTheme.selesaiPurpleBg,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'Selesai',
+                          style: GoogleFonts.poppins(
+                            color: DoctorTheme.selesaiPurple,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      )
                     else
                       const SizedBox(height: 18),
                   ],
@@ -795,107 +773,6 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gagal menghapus chat: $e'),
-            backgroundColor: DoctorTheme.alertRed,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
-  // ── Bersihkan Chat Lama (>30 hari) ──
-  Future<void> _handleCleanOldChats(
-      List<ConsultationModel> allConsultations) async {
-    final cutoff = DateTime.now().subtract(ConsultationConstants.kOldChatAge);
-    final oldChats = allConsultations.where((c) {
-      if (c.hiddenByDoctor) return false;
-      if (!c.isCompleted && !c.isExpired) return false;
-      final time = c.completedAt ?? c.createdAt;
-      return time.isBefore(cutoff);
-    }).toList();
-
-    if (oldChats.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tidak ada chat lama.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-      return;
-    }
-
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Bersihkan Chat Lama',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w800,
-            fontSize: 16,
-            color: DoctorTheme.primaryText,
-          ),
-        ),
-        content: Text(
-          'Terdapat ${oldChats.length} chat konsultasi yang sudah lebih dari 30 hari. Apakah Anda yakin ingin menghapusnya dari daftar pesan Anda?\n\nChat hanya disembunyikan dari daftar Anda; pasien tetap dapat melihat riwayat percakapan.',
-          style: GoogleFonts.poppins(
-            fontSize: 13,
-            color: DoctorTheme.secondaryText,
-            height: 1.4,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'Batal',
-              style: GoogleFonts.poppins(
-                color: DoctorTheme.neutralGray,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: DoctorTheme.alertRed,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Hapus Semua'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    try {
-      final docId = widget.doctorId ?? '';
-      final count = await _consultationService.cleanOldDoctorConsultations(
-        doctorId: docId,
-        consultations: allConsultations,
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                '$count chat lama berhasil dibersihkan dari daftar pesan'),
-            backgroundColor: DoctorTheme.successGreen,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('[DoctorMessagesTab] Error cleaning old chats: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal membersihkan chat lama: $e'),
             backgroundColor: DoctorTheme.alertRed,
             behavior: SnackBarBehavior.floating,
           ),

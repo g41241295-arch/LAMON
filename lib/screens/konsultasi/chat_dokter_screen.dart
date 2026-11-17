@@ -1052,6 +1052,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                   ? AppBar(
                       backgroundColor: Colors.transparent,
                       elevation: 0,
+                      toolbarHeight: 74,
                       flexibleSpace: Container(
                         decoration: const BoxDecoration(
                           gradient: LinearGradient(
@@ -1060,7 +1061,7 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                             colors: [Color(0xFF1F5C7A), Color(0xFF2E85A8)],
                           ),
                           borderRadius: BorderRadius.vertical(
-                            bottom: Radius.circular(24),
+                            bottom: Radius.circular(28),
                           ),
                         ),
                       ),
@@ -1074,17 +1075,34 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                       title: Row(
                         children: [
                           _buildPatientHeaderAvatar(),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
-                            child: Text(
-                              titleName,
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  titleName,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '• Sedang online',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white.withValues(alpha: 0.85),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -1093,41 +1111,44 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                         if (!widget.readOnly &&
                             (_consultation?.isActive ?? false))
                           Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: TextButton.icon(
-                              style: TextButton.styleFrom(
-                                backgroundColor:
-                                    Colors.white.withValues(alpha: 0.18),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              onPressed: _isCompleting
+                            padding: const EdgeInsets.only(right: 14),
+                            child: GestureDetector(
+                              onTap: _isCompleting
                                   ? null
                                   : _showSelesaikanKonsultasiDialog,
-                              icon: _isCompleting
-                                  ? const SizedBox(
-                                      width: 14,
-                                      height: 14,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.20),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.35),
+                                    width: 1.2,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (_isCompleting)
+                                      const SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    else
+                                      Text(
+                                        '✓ Selesai',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
                                       ),
-                                    )
-                                  : const Icon(
-                                      Icons.check_circle_outline_rounded,
-                                      size: 16,
-                                      color: Colors.white,
-                                    ),
-                              label: Text(
-                                _isCompleting ? 'Memproses...' : 'Selesai',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
+                                  ],
                                 ),
                               ),
                             ),

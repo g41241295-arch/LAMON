@@ -44,11 +44,23 @@ class DoctorTheme {
   static const Color accentGold = Color(0xFFF2B544);
   static const Color accentOrange = Color(0xFFE5983A);
   static const Color accentBrown = Color(0xFFB5651D);
+  static const Color notifOrange = Color(0xFFE0913A);
   static const Color alertRed = Color(0xFFD93A3A);
   static const Color alertRedBg = Color(0xFFFFEBEE);
   static const Color alertRedBorder = Color(0xFFFFCDD2);
   static const Color successGreen = Color(0xFF2E7D32);
   static const Color successGreenBg = Color(0xFFE8F5E9);
+
+  // ── Warna Status & Kategori Notifikasi / Badge ───────────────────────────
+  static const Color selesaiPurple = Color(0xFF5B3F8C);
+  static const Color selesaiPurpleBg = Color(0xFFEDE7F6);
+  static const Color patientAvatarBeige = Color(0xFFFBE9D2);
+  static const Color patientAvatarBrown = Color(0xFFB5651D);
+  static const Color jadwalGreen = Color(0xFF2F7A57);
+  static const Color jadwalGreenBg = Color(0xFFE4F3EC);
+  static const Color jadwalChipBg = Color(0xFFD8EFE4);
+  static const Color konsultasiChipBg = Color(0xFFFFF0D2);
+  static const Color konsultasiBoxBg = Color(0xFFFFF3DC);
 
   // ── Gradasi Kartu Hero (Gaya Kartu Jadwal Makan di Beranda Pasien) ───────
   static const LinearGradient heroGradient = LinearGradient(
