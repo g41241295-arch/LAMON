@@ -70,6 +70,8 @@ class FormalMenuGrid extends StatelessWidget {
                       badgeTextColor: const Color(0xFFD97706),
                       assetPath: 'assets/images/menu-catat1_crop.png',
                       accentColor: const Color(0xFFFFF7ED),
+                      imageScale: 1.25,
+                      imagePadding: const EdgeInsets.all(4),
                       onTap: () {
                         Navigator.pushNamed(context, AppRoutes.catatMakanan);
                       },
@@ -243,6 +245,8 @@ class _FormalCard extends StatelessWidget {
   final Color badgeTextColor;
   final String assetPath;
   final Color accentColor;
+  final double imageScale;
+  final EdgeInsetsGeometry? imagePadding;
   final VoidCallback onTap;
 
   const _FormalCard({
@@ -253,6 +257,8 @@ class _FormalCard extends StatelessWidget {
     required this.badgeTextColor,
     required this.assetPath,
     required this.accentColor,
+    this.imageScale = 1.0,
+    this.imagePadding,
     required this.onTap,
   });
 
@@ -291,15 +297,18 @@ class _FormalCard extends StatelessWidget {
                     topRight: Radius.circular(20),
                   ),
                 ),
-                padding: const EdgeInsets.all(12),
+                padding: imagePadding ?? const EdgeInsets.all(12),
                 child: Center(
-                  child: Image.asset(
-                    assetPath,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Icon(
-                      badgeIcon,
-                      size: 40,
-                      color: badgeTextColor,
+                  child: Transform.scale(
+                    scale: imageScale,
+                    child: Image.asset(
+                      assetPath,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Icon(
+                        badgeIcon,
+                        size: 40,
+                        color: badgeTextColor,
+                      ),
                     ),
                   ),
                 ),

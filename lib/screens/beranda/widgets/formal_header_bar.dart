@@ -49,16 +49,18 @@ class FormalHeaderBar extends StatelessWidget {
   }
 
   Widget _buildAvatar() {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid != null && uid.isNotEmpty) {
-      return RealtimeHeaderAvatar(
-        collection: 'users',
-        docId: uid,
-        size: 38,
-        borderRadius: 19,
-        fallback: _buildLegacyAvatar(),
-      );
-    }
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null && uid.isNotEmpty) {
+        return RealtimeHeaderAvatar(
+          collection: 'users',
+          docId: uid,
+          size: 38,
+          borderRadius: 19,
+          fallback: _buildLegacyAvatar(),
+        );
+      }
+    } catch (_) {}
     return _buildLegacyAvatar();
   }
 
@@ -105,11 +107,30 @@ class FormalHeaderBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstName = userName.trim().split(' ').first;
+    // Tentukan nama pengguna yang tampil (jika email, ambil username sebelum @)
+    final displayName = () {
+      final trimmed = userName.trim();
+      if (trimmed.isNotEmpty) {
+        if (trimmed.contains('@')) {
+          return trimmed.split('@').first;
+        }
+        return trimmed;
+      }
+      try {
+        final fbUser = FirebaseAuth.instance.currentUser;
+        if (fbUser?.displayName != null && fbUser!.displayName!.trim().isNotEmpty) {
+          return fbUser.displayName!.trim();
+        }
+        if (fbUser?.email != null && fbUser!.email!.trim().isNotEmpty) {
+          return fbUser.email!.trim().split('@').first;
+        }
+      } catch (_) {}
+      return 'Pengguna';
+    }();
 
     return Row(
       children: [
-        // Logo LAMON & Avatar Profil
+        // Avatar Profil + Nama Pengguna
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -120,26 +141,19 @@ class FormalHeaderBar extends StatelessWidget {
             const SizedBox(width: 8),
             GestureDetector(
               onTap: onProfileTap,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset(
-                    'assets/images/lamon-logo.png',
-                    width: 26,
-                    height: 26,
-                    fit: BoxFit.contain,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 120),
+                child: Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primaryText,
+                    letterSpacing: 0.2,
                   ),
-                  const SizedBox(width: 5),
-                  Text(
-                    'LAMON',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.primary,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
@@ -147,9 +161,9 @@ class FormalHeaderBar extends StatelessWidget {
 
         const Spacer(),
 
-        // Date Navigator Pill ala Referensi: < Hari ini, 15 Nov >
+        // Date Pill di Samping Notifikasi: Pure Tanggal (tanpa tombol < dan >)
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
@@ -168,18 +182,6 @@ class FormalHeaderBar extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (onPreviousDate != null)
-                GestureDetector(
-                  onTap: onPreviousDate,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4),
-                    child: Icon(
-                      Icons.chevron_left_rounded,
-                      size: 18,
-                      color: AppColors.primaryText,
-                    ),
-                  ),
-                ),
               const Icon(
                 Icons.calendar_today_rounded,
                 size: 13,
@@ -194,18 +196,6 @@ class FormalHeaderBar extends StatelessWidget {
                   color: AppColors.primaryText,
                 ),
               ),
-              if (onNextDate != null)
-                GestureDetector(
-                  onTap: onNextDate,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4),
-                    child: Icon(
-                      Icons.chevron_right_rounded,
-                      size: 18,
-                      color: AppColors.primaryText,
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
