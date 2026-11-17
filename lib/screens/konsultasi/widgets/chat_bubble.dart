@@ -203,27 +203,40 @@ class ChatBubble extends StatelessWidget {
       );
     }
 
-    // Skema warna bubble biasa
+    // Skema warna bubble biasa:
+    // Sisi dokter: bubble dokter biru tua/teal dengan teks putih, bubble pasien putih dengan border tipis.
     Color bubbleColor;
     Color textColor;
     Border? bubbleBorder;
+    final bool hasTealBackground;
 
-    if (isMe) {
-      if (currentUserRole == 'doctor') {
-        // Bubble dokter (milik sendiri): kuning lembut
-        bubbleColor = const Color(0xFFFFF7D6);
-        textColor = AppColors.primaryText;
-        bubbleBorder = Border.all(color: const Color(0xFFF0E4B0), width: 1);
+    if (currentUserRole == 'doctor') {
+      if (isMe) {
+        // Bubble dokter (milik sendiri): biru tua/teal LAMON
+        bubbleColor = AppColors.primary;
+        textColor = Colors.white;
+        bubbleBorder = null;
+        hasTealBackground = true;
       } else {
+        // Bubble pasien (lawan bicara): putih dengan border tipis
+        bubbleColor = Colors.white;
+        textColor = AppColors.primaryText;
+        bubbleBorder = Border.all(color: const Color(0xFFE2EDF3), width: 1.2);
+        hasTealBackground = false;
+      }
+    } else {
+      if (isMe) {
         // Bubble pasien (milik sendiri): teal-biru
         bubbleColor = AppColors.primary;
         textColor = Colors.white;
+        hasTealBackground = true;
+      } else {
+        // Bubble dokter (lawan bicara): biru lembut
+        bubbleColor = const Color(0xFFEDF5FA);
+        textColor = AppColors.primaryText;
+        bubbleBorder = Border.all(color: const Color(0xFFD6E8F3), width: 1);
+        hasTealBackground = false;
       }
-    } else {
-      // Bubble lawan bicara: biru lembut
-      bubbleColor = const Color(0xFFEDF5FA);
-      textColor = AppColors.primaryText;
-      bubbleBorder = Border.all(color: const Color(0xFFD6E8F3), width: 1);
     }
 
     return InkWell(
@@ -287,7 +300,7 @@ class ChatBubble extends StatelessWidget {
 
                           // ── Konten Lampiran Dokumen PDF ──
                           if (message.isFile && message.hasAttachment)
-                            _buildFileAttachment(context, isMe),
+                            _buildFileAttachment(context, hasTealBackground),
 
                           // ── Teks Pesan (atau Caption) ──
                           if (message.text.isNotEmpty)
@@ -461,7 +474,7 @@ class ChatBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildFileAttachment(BuildContext context, bool isMe) {
+  Widget _buildFileAttachment(BuildContext context, bool hasDarkBg) {
     final fileName = message.fileName ?? 'Dokumen.pdf';
     final fileSize = _formatFileSize(message.effectiveFileSize);
 
@@ -470,12 +483,12 @@ class ChatBubble extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isMe && currentUserRole == 'patient'
+          color: hasDarkBg
               ? Colors.white.withValues(alpha: 0.15)
               : Colors.black.withValues(alpha: 0.04),
           border: Border(
             bottom: BorderSide(
-              color: isMe && currentUserRole == 'patient' ? Colors.white24 : Colors.black12,
+              color: hasDarkBg ? Colors.white24 : Colors.black12,
             ),
           ),
         ),
@@ -504,7 +517,7 @@ class ChatBubble extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: isMe && currentUserRole == 'patient'
+                      color: hasDarkBg
                           ? Colors.white
                           : AppColors.primaryText,
                     ),
@@ -516,7 +529,7 @@ class ChatBubble extends StatelessWidget {
                     fileSize,
                     style: TextStyle(
                       fontSize: 11,
-                      color: isMe && currentUserRole == 'patient'
+                      color: hasDarkBg
                           ? Colors.white70
                           : AppColors.neutralGray,
                     ),
@@ -527,7 +540,7 @@ class ChatBubble extends StatelessWidget {
             Icon(
               Icons.open_in_new_rounded,
               size: 16,
-              color: isMe && currentUserRole == 'patient'
+              color: hasDarkBg
                   ? Colors.white70
                   : AppColors.neutralGray,
             ),

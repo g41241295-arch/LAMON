@@ -963,12 +963,16 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     final Widget chatContent = Stack(
       fit: StackFit.expand,
       children: [
-        // ── Background Pola Khusus Chat Konsultasi Dokter (Full Cover) ──
+        // ── Background Chat: Solid krem/off-white untuk Dokter, atau pola untuk Pasien ──
         Positioned.fill(
-          child: Image.asset(
-            'assets/images/Background Chat Konsultasi Dokter.png',
-            fit: BoxFit.cover,
-          ),
+          child: widget.isDoctor
+              ? Container(
+                  color: const Color(0xFFFAF6F0),
+                )
+              : Image.asset(
+                  'assets/images/Background Chat Konsultasi Dokter.png',
+                  fit: BoxFit.cover,
+                ),
         ),
 
         // ── Layar Chat Transparan di atas Background ──
@@ -1138,23 +1142,31 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
             onTap: () => FocusScope.of(context).unfocus(),
             child: Column(
               children: [
-                // ── Banner Menunggu Konfirmasi Dokter (Sisi Pasien) ──
+                // ── Banner Menunggu Konfirmasi Dokter ──
                 if (!isCompleted && isWaiting)
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFFBEA),
+                      color: widget.isDoctor
+                          ? const Color(0xFFFCFBF7)
+                          : const Color(0xFFFFFBEA),
                       border: Border(
-                        bottom: BorderSide(color: AppColors.warningYellow.withValues(alpha: 0.4)),
+                        bottom: BorderSide(
+                          color: widget.isDoctor
+                              ? const Color(0xFFEBE3D0)
+                              : AppColors.warningYellow.withValues(alpha: 0.4),
+                        ),
                       ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.hourglass_top_rounded,
                           size: 16,
-                          color: Color(0xFFB45309),
+                          color: widget.isDoctor
+                              ? const Color(0xFF9E652B)
+                              : const Color(0xFFB45309),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -1162,10 +1174,12 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                             widget.isDoctor
                                 ? 'Permintaan konsultasi ini belum dikonfirmasi aktif.'
                                 : 'Menunggu konfirmasi dokter. Anda tetap dapat mengirim pesan.',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFFB45309),
+                              color: widget.isDoctor
+                                  ? const Color(0xFF9E652B)
+                                  : const Color(0xFFB45309),
                             ),
                           ),
                         ),

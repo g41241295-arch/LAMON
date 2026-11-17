@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../constants/doctor_theme.dart';
 import '../../constants/practice_slot_constants.dart';
 import '../../services/doctor_service.dart';
 import '../../utils/app_date_formatter.dart';
-import '../../widgets/app_background.dart';
+import '../../widgets/app_header_pill.dart';
 
 /// Layar Pilih Jam Praktik Dokter untuk suatu tanggal.
+/// Menggunakan Design System Formal LAMON (Warm Off-White + Deep Teal).
 class PilihJamPraktikScreen extends StatefulWidget {
   final String doctorId;
   final DateTime date;
@@ -89,6 +91,18 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
       helpText: 'PILIH JAM MULAI PRAKTIK',
       confirmText: 'LANJUT',
       cancelText: 'BATAL',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: DoctorTheme.primary,
+              onPrimary: Colors.white,
+              onSurface: DoctorTheme.primaryText,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (pickedStart == null) return;
 
@@ -104,6 +118,18 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
       helpText: 'PILIH JAM SELESAI PRAKTIK',
       confirmText: 'SIMPAN JAM',
       cancelText: 'BATAL',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: DoctorTheme.primary,
+              onPrimary: Colors.white,
+              onSurface: DoctorTheme.primaryText,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (pickedEnd == null) return;
 
@@ -115,7 +141,7 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Jam selesai harus setelah jam mulai.'),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: DoctorTheme.alertRed,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -161,24 +187,36 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
       final shouldDelete = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Jadikan Hari Libur?',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          content: const Text(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'Jadikan Hari Libur?',
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              color: DoctorTheme.primaryText,
+            ),
+          ),
+          content: Text(
             'Tidak ada slot praktik yang dipilih. Jadwal untuk tanggal ini akan dihapus dan ditandai sebagai hari libur.',
-            style: TextStyle(fontSize: 14),
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: DoctorTheme.secondaryText,
+              height: 1.4,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              child: Text(
+                'Batal',
+                style: GoogleFonts.poppins(
+                  color: DoctorTheme.neutralGray,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
+              style: DoctorTheme.primaryButtonStyle(borderRadius: 12),
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('Ya, Simpan Libur'),
             ),
@@ -206,7 +244,7 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
                   ? 'Jadwal dihapus (hari libur).'
                   : 'Jadwal praktik berhasil disimpan.',
             ),
-            backgroundColor: AppColors.successGreen,
+            backgroundColor: DoctorTheme.successGreen,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -217,7 +255,7 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gagal menyimpan jadwal: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: DoctorTheme.alertRed,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -231,242 +269,196 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
   Widget build(BuildContext context) {
     final formattedDate = AppDateFormatter.formatLongDate(widget.date);
 
-    return AppBackground(
+    return DoctorBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppColors.primaryText),
-          onPressed: () => Navigator.pop(context),
-          tooltip: 'Kembali',
-        ),
-      ),
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // ── Bagian Atas (Header Tanggal) ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 6, 24, 20),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.12),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              // ── Header Pill ──
+              AppHeaderPill(
+                title: 'Atur Jam Praktik',
+                onBack: () => Navigator.pop(context),
+              ),
+
+              // ── Info Tanggal ──
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: DoctorTheme.cardBorder,
+                          width: 1.2,
                         ),
-                      ],
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.calendar_month_rounded,
+                        color: DoctorTheme.primary,
+                        size: 24,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.calendar_month_rounded,
-                      color: AppColors.primary,
-                      size: 24,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            formattedDate,
+                            style: GoogleFonts.poppins(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: DoctorTheme.primaryText,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Tentukan slot praktik untuk tanggal ini',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: DoctorTheme.secondaryText,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                  ],
+                ),
+              ),
+
+              // ── Panel Bawah Bersih Formal (Card Putih Rounded) ──
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 10,
+                        offset: Offset(0, -3),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          formattedDate,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primaryText,
+                          'Pilihan Slot Waktu',
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: DoctorTheme.primaryText,
                           ),
                         ),
-                        const SizedBox(height: 3),
-                        const Text(
-                          'Pilih jam praktik untuk tanggal ini',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.summaryCardSubtext,
-                            fontWeight: FontWeight.w500,
+                        const SizedBox(height: 14),
+
+                        // Daftar 4 Slot Kartu (3 Tetap + 1 Kustom Lainnya)
+                        Expanded(
+                          child: ListView(
+                            physics: const BouncingScrollPhysics(),
+                            children: [
+                              ...PracticeSlotConstants.allSlots.map((slot) {
+                                final isSelected = _selectedSlots.contains(slot.id);
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _buildSlotCard(slot, isSelected),
+                                );
+                              }),
+                              _buildCustomSlotCard(),
+                              const SizedBox(height: 14),
+                            ],
+                          ),
+                        ),
+
+                        // ── Tombol Batal & Simpan ──
+                        SafeArea(
+                          top: false,
+                          child: Row(
+                            children: [
+                              // Tombol Batal
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: _isLoading
+                                      ? null
+                                      : () => Navigator.pop(context),
+                                  style: DoctorTheme.secondaryButtonStyle(borderRadius: 16),
+                                  child: const Text('Batal'),
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+
+                              // Tombol Simpan
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: _isLoading ? null : _handleSave,
+                                  style: DoctorTheme.primaryButtonStyle(borderRadius: 16),
+                                  child: _isLoading
+                                      ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                    Colors.white),
+                                          ),
+                                        )
+                                      : const Text('Simpan'),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-
-            // ── Panel Bawah Gradasi Biru Bulat ──
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFFE2F0F9),
-                      Color(0xFFB8DBEE),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 10,
-                      offset: Offset(0, -3),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Slot Waktu Tersedia',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryText,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Daftar 4 Slot Kartu (3 Tetap + 1 Lainnya)
-                      Expanded(
-                        child: ListView(
-                          children: [
-                            ...PracticeSlotConstants.allSlots.map((slot) {
-                              final isSelected = _selectedSlots.contains(slot.id);
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 14),
-                                child: _buildSlotCard(slot, isSelected),
-                              );
-                            }),
-                            _buildCustomSlotCard(),
-                            const SizedBox(height: 14),
-                          ],
-                        ),
-                      ),
-
-                      // ── Tombol Batal & Simpan ──
-                      SafeArea(
-                        top: false,
-                        child: Row(
-                          children: [
-                            // Tombol Batal
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: _isLoading
-                                    ? null
-                                    : () => Navigator.pop(context),
-                                style: OutlinedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: AppColors.primaryText,
-                                  side: const BorderSide(
-                                    color: AppColors.inputBorder,
-                                    width: 1.2,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
-                                ),
-                                child: const Text(
-                                  'Batal',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-
-                            // Tombol Simpan
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: _isLoading ? null : _handleSave,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: Colors.white,
-                                  disabledBackgroundColor:
-                                      AppColors.primary.withValues(alpha: 0.4),
-                                  disabledForegroundColor: Colors.white70,
-                                  elevation: 1,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
-                                ),
-                                child: _isLoading
-                                    ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                  Colors.white),
-                                        ),
-                                      )
-                                    : const Text(
-                                        'Simpan',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
   }
 
   Widget _buildSlotCard(PracticeSlot slot, bool isSelected) {
     return GestureDetector(
       onTap: () => _toggleSlot(slot.id),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: AppColors.cardBackground,
+          color: isSelected ? DoctorTheme.primary.withValues(alpha: 0.04) : Colors.white,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.transparent,
-            width: isSelected ? 2 : 1,
+            color: isSelected ? DoctorTheme.primary : DoctorTheme.cardBorder,
+            width: isSelected ? 1.8 : 1.2,
           ),
           boxShadow: [
             BoxShadow(
               color: isSelected
-                  ? AppColors.primary.withValues(alpha: 0.15)
-                  : Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+                  ? DoctorTheme.primary.withValues(alpha: 0.08)
+                  : Colors.black.withValues(alpha: 0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -477,10 +469,10 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFFE8F2F8),
-                borderRadius: BorderRadius.circular(12),
+                color: DoctorTheme.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(slot.icon, color: AppColors.primary, size: 24),
+              child: Icon(slot.icon, color: DoctorTheme.primary, size: 22),
             ),
             const SizedBox(width: 14),
 
@@ -491,19 +483,19 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
                 children: [
                   Text(
                     slot.label,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryText,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: DoctorTheme.primaryText,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     slot.timeRangeDisplay,
-                    style: const TextStyle(
-                      fontSize: 13,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.summaryCardSubtext,
+                      color: DoctorTheme.secondaryText,
                     ),
                   ),
                 ],
@@ -516,10 +508,10 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
               height: 24,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? AppColors.primary : Colors.transparent,
+                color: isSelected ? DoctorTheme.primary : Colors.transparent,
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.inputBorder,
-                  width: 2,
+                  color: isSelected ? DoctorTheme.primary : DoctorTheme.cardBorder,
+                  width: 1.8,
                 ),
               ),
               child: isSelected
@@ -544,27 +536,26 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
         if (!_isCustomSelected || !hasCustomTime) {
           _pickCustomTimeRange();
         } else {
-          // Jika sudah terpilih dan diketuk, buka picker untuk mengubah jam
           _pickCustomTimeRange();
         }
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: AppColors.cardBackground,
+          color: _isCustomSelected ? DoctorTheme.primary.withValues(alpha: 0.04) : Colors.white,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: _isCustomSelected ? AppColors.primary : Colors.transparent,
-            width: _isCustomSelected ? 2 : 1,
+            color: _isCustomSelected ? DoctorTheme.primary : DoctorTheme.cardBorder,
+            width: _isCustomSelected ? 1.8 : 1.2,
           ),
           boxShadow: [
             BoxShadow(
               color: _isCustomSelected
-                  ? AppColors.primary.withValues(alpha: 0.15)
-                  : Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+                  ? DoctorTheme.primary.withValues(alpha: 0.08)
+                  : Colors.black.withValues(alpha: 0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -575,11 +566,11 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFFE8F2F8),
-                borderRadius: BorderRadius.circular(12),
+                color: DoctorTheme.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: const Icon(Icons.more_time_rounded,
-                  color: AppColors.primary, size: 24),
+                  color: DoctorTheme.primary, size: 22),
             ),
             const SizedBox(width: 14),
 
@@ -590,12 +581,12 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
                 children: [
                   Row(
                     children: [
-                      const Text(
+                      Text(
                         'Lainnya',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryText,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: DoctorTheme.primaryText,
                         ),
                       ),
                       if (hasCustomTime && _isCustomSelected) ...[
@@ -605,7 +596,7 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
                           child: const Icon(
                             Icons.edit_outlined,
                             size: 15,
-                            color: AppColors.primary,
+                            color: DoctorTheme.primary,
                           ),
                         ),
                       ],
@@ -614,12 +605,12 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
                   const SizedBox(height: 2),
                   Text(
                     timeDisplay,
-                    style: TextStyle(
-                      fontSize: 13,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: hasCustomTime && _isCustomSelected
-                          ? AppColors.primary
-                          : AppColors.summaryCardSubtext,
+                          ? DoctorTheme.primary
+                          : DoctorTheme.secondaryText,
                     ),
                   ),
                 ],
@@ -640,12 +631,12 @@ class _PilihJamPraktikScreenState extends State<PilihJamPraktikScreen> {
                 height: 24,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _isCustomSelected ? AppColors.primary : Colors.transparent,
+                  color: _isCustomSelected ? DoctorTheme.primary : Colors.transparent,
                   border: Border.all(
                     color: _isCustomSelected
-                        ? AppColors.primary
-                        : AppColors.inputBorder,
-                    width: 2,
+                        ? DoctorTheme.primary
+                        : DoctorTheme.cardBorder,
+                    width: 1.8,
                   ),
                 ),
                 child: _isCustomSelected

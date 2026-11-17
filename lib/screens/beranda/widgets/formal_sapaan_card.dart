@@ -4,10 +4,16 @@ import '../../../constants/app_colors.dart';
 
 class FormalSapaanCard extends StatelessWidget {
   final String userName;
+  final String? customGreeting;
+  final String? customTitle;
+  final String? customSubtitle;
 
   const FormalSapaanCard({
     super.key,
     required this.userName,
+    this.customGreeting,
+    this.customTitle,
+    this.customSubtitle,
   });
 
   @override
@@ -60,7 +66,7 @@ class FormalSapaanCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Halo, $displayName !',
+                    customGreeting ?? 'Halo, $displayName !',
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -71,17 +77,20 @@ class FormalSapaanCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    'Sehatkan Lambung,\nMulai dari Hari ini',
+                    customTitle ?? 'Sehatkan Lambung,\nMulai dari Hari ini',
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                       color: AppColors.primaryText,
                       height: 1.2,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    'Yuk, jaga pola makan dan pantau kesehatan lambungmu setiap hari',
+                    customSubtitle ??
+                        'Yuk, jaga pola makan dan pantau kesehatan lambungmu setiap hari',
                     style: GoogleFonts.poppins(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w500,

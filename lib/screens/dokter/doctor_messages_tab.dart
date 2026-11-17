@@ -1,7 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../constants/consultation_constants.dart';
+import '../../constants/doctor_theme.dart';
 import '../../models/consultation_model.dart';
 import '../../services/consultation_retention_service.dart';
 import '../../services/consultation_service.dart';
@@ -9,7 +10,7 @@ import '../../services/doctor_service.dart';
 import '../../utils/app_date_formatter.dart';
 import '../konsultasi/chat_dokter_screen.dart';
 
-/// Tab 2: Daftar Pesan Pasien untuk Dokter
+/// Tab 2: Daftar Pesan Pasien untuk Dokter (Design System Formal LAMON)
 class DoctorMessagesTab extends StatefulWidget {
   final List<ConsultationModel> consultations;
   final String? doctorId;
@@ -53,7 +54,7 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
     }
     _searchController.addListener(() => setState(() {}));
 
-    // Trigger pembersihan background 60 hari (Revisi 10 Bagian D)
+    // Trigger pembersihan background 60 hari
     final docId = widget.doctorId;
     if (docId != null && docId.isNotEmpty) {
       ConsultationRetentionService.instance.runRetentionCleanup(
@@ -90,8 +91,8 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
   Widget _buildContent(List<ConsultationModel> consultations) {
     final query = _searchController.text.trim().toLowerCase();
 
-    // Hanya konsultasi paid yang tidak disembunyikan oleh dokter (Revisi 11 Bagian B)
-    // dan belum melewati batas retensi 60 hari (Revisi 10 Bagian D)
+    // Hanya konsultasi paid yang tidak disembunyikan oleh dokter
+    // dan belum melewati batas retensi 60 hari
     final paidConsultations = consultations
         .where((c) =>
             c.paymentStatus == PaymentStatus.paid &&
@@ -99,9 +100,7 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
             !ConsultationRetentionService.isExpired(c))
         .toList();
 
-    // Filter per tab (E.2 & Revisi 12 A.2.6):
-    // "Sudah Dibalas" dan "Belum Dibalas" TIDAK lagi memuat consultation completed.
-    // Balasan otomatis dokter (lastMessageIsAutoReply == true) TIDAK memindahkan ke "Sudah Dibalas".
+    // Filter per tab:
     final sudahDibalas = paidConsultations.where((c) {
       return !c.isCompleted &&
           c.lastMessageSenderType == 'doctor' &&
@@ -148,7 +147,7 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Kolom Cari Pasien & Tombol Bersihkan Chat Lama (Revisi 11 Bagian B.4)
+              // Kolom Cari Pasien & Tombol Bersihkan Chat Lama
               Row(
                 children: [
                   Expanded(
@@ -156,12 +155,12 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: AppColors.inputBorder, width: 1),
+                        border: Border.all(color: DoctorTheme.cardBorder, width: 1.2),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
@@ -169,21 +168,25 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
                       child: Row(
                         children: [
                           const Icon(Icons.search_rounded,
-                              color: AppColors.neutralGray, size: 20),
+                              color: DoctorTheme.neutralGray, size: 20),
                           const SizedBox(width: 8),
                           Expanded(
                             child: TextField(
                               controller: _searchController,
                               focusNode: _searchFocusNode,
-                              decoration: const InputDecoration(
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                color: DoctorTheme.primaryText,
+                              ),
+                              decoration: InputDecoration(
                                 hintText: 'Cari pasien...',
-                                hintStyle: TextStyle(
-                                  color: AppColors.neutralGray,
-                                  fontSize: 14,
+                                hintStyle: GoogleFonts.poppins(
+                                  color: DoctorTheme.neutralGray,
+                                  fontSize: 13,
                                 ),
                                 border: InputBorder.none,
                                 isDense: true,
-                                contentPadding: EdgeInsets.symmetric(vertical: 11),
+                                contentPadding: const EdgeInsets.symmetric(vertical: 12),
                               ),
                             ),
                           ),
@@ -191,29 +194,29 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
                             GestureDetector(
                               onTap: () => _searchController.clear(),
                               child: const Icon(Icons.close_rounded,
-                                  color: AppColors.neutralGray, size: 18),
+                                  color: DoctorTheme.neutralGray, size: 18),
                             ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.inputBorder, width: 1),
+                      border: Border.all(color: DoctorTheme.cardBorder, width: 1.2),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
                     child: IconButton(
                       icon: const Icon(Icons.delete_sweep_outlined,
-                          color: AppColors.primary, size: 22),
+                          color: DoctorTheme.primary, size: 22),
                       tooltip: 'Bersihkan chat lama (>30 hari)',
                       onPressed: () => _handleCleanOldChats(consultations),
                     ),
@@ -222,7 +225,7 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
               ),
               const SizedBox(height: 14),
 
-              // ── Tab Pill (Sudah Dibalas | Belum Dibalas | Selesai) (E.1) ──
+              // ── Tab Pill (Sudah Dibalas | Belum Dibalas | Selesai) ──
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
@@ -253,15 +256,16 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
           ),
         ),
 
-        // ── List Percakapan Pasien (F.1: Satu area scroll per layar, F.2: padding viewPadding + 24) ──
+        // ── List Percakapan Pasien ──
         Expanded(
           child: filteredList.isEmpty
               ? _buildEmptyState()
               : ListView.separated(
+                  physics: const BouncingScrollPhysics(),
                   padding: EdgeInsets.fromLTRB(20, 6, 20, bottomPadding),
                   itemCount: filteredList.length + 1,
                   separatorBuilder: (_, index) => index < filteredList.length
-                      ? const SizedBox(height: 8)
+                      ? const SizedBox(height: 10)
                       : const SizedBox.shrink(),
                   itemBuilder: (context, index) {
                     if (index == filteredList.length) {
@@ -287,20 +291,20 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
     return GestureDetector(
       onTap: () => setState(() => _selectedTabIndex = index),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.white,
+          color: isSelected ? DoctorTheme.primary : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.inputBorder,
-            width: 1,
+            color: isSelected ? DoctorTheme.primary : DoctorTheme.cardBorder,
+            width: 1.2,
           ),
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.2),
-                blurRadius: 4,
+                color: DoctorTheme.primary.withValues(alpha: 0.22),
+                blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
           ],
@@ -310,29 +314,29 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
           children: [
             Text(
               title,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                color: isSelected ? Colors.white : AppColors.primaryText,
+              style: GoogleFonts.poppins(
+                fontSize: 12.5,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                color: isSelected ? Colors.white : DoctorTheme.primaryText,
               ),
             ),
             const SizedBox(width: 6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: isSelected
                     ? Colors.white.withValues(alpha: 0.25)
-                    : (isAlert ? const Color(0xFFFFEBEE) : const Color(0xFFF1F5F9)),
+                    : (isAlert ? DoctorTheme.alertRedBg : const Color(0xFFF1F5F9)),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 '$count',
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: isSelected
                       ? Colors.white
-                      : (isAlert ? const Color(0xFFD32F2F) : AppColors.primaryText),
+                      : (isAlert ? DoctorTheme.alertRed : DoctorTheme.primaryText),
                 ),
               ),
             ),
@@ -343,13 +347,11 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
   }
 
   Widget _buildConversationTile(BuildContext context, ConsultationModel item) {
-    // Tanggal/waktu di sisi kanan (C.3): hari ini -> jam; kemarin -> Kemarin; tahun sama -> 3 Nov; beda tahun -> 3 Nov 2025
     final time = item.isCompleted
         ? (item.completedAt ?? item.lastMessageAt ?? item.createdAt)
         : (item.lastMessageAt ?? item.createdAt);
     final timeStr = AppDateFormatter.formatConversationListTimestamp(time);
 
-    // Pratinjau pesan (E.3: baris tab Selesai menampilkan cuplikan rekomendasi 1 baris atau "Konsultasi selesai")
     final String previewText;
     if (item.isCompleted) {
       if (item.doctorRecommendation != null &&
@@ -370,20 +372,10 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
     );
 
     return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: hasUnread ? const Color(0xFFFFCDD2) : const Color(0xFFE8EFF5),
-          width: hasUnread ? 1.5 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+      decoration: DoctorTheme.cardDecoration(
+        borderRadius: 18,
+        borderColor: hasUnread ? DoctorTheme.alertRedBorder : DoctorTheme.cardBorder,
+        borderWidth: hasUnread ? 1.5 : 1.2,
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -397,14 +389,14 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
                 isDoctor: true,
                 patientUid: item.patientUid,
                 initialConsultation: item,
-                readOnly: item.isCompleted, // E.3: Selesai -> read-only
+                readOnly: item.isCompleted,
               ),
             ),
           );
         },
         trailing: PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert_rounded,
-              color: AppColors.neutralGray, size: 20),
+              color: DoctorTheme.neutralGray, size: 20),
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
           tooltip: 'Opsi Chat',
@@ -419,12 +411,12 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
               child: Row(
                 children: [
                   Icon(Icons.delete_outline_rounded,
-                      size: 18, color: Color(0xFFD32F2F)),
+                      size: 18, color: DoctorTheme.alertRed),
                   SizedBox(width: 8),
                   Text(
                     'Hapus chat',
                     style: TextStyle(
-                      color: Color(0xFFD32F2F),
+                      color: DoctorTheme.alertRed,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
@@ -440,19 +432,19 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
                     item.patientPhotoUrl!.startsWith('https://')))
             ? CircleAvatar(
                 radius: 22,
-                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
+                backgroundColor: DoctorTheme.primary.withValues(alpha: 0.1),
                 backgroundImage: NetworkImage(item.patientPhotoUrl!),
                 onBackgroundImageError: (_, _) {},
               )
             : CircleAvatar(
                 radius: 22,
-                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
+                backgroundColor: DoctorTheme.primary.withValues(alpha: 0.1),
                 child: Text(
                   item.patientInitials,
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
+                    color: DoctorTheme.primary,
                   ),
                 ),
               ),
@@ -462,10 +454,10 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
             Expanded(
               child: Text(
                 item.displayPatientName,
-                style: const TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryText,
+                  fontWeight: FontWeight.w700,
+                  color: DoctorTheme.primaryText,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -474,10 +466,10 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
             const SizedBox(width: 8),
             Text(
               timeStr,
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 11,
                 fontWeight: hasUnread ? FontWeight.bold : FontWeight.normal,
-                color: hasUnread ? AppColors.primary : AppColors.neutralGray,
+                color: hasUnread ? DoctorTheme.primary : DoctorTheme.neutralGray,
               ),
             ),
           ],
@@ -487,21 +479,20 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // C.2: Tanggal + Jam konsultasi
               Row(
                 children: [
                   const Icon(
                     Icons.access_time_rounded,
-                    size: 11,
-                    color: AppColors.neutralGray,
+                    size: 12,
+                    color: DoctorTheme.neutralGray,
                   ),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       schedStr,
-                      style: const TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 11,
-                        color: AppColors.neutralGray,
+                        color: DoctorTheme.secondaryText,
                         fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
@@ -516,11 +507,11 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
                   Expanded(
                     child: Text(
                       previewText,
-                      style: TextStyle(
-                        fontSize: 13,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12.5,
                         color: hasUnread
-                            ? AppColors.primaryText
-                            : AppColors.summaryCardSubtext,
+                            ? DoctorTheme.primaryText
+                            : DoctorTheme.secondaryText,
                         fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
                       ),
                       maxLines: 1,
@@ -532,7 +523,7 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: const BoxDecoration(
-                        color: Color(0xFFD32F2F),
+                        color: DoctorTheme.alertRed,
                         shape: BoxShape.circle,
                       ),
                       child: Text(
@@ -575,14 +566,14 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
                   ? Icons.check_circle_outline_rounded
                   : Icons.chat_bubble_outline_rounded,
               size: 56,
-              color: AppColors.neutralGray.withValues(alpha: 0.35),
+              color: DoctorTheme.neutralGray.withValues(alpha: 0.35),
             ),
             const SizedBox(height: 12),
             Text(
               emptyMessage,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.neutralGray,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: DoctorTheme.neutralGray,
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
@@ -603,13 +594,13 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.info_outline_rounded,
-                size: 13, color: AppColors.neutralGray.withValues(alpha: 0.7)),
+                size: 13, color: DoctorTheme.neutralGray.withValues(alpha: 0.7)),
             const SizedBox(width: 6),
-            const Text(
+            Text(
               'Chat dihapus otomatis 60 hari setelah aktivitas terakhir.',
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 11,
-                color: AppColors.neutralGray,
+                color: DoctorTheme.neutralGray,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -619,9 +610,8 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
     );
   }
 
-  /// Menangani hapus chat dokter (soft hide) untuk satu percakapan (Revisi 11 Bagian B)
+  /// Menangani hapus chat dokter (soft hide) untuk satu percakapan
   Future<void> _handleDeleteConversation(ConsultationModel item) async {
-    // Hanya untuk konsultasi completed atau expired (B.2)
     if (!item.isCompleted && !item.isExpired) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -637,27 +627,40 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
           'Hapus Chat Pasien',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w800,
+            fontSize: 16,
+            color: DoctorTheme.primaryText,
+          ),
         ),
         content: Text(
           'Apakah Anda yakin ingin menghapus chat dengan "${item.displayPatientName}" dari daftar pesan Anda?\n\nPercakapan hanya hilang dari daftar pesan Anda. Pasien tetap dapat melihat riwayat dan ringkasan konsultasi.',
-          style: const TextStyle(fontSize: 14, height: 1.4),
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: DoctorTheme.secondaryText,
+            height: 1.4,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal',
-                style: TextStyle(color: AppColors.neutralGray)),
+            child: Text(
+              'Batal',
+              style: GoogleFonts.poppins(
+                color: DoctorTheme.neutralGray,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFD32F2F),
+              backgroundColor: DoctorTheme.alertRed,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Hapus'),
@@ -707,7 +710,7 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gagal menghapus chat: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: DoctorTheme.alertRed,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -715,7 +718,7 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
     }
   }
 
-  /// Menangani pembersihan chat lama dokter (>30 hari) secara massal (Revisi 11 Bagian B.4)
+  /// Menangani pembersihan chat lama dokter (>30 hari) secara massal
   Future<void> _handleCleanOldChats(
       List<ConsultationModel> allConsultations) async {
     final cutoff = DateTime.now().subtract(ConsultationConstants.kOldChatAge);
@@ -741,25 +744,40 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Bersihkan Chat Lama',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Bersihkan Chat Lama',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w800,
+            fontSize: 16,
+            color: DoctorTheme.primaryText,
+          ),
+        ),
         content: Text(
           'Terdapat ${oldChats.length} chat konsultasi yang sudah lebih dari 30 hari. Apakah Anda yakin ingin menghapusnya dari daftar pesan Anda?\n\nChat hanya disembunyikan dari daftar Anda; pasien tetap dapat melihat riwayat percakapan.',
-          style: const TextStyle(fontSize: 14, height: 1.4),
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: DoctorTheme.secondaryText,
+            height: 1.4,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal',
-                style: TextStyle(color: AppColors.neutralGray)),
+            child: Text(
+              'Batal',
+              style: GoogleFonts.poppins(
+                color: DoctorTheme.neutralGray,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFD32F2F),
+              backgroundColor: DoctorTheme.alertRed,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Hapus Semua'),
@@ -781,7 +799,7 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
           SnackBar(
             content: Text(
                 '$count chat lama berhasil dibersihkan dari daftar pesan'),
-            backgroundColor: AppColors.successGreen,
+            backgroundColor: DoctorTheme.successGreen,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -792,7 +810,7 @@ class _DoctorMessagesTabState extends State<DoctorMessagesTab> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gagal membersihkan chat lama: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: DoctorTheme.alertRed,
             behavior: SnackBarBehavior.floating,
           ),
         );
