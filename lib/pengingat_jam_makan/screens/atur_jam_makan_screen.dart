@@ -213,75 +213,112 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Tombol Back di Kiri & Pill "Jadwal Harian" di Tengah Horizontal Layar
-                  SizedBox(
-                    height: 40,
-                    width: double.infinity,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Pill "Jadwal Harian" rata tengah horizontal layar
-                        Center(
-                          child: GlassContainer(
-                            borderRadius: 22,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 8),
-                            backgroundColor:
-                                const Color(0xFFFFF7D6).withValues(alpha: 0.88),
-                            child: Text(
-                              'Jadwal Harian',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF1E3A8A),
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFFEBE3D0),
+                                width: 1.2,
                               ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.04),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: Color(0xFF1C4E68),
+                              size: 20,
                             ),
                           ),
                         ),
-                        // Tombol Back di kiri
-                        Positioned(
-                          left: 0,
-                          child: GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: const Padding(
-                              padding: EdgeInsets.all(6),
-                              child: Icon(
-                                Icons.arrow_back,
-                                color: Color(0xFF1E3A8A),
-                                size: 24,
-                              ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 22, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF7D6),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: const Color(0xFFE8D7A5),
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
                             ),
+                          ],
+                        ),
+                        child: Text(
+                          'Jadwal Harian',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1C4E68),
+                            letterSpacing: 0.2,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
 
-                  // Pill Tanggal (Rata Tengah Horizontal Layar)
-                  SizedBox(
-                    width: double.infinity,
-                    child: Center(
-                      child: GlassContainer(
-                        borderRadius: 18,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 5),
-                        backgroundColor: Colors.white.withValues(alpha: 0.85),
+                  // Pill Tanggal
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: const Color(0xFF93C5FD).withValues(alpha: 0.7),
+                          color: const Color(0xFFEBE3D0),
                           width: 1.2,
                         ),
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            _datePillText,
-                            maxLines: 1,
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF1E3A8A),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.calendar_today_rounded,
+                            size: 13,
+                            color: Color(0xFF276F8F),
+                          ),
+                          const SizedBox(width: 6),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              _datePillText,
+                              maxLines: 1,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF1C4E68),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
@@ -289,11 +326,20 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
 
                   // Judul Bagian: "Atur jam makan"
                   Text(
-                    'Atur jam makan',
+                    'Atur Jam Makan',
                     style: GoogleFonts.poppins(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1E3A8A),
+                      color: const Color(0xFF1C4E68),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Sesuaikan waktu makan harian sesuai kenyamananmu',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF7C8E97),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -404,43 +450,45 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
     final screenW = MediaQuery.of(context).size.width;
     final thumbSize = (screenW * 0.165).clamp(58.0, 70.0);
 
-    return GlassContainer(
-      borderRadius: 22,
-      padding: const EdgeInsets.all(12),
-      backgroundColor: const Color(0xFFFFFBEB).withValues(alpha: 0.9),
-      border: Border.all(
-        color: Colors.white.withValues(alpha: 0.95),
-        width: 1.5,
-      ),
-      shadows: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.05),
-          blurRadius: 10,
-          offset: const Offset(0, 3),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: const Color(0xFFEBE3D0),
+          width: 1.2,
         ),
-      ],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Row(
         children: [
-          // Thumbnail Kiri: gambar meal_* persegi, sudut membulat ±14dp, border halus
+          // Thumbnail Kiri
           Container(
             width: thumbSize,
             height: thumbSize,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.85),
-                width: 1.0,
+                color: const Color(0xFFEBE3D0),
+                width: 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 4,
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(15),
               child: Image.asset(
                 assetPath,
                 fit: BoxFit.cover,
@@ -458,46 +506,51 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
                 Text(
                   title,
                   style: GoogleFonts.poppins(
-                    fontSize: 15,
+                    fontSize: 15.5,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1E3A8A),
+                    color: const Color(0xFF1C4E68),
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Tombol Pilihan Jam (Biru Pucat dengan Chevron)
-                InkWell(
-                  borderRadius: BorderRadius.circular(14),
+                // Tombol Pilihan Jam
+                GestureDetector(
                   onTap: onTap,
                   child: Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDCEBF5),
+                      color: const Color(0xFF276F8F).withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: const Color(0xFF93C5FD).withValues(alpha: 0.6),
-                        width: 1,
+                        color: const Color(0xFF276F8F).withValues(alpha: 0.2),
+                        width: 1.2,
                       ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        const Icon(
+                          Icons.access_time_rounded,
+                          size: 14,
+                          color: Color(0xFF276F8F),
+                        ),
+                        const SizedBox(width: 6),
                         Flexible(
                           child: Text(
                             timeLabel,
                             style: GoogleFonts.poppins(
                               fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF1E3A8A),
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1C4E68),
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 6),
                         const Icon(
-                          Icons.chevron_right,
-                          size: 16,
-                          color: Color(0xFF1E3A8A),
+                          Icons.edit_outlined,
+                          size: 14,
+                          color: Color(0xFF276F8F),
                         ),
                       ],
                     ),
@@ -512,13 +565,22 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
   }
 
   Widget _buildRepeatCard() {
-    return GlassContainer(
-      borderRadius: 22,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      backgroundColor: const Color(0xFFFFFBEB).withValues(alpha: 0.9),
-      border: Border.all(
-        color: Colors.white.withValues(alpha: 0.95),
-        width: 1.5,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: const Color(0xFFEBE3D0),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -545,7 +607,7 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1E3A8A),
+                    color: const Color(0xFF1C4E68),
                   ),
                 ),
               ),
@@ -561,11 +623,11 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
                 const SizedBox(width: 44),
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFDCEBF5),
+                    color: const Color(0xFF276F8F).withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: const Color(0xFF93C5FD).withValues(alpha: 0.6),
-                      width: 1,
+                      color: const Color(0xFF276F8F).withValues(alpha: 0.2),
+                      width: 1.2,
                     ),
                   ),
                   child: Row(
@@ -574,8 +636,8 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
                       // Tombol Kurang <
                       IconButton(
                         visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.chevron_left, size: 20),
-                        color: const Color(0xFF1E3A8A),
+                        icon: const Icon(Icons.chevron_left_rounded, size: 22),
+                        color: const Color(0xFF1C4E68),
                         onPressed: _isRepeatEnabled && _repeatDays > 1
                             ? () {
                                 setState(() => _repeatDays--);
@@ -589,15 +651,15 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
                           style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1E3A8A),
+                            color: const Color(0xFF1C4E68),
                           ),
                         ),
                       ),
                       // Tombol Tambah >
                       IconButton(
                         visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.chevron_right, size: 20),
-                        color: const Color(0xFF1E3A8A),
+                        icon: const Icon(Icons.chevron_right_rounded, size: 22),
+                        color: const Color(0xFF1C4E68),
                         onPressed: _isRepeatEnabled && _repeatDays < 30
                             ? () {
                                 setState(() => _repeatDays++);
@@ -613,7 +675,7 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
                   style: GoogleFonts.poppins(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1E3A8A),
+                    color: const Color(0xFF1C4E68),
                   ),
                 ),
               ],
@@ -657,30 +719,49 @@ class _AturJamMakanScreenState extends State<AturJamMakanScreen> {
   }
 
   Widget _buildSelesaiButton() {
-    return GlassContainer(
-      borderRadius: 24,
-      height: 48,
-      width: 220,
-      backgroundColor: Colors.white.withValues(alpha: 0.9),
-      border: Border.all(
-        color: const Color(0xFF93C5FD).withValues(alpha: 0.8),
-        width: 1.5,
-      ),
-      shadows: [
-        BoxShadow(
-          color: const Color(0xFF1E3A8A).withValues(alpha: 0.12),
-          blurRadius: 10,
-          offset: const Offset(0, 4),
-        ),
-      ],
+    return GestureDetector(
       onTap: _isLoading ? null : _onSelesaiPressed,
-      child: Center(
-        child: Text(
-          'Selesai',
-          style: GoogleFonts.poppins(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF1E3A8A),
+      child: Container(
+        height: 52,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [
+              Color(0xFF276F8F),
+              Color(0xFF1C4E68),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF276F8F).withValues(alpha: 0.35),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.check_circle_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Simpan Jadwal',
+                style: GoogleFonts.poppins(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
           ),
         ),
       ),

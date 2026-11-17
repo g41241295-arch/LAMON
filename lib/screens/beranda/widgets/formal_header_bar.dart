@@ -130,7 +130,7 @@ class FormalHeaderBar extends StatelessWidget {
 
     return Row(
       children: [
-        // Avatar Profil + Nama Pengguna
+        // Avatar Profil + Teks LAMON
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -141,18 +141,13 @@ class FormalHeaderBar extends StatelessWidget {
             const SizedBox(width: 8),
             GestureDetector(
               onTap: onProfileTap,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 120),
-                child: Text(
-                  displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primaryText,
-                    letterSpacing: 0.2,
-                  ),
+              child: Text(
+                'LAMON',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.primary,
+                  letterSpacing: 0.8,
                 ),
               ),
             ),

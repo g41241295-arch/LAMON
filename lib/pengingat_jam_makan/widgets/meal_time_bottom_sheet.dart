@@ -51,7 +51,7 @@ class MealTimeBottomSheet {
                 style: GoogleFonts.poppins(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF1E3A8A),
+                  color: const Color(0xFF1C4E68),
                 ),
               ),
               const SizedBox(height: 6),
@@ -59,7 +59,7 @@ class MealTimeBottomSheet {
                 'Pilih salah satu jadwal rekomendasi di bawah:',
                 style: GoogleFonts.poppins(
                   fontSize: 13,
-                  color: const Color(0xFF64748B),
+                  color: const Color(0xFF7C8E97),
                 ),
               ),
               const SizedBox(height: 18),
@@ -78,14 +78,14 @@ class MealTimeBottomSheet {
                           horizontal: 18, vertical: 14),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? const Color(0xFFDCEBF5)
+                            ? const Color(0xFF276F8F).withValues(alpha: 0.1)
                             : Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isSelected
                               ? const Color(0xFF276F8F)
-                              : const Color(0xFFE2E8F0),
-                          width: isSelected ? 1.8 : 1.0,
+                              : const Color(0xFFEBE3D0),
+                          width: isSelected ? 1.8 : 1.2,
                         ),
                         boxShadow: isSelected
                             ? [
@@ -117,9 +117,7 @@ class MealTimeBottomSheet {
                               fontWeight: isSelected
                                   ? FontWeight.w700
                                   : FontWeight.w500,
-                              color: isSelected
-                                  ? const Color(0xFF1E3A8A)
-                                  : const Color(0xFF334155),
+                              color: const Color(0xFF1C4E68),
                             ),
                           ),
                         ],
@@ -180,7 +178,7 @@ class MealTimeBottomSheet {
                 style: GoogleFonts.poppins(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF1E3A8A),
+                  color: const Color(0xFF1C4E68),
                 ),
               ),
               const SizedBox(height: 6),
@@ -188,7 +186,7 @@ class MealTimeBottomSheet {
                 'Istirahat teratur membantu pemulihan lambung:',
                 style: GoogleFonts.poppins(
                   fontSize: 13,
-                  color: const Color(0xFF64748B),
+                  color: const Color(0xFF7C8E97),
                 ),
               ),
               const SizedBox(height: 18),
@@ -207,14 +205,14 @@ class MealTimeBottomSheet {
                           horizontal: 18, vertical: 14),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? const Color(0xFFDCEBF5)
+                            ? const Color(0xFF276F8F).withValues(alpha: 0.1)
                             : Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isSelected
                               ? const Color(0xFF276F8F)
-                              : const Color(0xFFE2E8F0),
-                          width: isSelected ? 1.8 : 1.0,
+                              : const Color(0xFFEBE3D0),
+                          width: isSelected ? 1.8 : 1.2,
                         ),
                       ),
                       child: Row(
@@ -236,9 +234,7 @@ class MealTimeBottomSheet {
                               fontWeight: isSelected
                                   ? FontWeight.w700
                                   : FontWeight.w500,
-                              color: isSelected
-                                  ? const Color(0xFF1E3A8A)
-                                  : const Color(0xFF334155),
+                              color: const Color(0xFF1C4E68),
                             ),
                           ),
                         ],
