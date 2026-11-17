@@ -206,81 +206,8 @@ class DoctorHomeTab extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // Kartu Akses Cepat "Pesan"
-          GestureDetector(
-            onTap: () => onTapMessages(),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-              decoration: DoctorTheme.cardDecoration(
-                borderColor: totalUnreadMessages > 0
-                    ? DoctorTheme.alertRedBorder
-                    : DoctorTheme.cardBorder,
-                borderWidth: totalUnreadMessages > 0 ? 1.5 : 1.2,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: totalUnreadMessages > 0
-                          ? DoctorTheme.alertRedBg
-                          : DoctorTheme.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(
-                      Icons.chat_bubble_rounded,
-                      color: totalUnreadMessages > 0
-                          ? DoctorTheme.alertRed
-                          : DoctorTheme.primary,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Text(
-                          'Pesan',
-                          style: GoogleFonts.poppins(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: DoctorTheme.primaryText,
-                          ),
-                        ),
-                        if (totalUnreadMessages > 0) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: DoctorTheme.alertRed,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              totalUnreadMessages > 99
-                                  ? '99+'
-                                  : '$totalUnreadMessages',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: DoctorTheme.neutralGray,
-                    size: 22,
-                  ),
-                ],
-              ),
-            ),
-          ),
+          // Kartu Pesan Masuk Tunggal dengan Pratinjau Pesan Terakhir
+          _buildMessagesCard(context, consultations, totalUnreadMessages),
           const SizedBox(height: 24),
 
           // ── 8. Section Menunggu Konfirmasi ──
@@ -314,29 +241,13 @@ class DoctorHomeTab extends StatelessWidget {
           const SizedBox(height: 10),
 
           if (waitingConfirmationList.isEmpty)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-              decoration: DoctorTheme.cardDecoration(
-                borderColor: DoctorTheme.cardBorder,
-              ),
-              child: Center(
-                child: Text(
-                  'Belum ada permintaan konsultasi baru',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: DoctorTheme.neutralGray,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            )
+            _buildEmptyConfirmationCard()
           else
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: waitingConfirmationList.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final item = waitingConfirmationList[index];
                 return _buildWaitingItemCard(context, item);
@@ -451,41 +362,46 @@ class DoctorHomeTab extends StatelessWidget {
     required int waitingConfirmationCount,
   }) {
     final hasSlots = todaySlots.isNotEmpty;
+    final now = DateTime.now();
 
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: DoctorTheme.heroGradient,
+        borderRadius: BorderRadius.circular(26),
+        gradient: const LinearGradient(
+          begin: Alignment(-0.8, -0.8),
+          end: Alignment(0.8, 0.8),
+          colors: [Color(0xFF1F5C7A), Color(0xFF2E85A8)],
+        ),
         boxShadow: [
           BoxShadow(
-            color: DoctorTheme.primaryDark.withValues(alpha: 0.32),
-            blurRadius: 20,
+            color: const Color(0xFF1F5C7A).withValues(alpha: 0.28),
+            blurRadius: 18,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Baris Atas Hero Card
+          // Header kartu
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
                   Container(
-                    width: 38,
-                    height: 38,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
+                      color: Colors.white.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
                       Icons.access_time_filled_rounded,
                       color: Colors.white,
-                      size: 20,
+                      size: 22,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -505,7 +421,7 @@ class DoctorHomeTab extends StatelessWidget {
                             ? '${todaySlots.length} sesi praktik terjadwal'
                             : 'Tidak ada sesi hari ini',
                         style: GoogleFonts.poppins(
-                          fontSize: 11,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w500,
                           color: Colors.white.withValues(alpha: 0.85),
                         ),
@@ -516,48 +432,35 @@ class DoctorHomeTab extends StatelessWidget {
               ),
               if (hasSlots)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(14),
+                    color: Colors.white.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF7DE6D6), // Mint green
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        'Aktif',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    'Aktif',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
             ],
           ),
 
-          if (hasSlots) ...[
-            const SizedBox(height: 16),
-            Container(
-              height: 1,
-              color: Colors.white.withValues(alpha: 0.15),
-            ),
-            const SizedBox(height: 12),
-            // Daftar sesi per baris rapi (Sarapan/Siang/Malam style)
+          const SizedBox(height: 14),
+          Container(
+            height: 1,
+            color: Colors.white.withValues(alpha: 0.18),
+          ),
+          const SizedBox(height: 12),
+
+          if (hasSlots)
             Column(
               children: todaySlots.map((slotStr) {
                 final parsed = PracticeSlot.fromDynamic(slotStr);
+                final isOngoing = _isSlotOngoing(parsed, now);
                 final timeDisplay = (parsed.startTime.isNotEmpty && parsed.endTime.isNotEmpty)
                     ? '${parsed.startTime} - ${parsed.endTime} WIB'
                     : parsed.timeRangeDisplay;
@@ -565,12 +468,17 @@ class DoctorHomeTab extends StatelessWidget {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
+                      color: isOngoing
+                          ? Colors.white.withValues(alpha: 0.20)
+                          : Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: isOngoing
+                            ? Colors.white.withValues(alpha: 0.40)
+                            : Colors.white.withValues(alpha: 0.14),
+                        width: isOngoing ? 1.5 : 1,
                       ),
                     ),
                     child: Row(
@@ -578,31 +486,54 @@ class DoctorHomeTab extends StatelessWidget {
                         Icon(
                           parsed.icon,
                           color: Colors.white,
-                          size: 16,
+                          size: 18,
                         ),
                         const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            parsed.label,
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
+                        Text(
+                          parsed.label,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: isOngoing ? FontWeight.w800 : FontWeight.w600,
+                            color: Colors.white,
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
+                        if (isOngoing) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF2B544),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Sekarang',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF4A3200),
+                              ),
+                            ),
                           ),
-                          child: Text(
-                            timeDisplay,
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: DoctorTheme.primaryText,
+                        ],
+                        const SizedBox(width: 8),
+                        const Spacer(),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                timeDisplay,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFFE3EEF5),
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -611,24 +542,578 @@ class DoctorHomeTab extends StatelessWidget {
                   ),
                 );
               }).toList(),
-            ),
-          ] else ...[
-            const SizedBox(height: 12),
-            Text(
-              waitingConfirmationCount > 0
-                  ? 'Ada $waitingConfirmationCount permintaan konsultasi menunggu konfirmasimu.'
-                  : 'Semoga harimu menyenangkan, Dokter! Kelola konsultasi pasienmu dengan mudah.',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withValues(alpha: 0.9),
-                height: 1.4,
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Tidak ada jadwal praktik hari ini',
+                style: GoogleFonts.poppins(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white.withValues(alpha: 0.9),
+                ),
               ),
             ),
-          ],
         ],
       ),
     );
+  }
+
+  bool _isSlotOngoing(PracticeSlot slot, DateTime now) {
+    if (slot.startTime.isEmpty || slot.endTime.isEmpty) return false;
+    try {
+      final startParts = slot.startTime.replaceAll(':', '.').split('.');
+      final endParts = slot.endTime.replaceAll(':', '.').split('.');
+      if (startParts.length < 2 || endParts.length < 2) return false;
+      final startMinutes = int.parse(startParts[0].trim()) * 60 + int.parse(startParts[1].trim());
+      final endMinutes = int.parse(endParts[0].trim()) * 60 + int.parse(endParts[1].trim());
+      final nowMinutes = now.hour * 60 + now.minute;
+      return nowMinutes >= startMinutes && nowMinutes <= endMinutes;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ── Kartu Pesan Masuk Tunggal (Revisi 2 Bagian Pesan Pasien) ──
+  Widget _buildMessagesCard(
+    BuildContext context,
+    List<ConsultationModel> consultations,
+    int totalUnread,
+  ) {
+    // Cari pesan terakhir dari seluruh percakapan
+    ConsultationModel? latestItem;
+    for (final c in consultations) {
+      if (c.lastMessageText != null && c.lastMessageText!.trim().isNotEmpty) {
+        if (latestItem == null) {
+          latestItem = c;
+        } else {
+          final tItem = latestItem.lastMessageAt ?? latestItem.createdAt;
+          final tCurrent = c.lastMessageAt ?? c.createdAt;
+          if (tCurrent.isAfter(tItem)) {
+            latestItem = c;
+          }
+        }
+      }
+    }
+
+    if (latestItem == null && consultations.isNotEmpty) {
+      latestItem = consultations.first;
+    }
+
+    return GestureDetector(
+      onTap: () => onTapMessages(),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: DoctorTheme.cardDecoration(
+          borderRadius: 22,
+          borderColor: totalUnread > 0
+              ? DoctorTheme.unreadCardBorder
+              : DoctorTheme.cardBorder,
+        ),
+        child: Column(
+          children: [
+            // Baris Atas
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: DoctorTheme.envelopeIconBg,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(
+                    Icons.mail_outline_rounded,
+                    color: DoctorTheme.primary,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pesan Masuk',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: DoctorTheme.primaryText,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        totalUnread > 0
+                            ? '$totalUnread pesan belum dibaca'
+                            : 'Tidak ada pesan baru',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: totalUnread > 0
+                              ? DoctorTheme.alertRed
+                              : DoctorTheme.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (totalUnread > 0) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: DoctorTheme.alertRed,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      totalUnread > 99 ? '99+' : '$totalUnread',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: DoctorTheme.neutralGray,
+                  size: 22,
+                ),
+              ],
+            ),
+
+            // Garis Pemisah Tipis
+            const SizedBox(height: 12),
+            Container(
+              height: 1,
+              color: DoctorTheme.cardBorder,
+            ),
+            const SizedBox(height: 12),
+
+            // Baris Pratinjau Pesan Terakhir
+            if (latestItem != null) ...[
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 19,
+                    backgroundColor: DoctorTheme.getAvatarColors(latestItem.displayPatientName).background,
+                    child: Text(
+                      latestItem.patientInitials,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: DoctorTheme.getAvatarColors(latestItem.displayPatientName).text,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          latestItem.displayPatientName,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: DoctorTheme.primaryText,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          (latestItem.lastMessageText != null && latestItem.lastMessageText!.isNotEmpty)
+                              ? latestItem.lastMessageText!
+                              : (latestItem.isWaiting ? 'Menunggu konfirmasi konsultasi' : 'Belum ada pesan'),
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: DoctorTheme.secondaryText,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _formatMessagePreviewTime(latestItem.lastMessageAt ?? latestItem.createdAt),
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: DoctorTheme.neutralGray,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
+              Row(
+                children: [
+                  const Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    size: 16,
+                    color: DoctorTheme.neutralGray,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Belum ada pesan dari pasien',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: DoctorTheme.neutralGray,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatMessagePreviewTime(DateTime date) {
+    final now = DateTime.now();
+    final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
+    if (isToday) {
+      final hourStr = date.hour.toString().padLeft(2, '0');
+      final minuteStr = date.minute.toString().padLeft(2, '0');
+      return '$hourStr.$minuteStr';
+    }
+    final yesterday = now.subtract(const Duration(days: 1));
+    final isYesterday = date.year == yesterday.year && date.month == yesterday.month && date.day == yesterday.day;
+    if (isYesterday) {
+      return 'Kemarin';
+    }
+    const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    return '${date.day} ${months[date.month]}';
+  }
+
+  // ── Empty State Menunggu Konfirmasi ──
+  Widget _buildEmptyConfirmationCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+      decoration: DoctorTheme.cardDecoration(
+        borderRadius: 22,
+        borderColor: DoctorTheme.cardBorder,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: const BoxDecoration(
+              color: DoctorTheme.envelopeIconBg,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.hourglass_top_rounded,
+              color: DoctorTheme.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Belum ada permintaan baru',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: DoctorTheme.primary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Permintaan konsultasi akan muncul di sini',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: DoctorTheme.secondaryText,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Kartu Item Menunggu Konfirmasi (Revisi 2 Bagian Menunggu Konfirmasi) ──
+  Widget _buildWaitingItemCard(BuildContext context, ConsultationModel item) {
+    final scheduleDisplay = AppDateFormatter.formatScheduledDateTime(
+      item.effectiveScheduledDate,
+      item.scheduledTime,
+    );
+    final avatarColors = DoctorTheme.getAvatarColors(item.displayPatientName);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: DoctorTheme.cardDecoration(
+        borderRadius: 20,
+        borderColor: const Color(0xFFF2D9B0),
+        borderWidth: 1.2,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: avatarColors.background,
+                child: Text(
+                  item.patientInitials,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: avatarColors.text,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.displayPatientName,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: DoctorTheme.primaryText,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (scheduleDisplay.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        scheduleDisplay,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: DoctorTheme.secondaryText,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3DC),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Baru',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFB5651D),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _handleReject(context, item),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: DoctorTheme.primary, width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                  ),
+                  child: Text(
+                    'Tolak',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: DoctorTheme.primary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _handleAccept(context, item),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: DoctorTheme.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                  ),
+                  child: Text(
+                    'Terima',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleAccept(BuildContext context, ConsultationModel item) async {
+    try {
+      final doctorService = DoctorService();
+      await doctorService.confirmConsultation(
+        patientUid: item.patientUid,
+        consultationId: item.id,
+      );
+
+      if (context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatDokterScreen(
+              consultationId: item.id,
+              isDoctor: true,
+              patientUid: item.patientUid,
+              initialConsultation: item.copyWith(
+                status: 'active',
+                doctorConfirmedAt: DateTime.now(),
+                unreadForDoctor: 0,
+              ),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[DoctorHomeTab] Error confirming consultation: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengonfirmasi konsultasi: $e'),
+            backgroundColor: DoctorTheme.alertRed,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleReject(BuildContext context, ConsultationModel item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Tolak Permintaan Konsultasi?',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            color: DoctorTheme.primaryText,
+          ),
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin menolak permintaan konsultasi dari ${item.displayPatientName}?',
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: DoctorTheme.secondaryText,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'Batal',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: DoctorTheme.secondaryText,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: DoctorTheme.alertRed,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Tolak',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      String pUid = item.patientUid.trim();
+      if (pUid.isEmpty) {
+        final snap = await FirebaseFirestore.instance
+            .collectionGroup('consultations')
+            .where(FieldPath.documentId, isEqualTo: item.id)
+            .limit(1)
+            .get();
+        if (snap.docs.isNotEmpty) {
+          final segments = snap.docs.first.reference.path.split('/');
+          final idx = segments.indexOf('users');
+          if (idx != -1 && idx + 1 < segments.length) {
+            pUid = segments[idx + 1];
+          }
+        }
+      }
+
+      if (pUid.isNotEmpty) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(pUid)
+            .collection('consultations')
+            .doc(item.id)
+            .update({
+          'status': 'cancelled',
+          'unreadForDoctor': 0,
+        });
+      }
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Permintaan konsultasi telah ditolak'),
+            backgroundColor: DoctorTheme.primary,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[DoctorHomeTab] Error rejecting consultation: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menolak konsultasi: $e'),
+            backgroundColor: DoctorTheme.alertRed,
+          ),
+        );
+      }
+    }
   }
 
   // ── Kartu Statistik Bersih ──
@@ -789,238 +1274,4 @@ class DoctorHomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildWaitingItemCard(BuildContext context, ConsultationModel item) {
-    final scheduleDisplay = AppDateFormatter.formatScheduledDateTime(
-      item.effectiveScheduledDate,
-      item.scheduledTime,
-    );
-
-    return GestureDetector(
-      onTap: () => _showConfirmationBottomSheet(context, item),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: DoctorTheme.cardDecoration(
-          borderRadius: 18,
-          borderColor: DoctorTheme.cardBorder,
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: DoctorTheme.primary.withValues(alpha: 0.1),
-              child: Text(
-                item.patientInitials,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: DoctorTheme.primary,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.displayPatientName,
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: DoctorTheme.primaryText,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    scheduleDisplay,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: DoctorTheme.secondaryText,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (item.isNew)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: DoctorTheme.alertRedBg,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: DoctorTheme.alertRedBorder),
-                ),
-                child: const Text(
-                  'Baru',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: DoctorTheme.alertRed,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showConfirmationBottomSheet(
-      BuildContext context, ConsultationModel item) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Detail Permintaan Konsultasi',
-                  style: GoogleFonts.poppins(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: DoctorTheme.primaryText,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _detailRow('Nama Pasien', item.displayPatientName),
-                if (item.patientGender != null && item.patientGender!.isNotEmpty)
-                  _detailRow('Jenis Kelamin', item.patientGender!),
-                if (item.patientAge != null)
-                  _detailRow('Usia', '${item.patientAge} tahun'),
-                _detailRow(
-                  'Jadwal Konsultasi',
-                  AppDateFormatter.formatScheduledDateTime(
-                    item.effectiveScheduledDate,
-                    item.scheduledTime,
-                  ),
-                ),
-                _detailRow(
-                  'Waktu Pemesanan',
-                  AppDateFormatter.formatFullDateTime(item.createdAt),
-                ),
-                const SizedBox(height: 20),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        style: DoctorTheme.secondaryButtonStyle(),
-                        child: const Text('Tutup'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          Navigator.pop(ctx);
-                          try {
-                            final doctorService = DoctorService();
-                            await doctorService.confirmConsultation(
-                              patientUid: item.patientUid,
-                              consultationId: item.id,
-                            );
-
-                            if (context.mounted) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ChatDokterScreen(
-                                    consultationId: item.id,
-                                    isDoctor: true,
-                                    patientUid: item.patientUid,
-                                    initialConsultation: item.copyWith(
-                                      status: 'active',
-                                      doctorConfirmedAt: DateTime.now(),
-                                      unreadForDoctor: 0,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            debugPrint('[DoctorHomeTab] Error confirming consultation: $e');
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Gagal mengonfirmasi konsultasi: $e'),
-                                  backgroundColor: DoctorTheme.alertRed,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                        style: DoctorTheme.primaryButtonStyle(),
-                        child: const Text('Konfirmasi & Mulai Chat'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _detailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 130,
-            child: Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                color: DoctorTheme.secondaryText,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Text(
-            ': ',
-            style: GoogleFonts.poppins(
-              color: DoctorTheme.secondaryText,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: DoctorTheme.primaryText,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

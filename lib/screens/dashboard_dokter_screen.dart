@@ -273,7 +273,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     );
   }
 
-  /// Buka layar Pesan sebagai halaman terpisah dengan header pill krem.
+  /// Buka layar Pesan sebagai halaman terpisah dengan header formal LAMON.
   void _openMessagesScreen({
     bool initialBelumDibalas = false,
     bool focusSearch = false,
@@ -286,22 +286,13 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
             backgroundColor: Colors.transparent,
             body: SafeArea(
               bottom: true,
-              child: Column(
-                children: [
-                  AppHeaderPill(
-                    title: 'Pesan',
-                    onBack: () => Navigator.pop(context),
-                  ),
-                  Expanded(
-                    child: DoctorMessagesTab(
-                      key: ValueKey('msg_${initialBelumDibalas}_$focusSearch'),
-                      doctorId: _doctor?.id,
-                      consultations: _consultations,
-                      initialBelumDibalas: initialBelumDibalas,
-                      focusSearch: focusSearch,
-                    ),
-                  ),
-                ],
+              child: DoctorMessagesTab(
+                key: ValueKey('msg_${initialBelumDibalas}_$focusSearch'),
+                doctorId: _doctor?.id,
+                consultations: _consultations,
+                initialBelumDibalas: initialBelumDibalas,
+                focusSearch: focusSearch,
+                onBack: () => Navigator.pop(context),
               ),
             ),
           ),

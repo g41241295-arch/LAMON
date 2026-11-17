@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/consultation_constants.dart';
@@ -836,6 +837,27 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
   }
 
   Widget _buildDateSeparator(DateTime date) {
+    if (widget.isDoctor) {
+      return Center(
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE9E2D3),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Text(
+            AppDateFormatter.formatChatDateSeparator(date),
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF6B8190),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Center(
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 10),
@@ -868,21 +890,21 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     final photoUrl = _consultation?.patientPhotoUrl?.trim() ?? '';
     if (photoUrl.isNotEmpty && (photoUrl.startsWith('http://') || photoUrl.startsWith('https://'))) {
       return CircleAvatar(
-        radius: 18,
-        backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+        radius: 19,
+        backgroundColor: Colors.white.withValues(alpha: 0.2),
         backgroundImage: NetworkImage(photoUrl),
         onBackgroundImageError: (_, _) {},
       );
     }
     return CircleAvatar(
-      radius: 18,
-      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+      radius: 19,
+      backgroundColor: Colors.white,
       child: Text(
         _consultation?.patientInitials ?? 'P',
         style: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,
-          color: AppColors.primary,
+          color: Color(0xFF1F5C7A),
         ),
       ),
     );
@@ -1026,117 +1048,161 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                     const SizedBox(width: 8),
                   ],
                 )
-              : AppBar(
-                  backgroundColor: Colors.white.withValues(alpha: 0.94),
-                  elevation: 0.5,
-                  surfaceTintColor: Colors.transparent,
-                  shadowColor: Colors.black.withValues(alpha: 0.08),
-                  leading: IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                        color: AppColors.primaryText),
-                    onPressed: () => Navigator.pop(context),
-                    tooltip: 'Kembali',
-                  ),
-                  titleSpacing: 0,
-                  title: Row(
-                    children: [
-                      if (widget.isDoctor)
-                        _buildPatientHeaderAvatar()
-                      else
-                        DoctorAvatar(
-                          photoUrl: _consultation?.effectiveDoctorPhotoUrl ?? '',
-                          doctorId: _consultation?.doctorId,
-                          doctorName: _consultation?.doctorName,
-                          size: 36,
-                          borderRadius: 10,
+              : (widget.isDoctor
+                  ? AppBar(
+                      backgroundColor: Colors.transparent,
+                      elevation: 0,
+                      flexibleSpace: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFF1F5C7A), Color(0xFF2E85A8)],
+                          ),
+                          borderRadius: BorderRadius.vertical(
+                            bottom: Radius.circular(24),
+                          ),
                         ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
+                      ),
+                      leading: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                            color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                        tooltip: 'Kembali',
+                      ),
+                      titleSpacing: 0,
+                      title: Row(
+                        children: [
+                          _buildPatientHeaderAvatar(),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
                               titleName,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.primaryText,
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            Row(
+                          ),
+                        ],
+                      ),
+                      actions: [
+                        if (!widget.readOnly &&
+                            (_consultation?.isActive ?? false))
+                          Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: TextButton.icon(
+                              style: TextButton.styleFrom(
+                                backgroundColor:
+                                    Colors.white.withValues(alpha: 0.18),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              onPressed: _isCompleting
+                                  ? null
+                                  : _showSelesaikanKonsultasiDialog,
+                              icon: _isCompleting
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.check_circle_outline_rounded,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
+                              label: Text(
+                                _isCompleting ? 'Memproses...' : 'Selesai',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    )
+                  : AppBar(
+                      backgroundColor: Colors.white.withValues(alpha: 0.94),
+                      elevation: 0.5,
+                      surfaceTintColor: Colors.transparent,
+                      shadowColor: Colors.black.withValues(alpha: 0.08),
+                      leading: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                            color: AppColors.primaryText),
+                        onPressed: () => Navigator.pop(context),
+                        tooltip: 'Kembali',
+                      ),
+                      titleSpacing: 0,
+                      title: Row(
+                        children: [
+                          DoctorAvatar(
+                            photoUrl: _consultation?.effectiveDoctorPhotoUrl ?? '',
+                            doctorId: _consultation?.doctorId,
+                            doctorName: _consultation?.doctorName,
+                            size: 36,
+                            borderRadius: 10,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Container(
-                                  width: 7,
-                                  height: 7,
-                                  decoration: BoxDecoration(
-                                    color: statusColor,
-                                    shape: BoxShape.circle,
+                                Text(
+                                  titleName,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.primaryText,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(width: 5),
-                                Flexible(
-                                  child: Text(
-                                    subtitleText,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: statusColor,
-                                      fontWeight: FontWeight.w600,
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 7,
+                                      height: 7,
+                                      decoration: BoxDecoration(
+                                        color: statusColor,
+                                        shape: BoxShape.circle,
+                                      ),
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                    const SizedBox(width: 5),
+                                    Flexible(
+                                      child: Text(
+                                        subtitleText,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: statusColor,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    if (widget.isDoctor &&
-                        !widget.readOnly &&
-                        (_consultation?.isActive ?? false))
-                      Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: TextButton.icon(
-                          style: TextButton.styleFrom(
-                            backgroundColor:
-                                AppColors.successGreen.withValues(alpha: 0.12),
-                            foregroundColor: AppColors.successGreen,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
                           ),
-                          onPressed: _isCompleting
-                              ? null
-                              : _showSelesaikanKonsultasiDialog,
-                          icon: _isCompleting
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.successGreen,
-                                  ),
-                                )
-                              : const Icon(Icons.check_circle_outline_rounded,
-                                  size: 16),
-                          label: Text(
-                            _isCompleting ? 'Memproses...' : 'Selesai',
-                            style: const TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.w700),
-                          ),
-                        ),
+                        ],
                       ),
-                  ],
-                ),
+                    )),
           body: GestureDetector(
             behavior: HitTestBehavior.translucent,
             onTap: () => FocusScope.of(context).unfocus(),
@@ -1675,102 +1741,195 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     );
   }
 
+  Widget _buildDoctorQuickActionChips() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
+      alignment: Alignment.centerLeft,
+      color: Colors.transparent,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          children: [
+            _buildDoctorChip(
+              label: 'Jadwalkan kontrol',
+              templateText:
+                  'Silakan jadwalkan konsultasi kontrol kembali dalam 3-5 hari ke depan.',
+            ),
+            const SizedBox(width: 8),
+            _buildDoctorChip(
+              label: 'Saran makanan',
+              templateText:
+                  'Disarankan untuk mengonsumsi makanan yang mudah dicerna, rendah lemak, dan hindari makanan pedas serta asam.',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDoctorChip({
+    required String label,
+    required String templateText,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _inputController.text = templateText;
+          _inputController.selection = TextSelection.fromPosition(
+            TextPosition(offset: _inputController.text.length),
+          );
+        });
+        _focusNode.requestFocus();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFBFD9E6), width: 1.2),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF1F5C7A),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildInputBar(BuildContext context, List<ChatMessage> visibleMessages) {
     final isEditing = _editingMessage != null;
 
     return SafeArea(
       top: false,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Tombol Lampiran (+)
-            IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
-              icon: Icon(
-                Icons.add_circle_outline_rounded,
-                color: isEditing ? AppColors.neutralGray : AppColors.primary,
-                size: 26,
-              ),
-              onPressed: (_isSending || _isUploading || isEditing)
-                  ? null
-                  : _showAttachmentOptions,
-              tooltip: isEditing ? 'Tidak dapat melampirkan saat mengedit' : 'Lampirkan file atau foto',
-            ),
-            const SizedBox(width: 4),
-
-            // Input Teks
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.isDoctor && !isEditing && !widget.readOnly)
+            _buildDoctorQuickActionChips(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: widget.isDoctor ? const Color(0xFFFAF6F0) : Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, -2),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: TextField(
-                  controller: _inputController,
-                  focusNode: _focusNode,
-                  maxLines: 4,
-                  minLines: 1,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: InputDecoration(
-                    hintText: isEditing ? 'Edit pesan...' : 'Tulis pesan...',
-                    hintStyle: const TextStyle(
-                      color: AppColors.neutralGray,
-                      fontSize: 14,
+              ],
+            ),
+            child: Row(
+              children: [
+                // Tombol Lampiran (+)
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
+                  icon: Icon(
+                    Icons.add_circle_outline_rounded,
+                    color: isEditing
+                        ? AppColors.neutralGray
+                        : (widget.isDoctor
+                            ? const Color(0xFF1F5C7A)
+                            : AppColors.primary),
+                    size: 26,
+                  ),
+                  onPressed: (_isSending || _isUploading || isEditing)
+                      ? null
+                      : _showAttachmentOptions,
+                  tooltip: isEditing
+                      ? 'Tidak dapat melampirkan saat mengedit'
+                      : 'Lampirkan file atau foto',
+                ),
+                const SizedBox(width: 4),
+
+                // Input Teks
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: widget.isDoctor
+                            ? const Color(0xFFEFE3D0)
+                            : const Color(0xFFE2EDF3),
+                        width: 1.2,
+                      ),
                     ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: TextField(
+                      controller: _inputController,
+                      focusNode: _focusNode,
+                      maxLines: 4,
+                      minLines: 1,
+                      textCapitalization: TextCapitalization.sentences,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13.5,
+                        color: widget.isDoctor
+                            ? const Color(0xFF24435A)
+                            : AppColors.primaryText,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: isEditing ? 'Edit pesan...' : 'Tulis pesan...',
+                        hintStyle: GoogleFonts.poppins(
+                          color: widget.isDoctor
+                              ? const Color(0xFF6B8190)
+                              : AppColors.neutralGray,
+                          fontSize: 13.5,
+                        ),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 8),
+                const SizedBox(width: 8),
 
-            // Tombol Kirim / Simpan Perubahan
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: isEditing ? AppColors.successGreen : AppColors.primary,
-                shape: BoxShape.circle,
-              ),
-              child: _isSending || _isUploading
-                  ? const Padding(
-                      padding: EdgeInsets.all(10),
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      icon: Icon(
-                        isEditing ? Icons.check_rounded : Icons.send_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      onPressed: isEditing
-                          ? () => _saveEditedMessage(visibleMessages)
-                          : _sendMessage,
-                      tooltip: isEditing ? 'Simpan perubahan' : 'Kirim pesan',
-                    ),
+                // Tombol Kirim / Simpan Perubahan (46px bulat biru tua untuk dokter)
+                Container(
+                  width: widget.isDoctor ? 46 : 42,
+                  height: widget.isDoctor ? 46 : 42,
+                  decoration: BoxDecoration(
+                    color: isEditing
+                        ? AppColors.successGreen
+                        : (widget.isDoctor
+                            ? const Color(0xFF1F5C7A)
+                            : AppColors.primary),
+                    shape: BoxShape.circle,
+                  ),
+                  child: _isSending || _isUploading
+                      ? const Padding(
+                          padding: EdgeInsets.all(10),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          icon: Icon(
+                            isEditing ? Icons.check_rounded : Icons.send_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          onPressed: isEditing
+                              ? () => _saveEditedMessage(visibleMessages)
+                              : _sendMessage,
+                          tooltip: isEditing ? 'Simpan perubahan' : 'Kirim pesan',
+                        ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

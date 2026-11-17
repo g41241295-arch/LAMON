@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 /// Design System terpusat untuk seluruh area akses DOKTER aplikasi LAMON.
 ///
-/// Konsisten dengan desain area PASIEN (Warm Off-White + Deep Teal LAMON).
+/// Konsisten dengan desain area PASIEN (Warm Off-White #FAF6F0 + Deep Teal #1F5C7A).
 /// Menghilangkan warna kuning berlebih dan dekorasi yang mencolok,
 /// menggantikannya dengan tampilan yang formal, bersih, dan profesional.
 class DoctorTheme {
@@ -11,29 +11,40 @@ class DoctorTheme {
 
   // ── Warna Latar Belakang (Formal Warm Off-White) ─────────────────────────
   static const Color scaffoldBg = Color(0xFFFAF6F0);
-  static const Color bgGradientStart = Color(0xFFFCFBF7);
-  static const Color bgGradientEnd = Color(0xFFF7F4EB);
-  static const Color bgGradientBottom = Color(0xFFF2EEDB);
+  static const Color bgGradientStart = Color(0xFFFAF6F0);
+  static const Color bgGradientEnd = Color(0xFFFAF6F0);
+  static const Color bgGradientBottom = Color(0xFFF5EFE6);
 
   // ── Warna Utama (Deep Teal / Primary LAMON) ──────────────────────────────
-  static const Color primary = Color(0xFF276F8F);
-  static const Color primaryDark = Color(0xFF1B556E);
-  static const Color primaryLight = Color(0xFF3885A8);
-  static const Color primaryText = Color(0xFF1C4E68);
-  static const Color secondaryText = Color(0xFF527F97);
-  static const Color neutralGray = Color(0xFF7C8E97);
+  static const Color primary = Color(0xFF1F5C7A);
+  static const Color primaryDark = Color(0xFF17475E);
+  static const Color primaryLight = Color(0xFF2E85A8);
+  static const Color primaryText = Color(0xFF1F5C7A);
+  static const Color secondaryText = Color(0xFF6B8190);
+  static const Color neutralGray = Color(0xFF8B9EAA);
   static const Color lightGray = Color(0xFFE2EDF3);
 
   // ── Warna Kartu & Border ────────────────────────────────────────────────
   static const Color cardBg = Colors.white;
   static const Color cardBgSubtle = Color(0xFFFCFBF7);
-  static const Color cardBorder = Color(0xFFEBE3D0);
+  static const Color cardBorder = Color(0xFFEFE3D0);
   static const Color cardBorderSubtle = Color(0xFFE8EFF5);
 
+  // ── Warna Kartu Unread & Chat ───────────────────────────────────────────
+  static const Color unreadCardBg = Color(0xFFF4FAFD);
+  static const Color unreadCardBorder = Color(0xFFBFD9E6);
+  static const Color patientBubbleText = Color(0xFF24435A);
+  static const Color doctorBubbleTime = Color(0xFFCFE3EE);
+  static const Color dateChipBg = Color(0xFFE9E2D3);
+  static const Color envelopeIconBg = Color(0xFFDCEBF3);
+  static const Color keluhanBg = Color(0xFFFFF8EA);
+  static const Color keluhanBorder = Color(0xFFF2D9B0);
+
   // ── Warna Aksen (Hanya sebagai aksen kecil, bukan background dominan) ───
+  static const Color accentGold = Color(0xFFF2B544);
   static const Color accentOrange = Color(0xFFE5983A);
-  static const Color accentBrown = Color(0xFF9E652B);
-  static const Color alertRed = Color(0xFFD32F2F);
+  static const Color accentBrown = Color(0xFFB5651D);
+  static const Color alertRed = Color(0xFFD93A3A);
   static const Color alertRedBg = Color(0xFFFFEBEE);
   static const Color alertRedBorder = Color(0xFFFFCDD2);
   static const Color successGreen = Color(0xFF2E7D32);
@@ -41,20 +52,45 @@ class DoctorTheme {
 
   // ── Gradasi Kartu Hero (Gaya Kartu Jadwal Makan di Beranda Pasien) ───────
   static const LinearGradient heroGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
+    begin: Alignment(-0.8, -0.8),
+    end: Alignment(0.8, 0.8),
     colors: [
-      Color(0xFF1B556E), // Deep Teal
-      Color(0xFF276F8F), // Primary Teal
-      Color(0xFF3885A8), // Light Teal
+      Color(0xFF1F5C7A), // Deep Teal
+      Color(0xFF2E85A8), // Light Teal
     ],
   );
+
+  // ── Variasi Warna Avatar Inisial Pasien (Biru muda, Peach, Hijau muda, Lavender) ──
+  static const List<DoctorAvatarColors> avatarColorPalette = [
+    DoctorAvatarColors(
+      bg: Color(0xFFE1F0F8), // Biru muda
+      text: Color(0xFF1F5C7A),
+    ),
+    DoctorAvatarColors(
+      bg: Color(0xFFFDE8E1), // Peach
+      text: Color(0xFFB5651D),
+    ),
+    DoctorAvatarColors(
+      bg: Color(0xFFE2F5E9), // Hijau muda
+      text: Color(0xFF2E7D32),
+    ),
+    DoctorAvatarColors(
+      bg: Color(0xFFEDE7F6), // Lavender
+      text: Color(0xFF5E35B1),
+    ),
+  ];
+
+  static DoctorAvatarColors getAvatarColors(String key) {
+    if (key.isEmpty) return avatarColorPalette.first;
+    final code = key.codeUnits.fold<int>(0, (prev, elem) => prev + elem);
+    return avatarColorPalette[code % avatarColorPalette.length];
+  }
 
   // ── Dekorasi Kartu Standar ──────────────────────────────────────────────
   static BoxDecoration cardDecoration({
     Color? color,
     Color? borderColor,
-    double borderRadius = 20,
+    double borderRadius = 22,
     double borderWidth = 1.2,
     List<BoxShadow>? customShadow,
   }) {
@@ -121,55 +157,46 @@ class DoctorTheme {
 
   // ── Input Decoration ─────────────────────────────────────────────────────
   static InputDecoration inputDecoration({
-    String? hintText,
+    required String hintText,
     Widget? prefixIcon,
     Widget? suffixIcon,
-    Color fillColor = const Color(0xFFF8FAFC),
   }) {
     return InputDecoration(
       hintText: hintText,
       hintStyle: GoogleFonts.poppins(
         fontSize: 13,
         color: neutralGray,
-        fontWeight: FontWeight.normal,
+        fontWeight: FontWeight.w400,
       ),
       filled: true,
-      fillColor: fillColor,
+      fillColor: Colors.white,
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: cardBorder, width: 1.2),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: cardBorder, width: 1.2),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: primary, width: 1.6),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: alertRed, width: 1.2),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: alertRed, width: 1.6),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: primary, width: 1.5),
       ),
     );
   }
 
-  // ── Tombol Utama (Primary Button) ───────────────────────────────────────
+  // ── Gaya Tombol ──────────────────────────────────────────────────────────
   static ButtonStyle primaryButtonStyle({
     double borderRadius = 16,
-    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
   }) {
     return ElevatedButton.styleFrom(
       backgroundColor: primary,
       foregroundColor: Colors.white,
-      elevation: 1,
+      elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadius),
       ),
@@ -181,29 +208,41 @@ class DoctorTheme {
     );
   }
 
-  // ── Tombol Sekunder (Outlined Button) ───────────────────────────────────
   static ButtonStyle secondaryButtonStyle({
     double borderRadius = 16,
-    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+    double borderWidth = 1.2,
+    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
   }) {
     return OutlinedButton.styleFrom(
-      backgroundColor: Colors.white,
-      foregroundColor: primaryText,
-      side: const BorderSide(color: cardBorder, width: 1.2),
+      foregroundColor: primary,
+      side: BorderSide(color: primary, width: borderWidth),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadius),
       ),
       padding: padding,
       textStyle: GoogleFonts.poppins(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
+        fontSize: 13.5,
+        fontWeight: FontWeight.w700,
       ),
     );
   }
 }
 
+/// Model warna avatar inisial (background dan teks)
+class DoctorAvatarColors {
+  final Color bg;
+  final Color text;
+
+  const DoctorAvatarColors({
+    required this.bg,
+    required this.text,
+  });
+
+  Color get background => bg;
+}
+
 /// Pembungkus Latar Belakang Area Dokter.
-/// Menggunakan gradasi krem/off-white lembut (sama dengan halaman pasien, #FCFBF7 - #F7F4EB).
+/// Menggunakan warna solid krem / off-white lembut (#FAF6F0).
 class DoctorBackground extends StatelessWidget {
   final Widget child;
 
@@ -214,17 +253,7 @@ class DoctorBackground extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: double.infinity,
-      decoration: const BoxDecoration(
-        color: DoctorTheme.scaffoldBg,
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            DoctorTheme.bgGradientStart,
-            DoctorTheme.bgGradientEnd,
-          ],
-        ),
-      ),
+      color: DoctorTheme.scaffoldBg,
       child: child,
     );
   }

@@ -212,16 +212,16 @@ class ChatBubble extends StatelessWidget {
 
     if (currentUserRole == 'doctor') {
       if (isMe) {
-        // Bubble dokter (milik sendiri): biru tua/teal LAMON
-        bubbleColor = AppColors.primary;
+        // Bubble dokter (milik sendiri): biru tua/teal LAMON #1F5C7A
+        bubbleColor = const Color(0xFF1F5C7A);
         textColor = Colors.white;
         bubbleBorder = null;
         hasTealBackground = true;
       } else {
-        // Bubble pasien (lawan bicara): putih dengan border tipis
+        // Bubble pasien (lawan bicara): putih dengan border tipis #EFE3D0
         bubbleColor = Colors.white;
-        textColor = AppColors.primaryText;
-        bubbleBorder = Border.all(color: const Color(0xFFE2EDF3), width: 1.2);
+        textColor = const Color(0xFF24435A);
+        bubbleBorder = Border.all(color: const Color(0xFFEFE3D0), width: 1.2);
         hasTealBackground = false;
       }
     } else {
@@ -265,7 +265,8 @@ class ChatBubble extends StatelessWidget {
                 children: [
                   Container(
                     constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.72,
+                      maxWidth: MediaQuery.of(context).size.width *
+                          (currentUserRole == 'doctor' ? 0.78 : 0.72),
                     ),
                     decoration: BoxDecoration(
                       color: bubbleColor,
@@ -322,42 +323,77 @@ class ChatBubble extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        statusText,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.neutralGray,
-                        ),
-                      ),
-                      if (ConsultationConstants.kShowAutoReplyLabel &&
-                          message.isAutoReply) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 1.5),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                              width: 0.5,
+                  if (currentUserRole == 'doctor')
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isMe) ...[
+                          Text(
+                            timeStr,
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              color: Color(0xFFCFE3EE),
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                          child: const Text(
-                            'Balasan otomatis',
-                            style: TextStyle(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
+                          const SizedBox(width: 4),
+                          Text(
+                            isRead ? '✓✓' : '✓',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFCFE3EE),
                             ),
                           ),
-                        ),
+                        ] else ...[
+                          Text(
+                            timeStr,
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              color: Color(0xFF6B8190),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
+                    )
+                  else
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          statusText,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.neutralGray,
+                          ),
+                        ),
+                        if (ConsultationConstants.kShowAutoReplyLabel &&
+                            message.isAutoReply) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                                width: 0.5,
+                              ),
+                            ),
+                            child: const Text(
+                              'Balasan otomatis',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -399,14 +435,16 @@ class ChatBubble extends StatelessWidget {
     return CircleAvatar(
       radius: 16,
       backgroundColor: isMe && currentUserRole == 'doctor'
-          ? const Color(0xFFFFF0B3)
+          ? const Color(0xFF1F5C7A).withValues(alpha: 0.12)
           : AppColors.primaryLight.withValues(alpha: 0.25),
       child: Icon(
         currentUserRole == 'doctor'
             ? Icons.medical_services_rounded
             : Icons.person_rounded,
         size: 16,
-        color: AppColors.primary,
+        color: currentUserRole == 'doctor'
+            ? const Color(0xFF1F5C7A)
+            : AppColors.primary,
       ),
     );
   }
