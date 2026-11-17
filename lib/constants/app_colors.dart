@@ -59,7 +59,21 @@ class AppColors {
   static const Color neutralGray = Color(0xFF7C8E97);
   static const Color lightGray = Color(0xFFE3EDF2);
 
-  // Admin Theme
+  // Admin Theme (Refined Palette)
+  // Background & surface
+  static const Color bgPrimary = Color(0xFFFFF6D8);      // Soft Yellow — background utama
+  static const Color bgAccent = Color(0xFFF4E8B5);       // Warm Cream — aksen dekoratif tipis
+  static const Color surfaceCard = Color(0xFFFFFFFF);    // Putih — SEMUA card/panel konten
+  static const Color softBlue = Color(0xFFDCEAF5);       // Soft Blue — komponen info/sekunder
+
+  // Teks & ikon
+  static const Color textPrimary = Color(0xFF263D59);    // Navy — judul, teks utama, ikon penting
+  static const Color textSecondary = Color(0xFF788493);  // Muted Gray — keterangan/sekunder
+
+  // Aksen penekanan
+  static const Color accentGold = Color(0xFFE8C86A);     // Soft Gold — penekanan/highlight angka penting
+
+  // Admin Theme (Legacy tokens)
   static const Color adminBlue = Color(0xFF337AA3);
   static const Color adminBlueDark = Color(0xFF25607F);
   static const Color adminBlueLight = Color(0xFFE8F4FB);

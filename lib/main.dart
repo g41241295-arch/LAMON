@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -110,7 +111,9 @@ class _LamonAppState extends State<LamonApp> {
             color: AppColors.cardBackground,
             elevation: 0,
           ),
-          fontFamily: 'Segoe UI',
+          textTheme: GoogleFonts.plusJakartaSansTextTheme(
+            ThemeData.light().textTheme,
+          ),
           appBarTheme: const AppBarTheme(
             backgroundColor: Colors.transparent,
             elevation: 0,
