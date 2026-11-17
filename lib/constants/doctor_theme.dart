@@ -157,7 +157,8 @@ class DoctorTheme {
 
   // ── Input Decoration ─────────────────────────────────────────────────────
   static InputDecoration inputDecoration({
-    required String hintText,
+    String? hintText,
+    Color? fillColor,
     Widget? prefixIcon,
     Widget? suffixIcon,
   }) {
@@ -169,7 +170,7 @@ class DoctorTheme {
         fontWeight: FontWeight.w400,
       ),
       filled: true,
-      fillColor: Colors.white,
+      fillColor: fillColor ?? Colors.white,
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
