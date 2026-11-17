@@ -1,7 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../widgets/app_background.dart';
+import '../../widgets/app_scaffold.dart';
 import '../debug/alarm_debug.dart';
 import '../models/meal_reminder_plan.dart';
 import 'kalender_jadwal_screen.dart';
@@ -32,81 +31,118 @@ class _PilihKondisiScreenState extends State<PilihKondisiScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AppBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Stack(
+    return AppScaffold(
+      backgroundGradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xFFFCFBF7),
+          Color(0xFFF7F4EB),
+          Color(0xFFF2EEDB),
+        ],
+      ),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        child: Column(
           children: [
-            // ── Konten Utama (Scrollable) ──────────────────────────────────
-            SafeArea(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-                child: Column(
-                  children: [
-                    // ── Header Bar: Tombol Back & Pill Judul ───────────────
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: const Color(0xFFEBE3D0),
-                                  width: 1.2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.04),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.arrow_back_rounded,
-                                color: Color(0xFF1C4E68),
-                                size: 20,
-                              ),
-                            ),
-                          ),
+            // ── Header Bar: Tombol Back, Pill Judul, & Ikon Alarm ───
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                // Tombol Back di Kiri
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFEBE3D0),
+                          width: 1.2,
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 22, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF7D6),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: const Color(0xFFE8D7A5),
-                              width: 1.2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.04),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           ),
-                          child: Text(
-                            'Pengingat Jam Makan',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1C4E68),
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Color(0xFF1C4E68),
+                        size: 20,
+                      ),
                     ),
+                  ),
+                ),
+
+                // Pill Judul di Tengah
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 22, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7D6),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: const Color(0xFFE8D7A5),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    'Pengingat Jam Makan',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1C4E68),
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+
+                // Ikon Alarm Minimalis & Profesional di Kanan Atas Header
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: () => showScheduledAlarmsDialog(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFEBE3D0),
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.alarm_rounded,
+                        color: Color(0xFF1C4E68),
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
 
                     const SizedBox(height: 28),
 
@@ -186,7 +222,7 @@ class _PilihKondisiScreenState extends State<PilihKondisiScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 18),
 
                     // ── Card 1: Baik-baik Saja (MealCondition.sehat) ───────
                     _buildAestheticCard(
@@ -200,11 +236,6 @@ class _PilihKondisiScreenState extends State<PilihKondisiScreen> {
                       iconColor: const Color(0xFF059669),
                       description:
                           'Kondisi lambung prima. Jadwal makan teratur 3 kali sehari dengan rentang waktu yang nyaman dan fleksibel.',
-                      tags: const [
-                        '🥗 3x Jam Makan',
-                        '⏰ Rentang Fleksibel',
-                        '🗓️ 1 - 30 Hari',
-                      ],
                       buttonLabel: 'Atur Jadwal Sehat',
                       buttonGradient: const [
                         Color(0xFF276F8F),
@@ -212,7 +243,7 @@ class _PilihKondisiScreenState extends State<PilihKondisiScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 16),
 
                     // ── Card 2: Sakit (MealCondition.sakit) ───────────────
                     _buildAestheticCard(
@@ -226,34 +257,17 @@ class _PilihKondisiScreenState extends State<PilihKondisiScreen> {
                       iconColor: const Color(0xFFE11D48),
                       description:
                           'Lambung sedang sensitif atau kambuh. Jadwal makan dipandu ketat per jam dilengkapi pengingat waktu tidur.',
-                      tags: const [
-                        '🥣 Waktu Makan Ketat',
-                        '🌙 Atur Jam Tidur',
-                        '🗓️ Pemulihan 7 Hari',
-                      ],
                       buttonLabel: 'Atur Jadwal Pemulihan',
                       buttonGradient: const [
                         Color(0xFFE5983A),
                         Color(0xFFB45309),
                       ],
                     ),
-
-                    // ── Diagnostik kDebugMode: Tombol "Alarm terjadwal" ───
-                    if (kDebugMode) ...[
-                      const SizedBox(height: 24),
-                      const Center(
-                        child: AlarmDebugButton(),
-                      ),
-                    ],
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+            );
+          }
 
   Widget _buildAestheticCard({
     required MealCondition condition,
@@ -265,7 +279,6 @@ class _PilihKondisiScreenState extends State<PilihKondisiScreen> {
     required Color iconBgColor,
     required Color iconColor,
     required String description,
-    required List<String> tags,
     required String buttonLabel,
     required List<Color> buttonGradient,
   }) {
@@ -279,7 +292,7 @@ class _PilihKondisiScreenState extends State<PilihKondisiScreen> {
       },
       onTapCancel: () => setState(() => _pressedCondition = null),
       child: AnimatedScale(
-        scale: isPressed ? 0.975 : 1.0,
+        scale: isPressed ? 0.98 : 1.0,
         duration: const Duration(milliseconds: 140),
         curve: Curves.easeOutCubic,
         child: Container(
@@ -287,18 +300,18 @@ class _PilihKondisiScreenState extends State<PilihKondisiScreen> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: const Color(0xFFEBE3D0),
-              width: 1.3,
+              width: 1.2,
             ),
             boxShadow: [
               BoxShadow(
                 color: isPressed
-                    ? Colors.black.withValues(alpha: 0.08)
-                    : Colors.black.withValues(alpha: 0.04),
-                blurRadius: isPressed ? 8 : 14,
-                offset: const Offset(0, 4),
+                    ? Colors.black.withValues(alpha: 0.07)
+                    : Colors.black.withValues(alpha: 0.035),
+                blurRadius: isPressed ? 8 : 12,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -310,8 +323,8 @@ class _PilihKondisiScreenState extends State<PilihKondisiScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    width: 46,
-                    height: 46,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       color: iconBgColor,
                       shape: BoxShape.circle,
@@ -327,13 +340,13 @@ class _PilihKondisiScreenState extends State<PilihKondisiScreen> {
                       child: Icon(
                         icon,
                         color: iconColor,
-                        size: 24,
+                        size: 23,
                       ),
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
+                        horizontal: 10, vertical: 4.5),
                     decoration: BoxDecoration(
                       color: badgeBgColor,
                       borderRadius: BorderRadius.circular(12),
@@ -356,7 +369,7 @@ class _PilihKondisiScreenState extends State<PilihKondisiScreen> {
               Text(
                 title,
                 style: GoogleFonts.poppins(
-                  fontSize: 18,
+                  fontSize: 17,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF1C4E68),
                   letterSpacing: 0.2,
@@ -374,36 +387,6 @@ class _PilihKondisiScreenState extends State<PilihKondisiScreen> {
                   color: const Color(0xFF7C8E97),
                   height: 1.45,
                 ),
-              ),
-
-              const SizedBox(height: 14),
-
-              // Highlight Feature Tags (Pills)
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: tags.map((tag) {
-                  return Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF7F4EB),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: const Color(0xFFEBE3D0),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      tag,
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1C4E68),
-                      ),
-                    ),
-                  );
-                }).toList(),
               ),
 
               const SizedBox(height: 18),

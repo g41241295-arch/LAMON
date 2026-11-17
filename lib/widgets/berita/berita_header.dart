@@ -58,12 +58,12 @@ class BeritaHeader extends StatelessWidget {
 
             // ── Pill judul (tengah) ────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: const Color(0xFFFFF7D6),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: const Color(0xFFEBE3D0),
+                  color: const Color(0xFFE8D7A5),
                   width: 1.2,
                 ),
                 boxShadow: [
@@ -78,8 +78,8 @@ class BeritaHeader extends StatelessWidget {
                 'Berita Kesehatan',
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primaryText,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1C4E68),
                   letterSpacing: 0.2,
                 ),
               ),

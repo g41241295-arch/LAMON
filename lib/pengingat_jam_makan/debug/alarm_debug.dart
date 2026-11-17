@@ -125,162 +125,411 @@ class _ScheduledAlarmsDialogState extends State<_ScheduledAlarmsDialog> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: const Color(0xFFFEFDF8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.alarm_on, color: Color(0xFF276F8F), size: 24),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Alarm Terjadwal (${_alarms.length})',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1E3A8A),
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.refresh, size: 20),
-                color: const Color(0xFF276F8F),
-                onPressed: _loading ? null : _loadAlarms,
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              const Icon(Icons.public, size: 14, color: Color(0xFF64748B)),
-              const SizedBox(width: 4),
-              Text(
-                'Zona Waktu: ${tz.local.name}',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF64748B),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      content: SizedBox(
-        width: double.maxFinite,
-        height: 380,
-        child: _loading
-            ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFF276F8F)),
-              )
-            : _alarms.isEmpty
-                ? Center(
-                    child: Text(
-                      'Tidak ada alarm terjadwal di sistem.',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: const Color(0xFF64748B),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  )
-                : ListView.separated(
-                    itemCount: _alarms.length,
-                    separatorBuilder: (context, index) =>
-                        const Divider(height: 12),
-                    itemBuilder: (context, index) {
-                      final item = _alarms[index];
-                      final timeStr = item.scheduledTime != null
-                          ? '${item.scheduledTime!.year}-${item.scheduledTime!.month.toString().padLeft(2, '0')}-${item.scheduledTime!.day.toString().padLeft(2, '0')} ${item.scheduledTime!.hour.toString().padLeft(2, '0')}:${item.scheduledTime!.minute.toString().padLeft(2, '0')}'
-                          : item.payload;
+  static const List<String> _monthNames = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
 
-                      final isExpiredNotif =
-                          item.payload.contains('type=plan_expired');
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  item.title,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: isExpiredNotif
-                                        ? const Color(0xFFC05621)
-                                        : const Color(0xFF1E3A8A),
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: isExpiredNotif
-                                      ? const Color(0xFFFEEBC8)
-                                      : const Color(0xFFDCEBF5),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'ID: ${item.id}',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: isExpiredNotif
-                                        ? const Color(0xFFC05621)
-                                        : const Color(0xFF276F8F),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.access_time,
-                                size: 13,
-                                color: Color(0xFF64748B),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                timeStr.isNotEmpty
-                                    ? timeStr
-                                    : '(tanpa payload waktu)',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFF475569),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(
-            'Tutup',
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF276F8F),
-            ),
-          ),
-        ),
-      ],
+  _AlarmStyle _getAlarmStyle(String title, bool isExpired) {
+    if (isExpired || title.toLowerCase().contains('habis')) {
+      return const _AlarmStyle(
+        icon: Icons.event_available_rounded,
+        iconColor: Color(0xFFD97706),
+        iconBg: Color(0xFFFEF3C7),
+      );
+    }
+    final lower = title.toLowerCase();
+    if (lower.contains('sarapan')) {
+      return const _AlarmStyle(
+        icon: Icons.wb_sunny_rounded,
+        iconColor: Color(0xFFEA580C),
+        iconBg: Color(0xFFFFF7ED),
+      );
+    } else if (lower.contains('siang')) {
+      return const _AlarmStyle(
+        icon: Icons.restaurant_rounded,
+        iconColor: Color(0xFF059669),
+        iconBg: Color(0xFFECFDF5),
+      );
+    } else if (lower.contains('malam')) {
+      return const _AlarmStyle(
+        icon: Icons.nights_stay_rounded,
+        iconColor: Color(0xFF2563EB),
+        iconBg: Color(0xFFEFF6FF),
+      );
+    } else if (lower.contains('tidur')) {
+      return const _AlarmStyle(
+        icon: Icons.bedtime_rounded,
+        iconColor: Color(0xFF7C3AED),
+        iconBg: Color(0xFFF5F3FF),
+      );
+    }
+    return const _AlarmStyle(
+      icon: Icons.alarm_rounded,
+      iconColor: Color(0xFF276F8F),
+      iconBg: Color(0xFFE8F1F5),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: const Color(0xFFFCFBF7),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(
+          color: Color(0xFFEBE3D0),
+          width: 1.2,
+        ),
+      ),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header Bar ───────────────────────────────────────────────
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF276F8F).withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF276F8F).withValues(alpha: 0.22),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.alarm_on_rounded,
+                      color: Color(0xFF276F8F),
+                      size: 22,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'Alarm Terjadwal',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16.5,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF1C4E68),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF7D6),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: const Color(0xFFE8D7A5),
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              '${_alarms.length}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF1C4E68),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.public_rounded,
+                            size: 12,
+                            color: Color(0xFF7C8E97),
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'Zona Waktu: ${tz.local.name}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF7C8E97),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Muat ulang',
+                  icon: const Icon(Icons.refresh_rounded, size: 22),
+                  color: const Color(0xFF276F8F),
+                  onPressed: _loading ? null : _loadAlarms,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // ── Daftar Alarm Terjadwal ───────────────────────────────────
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.45,
+              ),
+              child: _loading
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 36),
+                        child: CircularProgressIndicator(color: Color(0xFF276F8F)),
+                      ),
+                    )
+                  : _alarms.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 36),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.notifications_off_outlined,
+                                  size: 40,
+                                  color: const Color(0xFF7C8E97).withValues(alpha: 0.6),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Belum ada alarm terjadwal di sistem.',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF7C8E97),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: _alarms.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final item = _alarms[index];
+                            final isExpiredNotif =
+                                item.payload.contains('type=plan_expired');
+                            final style = _getAlarmStyle(item.title, isExpiredNotif);
+
+                            final timeStr = item.scheduledTime != null
+                                ? '${item.scheduledTime!.hour.toString().padLeft(2, '0')}.${item.scheduledTime!.minute.toString().padLeft(2, '0')} WIB'
+                                : '--.-- WIB';
+
+                            final dateStr = item.scheduledTime != null
+                                ? '${item.scheduledTime!.day} ${_monthNames[item.scheduledTime!.month - 1]} ${item.scheduledTime!.year}'
+                                : (item.payload.isNotEmpty ? item.payload : 'Terjadwal');
+
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: const Color(0xFFEBE3D0),
+                                  width: 1.1,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.03),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  // Ikon Kategori
+                                  Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: BoxDecoration(
+                                      color: style.iconBg,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: style.iconColor
+                                            .withValues(alpha: 0.25),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        style.icon,
+                                        size: 19,
+                                        color: style.iconColor,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+
+                                  // Judul Waktu Makan & Tanggal (Narasi lama dihapus & digantikan tanggal)
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          item.title,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF1C4E68),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(
+                                              Icons.calendar_today_rounded,
+                                              size: 11,
+                                              color: Color(0xFF7C8E97),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Flexible(
+                                              child: Text(
+                                                dateStr,
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 11.5,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: const Color(0xFF7C8E97),
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+
+                                  // Bagian Jam di Sisi Kanan (Kotak Bening / Tanpa Warna dengan Border Halus)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 7),
+                                    decoration: BoxDecoration(
+                                      color: Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: const Color(0xFF276F8F)
+                                            .withValues(alpha: 0.28),
+                                        width: 1.1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.access_time_rounded,
+                                          size: 13,
+                                          color: Color(0xFF276F8F),
+                                        ),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          timeStr,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF1C4E68),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ── Tombol Tutup Modern ──────────────────────────────────────
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: double.infinity,
+                height: 46,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF276F8F),
+                      Color(0xFF1C4E68),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF276F8F).withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    'Tutup',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AlarmStyle {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+
+  const _AlarmStyle({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+  });
 }
 
 class _AlarmItemInfo {

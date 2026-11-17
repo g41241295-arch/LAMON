@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/gastropedia_item_model.dart';
 
-/// Widget item kategori bergaya kartu kotak rounded.
-/// Berisi gambar kategori di bagian atas (BoxFit.cover, rounded top corners),
-/// serta label kategori tebal dan ikon chevron kecil di bagian bawah.
+/// Widget item kategori bergaya kartu modern dan elegan.
+/// Memadukan foto kategori bernuansa hangat, label kategori tebal,
+/// sub-label tematik, dan ikon panah berlatar lingkaran lembut.
 class CategoryItem extends StatefulWidget {
   final GastropediaCategory category;
   final VoidCallback onTap;
@@ -53,6 +53,17 @@ class _CategoryItemState extends State<CategoryItem>
 
   void _onTapCancel() => _controller.reverse();
 
+  String _getCategorySubtitle(GastropediaCategory cat) {
+    switch (cat) {
+      case GastropediaCategory.makanan:
+        return 'Lauk Sehat';
+      case GastropediaCategory.buah:
+        return 'Segar & Alami';
+      case GastropediaCategory.sayuran:
+        return 'Serat Halus';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Semantics(
@@ -68,15 +79,15 @@ class _CategoryItemState extends State<CategoryItem>
               Transform.scale(scale: _scaleAnim.value, child: child),
           child: Container(
             decoration: BoxDecoration(
-              color: AppColors.gastropediaCardBg,
-              borderRadius: BorderRadius.circular(16),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 color: AppColors.gastropediaCardBorder,
                 width: 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: const Color(0xFF1C4E68).withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 3),
                 ),
@@ -92,50 +103,100 @@ class _CategoryItemState extends State<CategoryItem>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ─── Foto Kategori Mengisi Bagian Atas ───
+                // ─── Foto Kategori dengan Gradient Overlay ───
                 SizedBox(
-                  height: 72,
-                  child: Image.asset(
-                    widget.category.thumbnailAsset,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    errorBuilder: (_, _, _) => Container(
-                      color: const Color(0xFF639BC6),
-                      child: const Icon(
-                        Icons.restaurant_rounded,
-                        color: Colors.white,
-                        size: 30,
+                  height: 76,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(
+                        widget.category.thumbnailAsset,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          color: const Color(0xFFE2ECF2),
+                          child: const Icon(
+                            Icons.restaurant_rounded,
+                            color: Color(0xFF276F8F),
+                            size: 28,
+                          ),
+                        ),
                       ),
-                    ),
+                      // Soft gradient di bagian bawah gambar agar kontras
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.15),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
-                // ─── Baris Bawah: Label Kategori + Ikon Chevron ───
+                // ─── Baris Bawah: Label Kategori + Subtitle + Chevron Lingkaran ───
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 9,
+                    horizontal: 10,
+                    vertical: 8,
                   ),
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          widget.category.label,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF1E5D7D),
-                            letterSpacing: -0.2,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              widget.category.label,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF1C4E68),
+                                letterSpacing: -0.2,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              _getCategorySubtitle(widget.category),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF6B8797),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 2),
-                      const Icon(
-                        Icons.chevron_right_rounded,
-                        size: 16,
-                        color: Color(0xFF1E5D7D),
+                      const SizedBox(width: 4),
+                      Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF7F4EB),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFEBE3D0),
+                            width: 1,
+                          ),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 10,
+                            color: Color(0xFF276F8F),
+                          ),
+                        ),
                       ),
                     ],
                   ),
