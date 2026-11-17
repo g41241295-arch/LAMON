@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../models/food_entry_model.dart';
 import '../../routes/app_routes.dart';
@@ -92,7 +93,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
   void initState() {
     super.initState();
     _openedAt = DateTime.now();
-        _activeSession = MealSessionTab.detectCurrentSession();
+    _activeSession = MealSessionTab.detectCurrentSession();
     _loadSubmittedSessions();
   }
 
@@ -247,13 +248,13 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
               const SizedBox(width: 10),
               Text(
                 'Data ${_activeSession.label} berhasil disimpan!',
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
               ),
             ],
           ),
           backgroundColor: AppColors.successGreen,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -281,11 +282,11 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
         SnackBar(
           content: Text(
             '$e',
-            style: const TextStyle(fontWeight: FontWeight.w600),
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
           ),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           duration: const Duration(seconds: 5),
         ),
       );
@@ -310,6 +311,10 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: const Color(0xFFEBE3D0),
+                width: 1.2,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.08),
@@ -326,77 +331,93 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: const Color(0xFFEBE3D0),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
                 const Icon(
                   Icons.auto_awesome_rounded,
                   size: 40,
-                  color: AppColors.primary,
+                  color: Color(0xFF276F8F),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Ringkasan hari ini sudah tersedia!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primaryText,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1C4E68),
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Kamu sudah melengkapi Sarapan, Makan Siang, dan Makan Malam hari ini. Ringkasan nutrisimu sudah bisa dilihat.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 13,
-                    color: AppColors.brownSubtext,
+                    color: const Color(0xFF7C8E97),
                     height: 1.45,
                   ),
                 ),
                 const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(ctx, 'ringkasan'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(50),
+                GestureDetector(
+                  onTap: () => Navigator.pop(ctx, 'ringkasan'),
+                  child: Container(
+                    width: double.infinity,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xFF276F8F),
+                          Color(0xFF1C4E68),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      elevation: 2,
-                      shadowColor: AppColors.primary.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF276F8F).withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
-                    child: const Text(
-                      'Lihat Ringkasan',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                    child: Center(
+                      child: Text(
+                        'Lihat Ringkasan',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(ctx, 'nanti'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primaryText,
-                      side: BorderSide(color: Colors.grey.shade300),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(50),
+                GestureDetector(
+                  onTap: () => Navigator.pop(ctx, 'nanti'),
+                  child: Container(
+                    width: double.infinity,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: const Color(0xFFEBE3D0),
+                        width: 1.2,
                       ),
                     ),
-                    child: const Text(
-                      'Nanti',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                    child: Center(
+                      child: Text(
+                        'Nanti Saja',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF1C4E68),
+                        ),
                       ),
                     ),
                   ),
@@ -416,7 +437,6 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
       Navigator.pop(context); // kembali ke halaman sebelumnya
     }
   }
-
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   String _formatDate(DateTime dt) {
@@ -468,19 +488,17 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
   Widget _buildHeader() {
     final isMalam = _activeSession == MealSession.makanMalam;
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Baris: Back + Judul
+          // Baris: Tombol Back + Pill Judul "Catat Makanan"
           Stack(
             alignment: Alignment.center,
             children: [
               Align(
                 alignment: Alignment.centerLeft,
-                child: InkWell(
+                child: GestureDetector(
                   onTap: () => Navigator.pop(context),
-                  borderRadius: BorderRadius.circular(24),
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -500,19 +518,19 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                     ),
                     child: const Icon(
                       Icons.arrow_back_rounded,
-                      color: AppColors.primaryText,
+                      color: Color(0xFF1C4E68),
                       size: 20,
                     ),
                   ),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: const Color(0xFFFFF7D6),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: const Color(0xFFEBE3D0),
+                    color: const Color(0xFFE8D7A5),
                     width: 1.2,
                   ),
                   boxShadow: [
@@ -523,12 +541,12 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                     ),
                   ],
                 ),
-                child: const Text(
+                child: Text(
                   'Catat Makanan',
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primaryText,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1C4E68),
                     letterSpacing: 0.2,
                   ),
                 ),
@@ -536,45 +554,63 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
             ],
           ),
 
-          const SizedBox(height: 4),
+          const SizedBox(height: 10),
 
-          // Tanggal (+ jam jika Makan Malam)
-          Center(
-            child: Text(
-              isMalam
-                  ? '${_formatDate(_openedAt)}, ${_formatTime(_openedAt)}'
-                  : _formatDate(_openedAt),
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.neutralGray,
+          // Badge Tanggal (+ jam jika Makan Malam)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFFEBE3D0),
+                width: 1.1,
               ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.calendar_today_rounded,
+                  size: 13,
+                  color: Color(0xFF276F8F),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  isMalam
+                      ? '${_formatDate(_openedAt)}, ${_formatTime(_openedAt)} WIB'
+                      : _formatDate(_openedAt),
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1C4E68),
+                  ),
+                ),
+              ],
             ),
           ),
 
           const SizedBox(height: 12),
 
-          // Segmented Control
+          // Segmented Control 3 Waktu Makan (Sarapan, Makan Siang, Makan Malam)
           MealSessionTab(
             activeSession: _activeSession,
             submittedMap: _submittedMap,
             onSessionChanged: (session) {
               setState(() {
                 _activeSession = session;
-                // Perbarui waktu jika Malam dipilih
-                    if (session == MealSession.makanMalam) {
+                if (session == MealSession.makanMalam) {
                   _openedAt = DateTime.now();
                 }
               });
             },
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
         ],
       ),
     );
   }
-
 
   // ── Form ──────────────────────────────────────────────────────────────────
   Widget _buildForm() {
@@ -584,21 +620,22 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
 
     return SingleChildScrollView(
       controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Banner: Sesi Sudah Diisi ─────────────────────────────────────
-          if (isReadOnly) ...[  
+          if (isReadOnly) ...[
             Container(
               width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 16),
+              margin: const EdgeInsets.only(bottom: 14),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppColors.successGreen.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: AppColors.successGreen.withValues(alpha: 0.35),
+                  width: 1.2,
                 ),
               ),
               child: Row(
@@ -606,7 +643,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   const Icon(
                     Icons.check_circle_rounded,
                     color: AppColors.successGreen,
-                    size: 28,
+                    size: 26,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -615,10 +652,10 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                       children: [
                         Text(
                           'Data ${_activeSession.label} Sudah Tersimpan',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primaryText,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1C4E68),
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -629,9 +666,10 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                                 ? 'Diisi ${_formatTime(entry.waktuPengisian)} WIB · ${_formatDate(entry.waktuPengisian)}'
                                 : 'Entri sesi ini sudah tercatat hari ini.';
                           }(),
-                          style: const TextStyle(
+                          style: GoogleFonts.poppins(
                             fontSize: 12,
-                            color: AppColors.neutralGray,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF7C8E97),
                           ),
                         ),
                       ],
@@ -641,9 +679,9 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
               ),
             ),
           ],
-          // ── Pilihan Kategori: Jenis Makanan ──────────────────────────────
+
+          // ── Kategori Makanan: Jenis Makanan ──────────────────────────────
           SectionCard(
-            padding: const EdgeInsets.all(18),
             child: ChipSelector(
               label: 'Makanan Anda termasuk yang mana?',
               options: const ['Junk Food', 'Homemade'],
@@ -654,11 +692,10 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   : (v) => setState(() => s.jenisMakanan = v),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-          // ── Pilihan Kategori: Sumber Karbohidrat ─────────────────────────
+          // ── Kategori Makanan: Sumber Karbohidrat ─────────────────────────
           SectionCard(
-            padding: const EdgeInsets.all(18),
             child: ChipSelector(
               label: 'Sumber karbohidrat mana yang Anda makan?',
               options: const ['Nasi putih', 'Roti'],
@@ -669,11 +706,10 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   : (v) => setState(() => s.sumberKarbohidrat = v),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-          // ── Pilihan Kategori: Protein ─────────────────────────────────────
+          // ── Kategori Makanan: Protein ─────────────────────────────────────
           SectionCard(
-            padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -703,11 +739,10 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-          // ── Pilihan Kategori: Sayuran ─────────────────────────────────────
+          // ── Kategori Makanan: Sayuran ─────────────────────────────────────
           SectionCard(
-            padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -737,28 +772,78 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
-          // ── Instruksi Slider ─────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              'Pilihlah, semakin ke kiri semakin rendah dan semakin ke kanan semakin tinggi.',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
-                height: 1.4,
+          // ── Petunjuk Slider Karakteristik ────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF276F8F).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFF276F8F).withValues(alpha: 0.18),
+                width: 1.2,
               ),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  color: Color(0xFF276F8F),
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Pilihlah, semakin ke kiri semakin rendah dan semakin ke kanan semakin tinggi.',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1C4E68),
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
 
-          // ── Slider Rasa ──────────────────────────────────────────────────
+          // ── Slider Karakteristik Rasa Makanan ─────────────────────────────
           SectionCard(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF276F8F).withValues(alpha: 0.09),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.restaurant_menu_rounded,
+                        color: Color(0xFF276F8F),
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Karakteristik Rasa Makanan',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1C4E68),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                const Divider(height: 1, color: Color(0xFFEBE3D0)),
+                const SizedBox(height: 14),
+
                 DiscreteSlider(
                   label: 'Apakah makanan yang Anda makan pedas?',
                   iconEmoji: '🌶️',
@@ -772,9 +857,9 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   value: s.levelPedas,
                   onChanged: isReadOnly ? null : (v) => setState(() => s.levelPedas = v),
                 ),
-                const SizedBox(height: 16),
-                const Divider(height: 1, color: AppColors.lightGray),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
+                const Divider(height: 1, color: Color(0xFFEBE3D0)),
+                const SizedBox(height: 14),
 
                 DiscreteSlider(
                   label: 'Apakah makanan yang Anda makan asin?',
@@ -789,13 +874,18 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   value: s.levelAsin,
                   onChanged: isReadOnly ? null : (v) => setState(() => s.levelAsin = v),
                 ),
-                const SizedBox(height: 16),
-                const Divider(height: 1, color: AppColors.lightGray),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
+                const Divider(height: 1, color: Color(0xFFEBE3D0)),
+                const SizedBox(height: 14),
 
                 DiscreteSlider(
                   label: 'Apakah makanan yang Anda makan asam?',
-                  customIcon: Image.asset('assets/images/asam.png', width: 22, height: 22, errorBuilder: (c,e,s) => const Text('🍋', style: TextStyle(fontSize: 22))),
+                  customIcon: Image.asset(
+                    'assets/images/asam.png',
+                    width: 20,
+                    height: 20,
+                    errorBuilder: (c, e, s) => const Text('🍋', style: TextStyle(fontSize: 18)),
+                  ),
                   stepLabels: const [
                     'Tidak asam',
                     'Sedikit asam',
@@ -806,13 +896,18 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   value: s.levelAsam,
                   onChanged: isReadOnly ? null : (v) => setState(() => s.levelAsam = v),
                 ),
-                const SizedBox(height: 16),
-                const Divider(height: 1, color: AppColors.lightGray),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
+                const Divider(height: 1, color: Color(0xFFEBE3D0)),
+                const SizedBox(height: 14),
 
                 DiscreteSlider(
                   label: 'Apakah makanan yang Anda makan manis?',
-                  customIcon: Image.asset('assets/images/manis.png', width: 22, height: 22, errorBuilder: (c,e,s) => const Text('🍯', style: TextStyle(fontSize: 22))),
+                  customIcon: Image.asset(
+                    'assets/images/manis.png',
+                    width: 20,
+                    height: 20,
+                    errorBuilder: (c, e, s) => const Text('🍯', style: TextStyle(fontSize: 18)),
+                  ),
                   stepLabels: const [
                     'Tidak manis',
                     'Sedikit manis',
@@ -823,13 +918,18 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   value: s.levelManis,
                   onChanged: isReadOnly ? null : (v) => setState(() => s.levelManis = v),
                 ),
-                const SizedBox(height: 16),
-                const Divider(height: 1, color: AppColors.lightGray),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
+                const Divider(height: 1, color: Color(0xFFEBE3D0)),
+                const SizedBox(height: 14),
 
                 DiscreteSlider(
                   label: 'Apakah makanan yang Anda makan berlemak?',
-                  customIcon: Image.asset('assets/images/berlemak.png', width: 22, height: 22, errorBuilder: (c,e,s) => const Text('🥩', style: TextStyle(fontSize: 22))),
+                  customIcon: Image.asset(
+                    'assets/images/berlemak.png',
+                    width: 20,
+                    height: 20,
+                    errorBuilder: (c, e, s) => const Text('🥩', style: TextStyle(fontSize: 18)),
+                  ),
                   stepLabels: const [
                     'Tidak berlemak',
                     'Sedikit berlemak',
@@ -843,50 +943,129 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 14),
 
-          const SizedBox(height: 12),
-
-          // ── Toggle Ya/Tidak ───────────────────────────────────────────────
+          // ── Pertanyaan Kebiasaan Setelah Makan (Iya/Tidak) ─────────────────
           SectionCard(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF276F8F).withValues(alpha: 0.09),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.access_time_rounded,
+                        color: Color(0xFF276F8F),
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Kebiasaan Setelah Makan',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1C4E68),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                const Divider(height: 1, color: Color(0xFFEBE3D0)),
+                const SizedBox(height: 14),
+
                 ToggleYesNo(
                   label: 'Apakah Anda berbaring dalam waktu 2–3 jam setelah makan?',
                   value: s.berbaringSetelahMakan,
                   hasError: s.errBerbaring,
-                  onChanged: isReadOnly ? null : (v) =>
-                      setState(() => s.berbaringSetelahMakan = v),
+                  onChanged: isReadOnly
+                      ? null
+                      : (v) => setState(() => s.berbaringSetelahMakan = v),
                 ),
-                const SizedBox(height: 16),
-                const Divider(height: 1, color: AppColors.lightGray),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
+                const Divider(height: 1, color: Color(0xFFEBE3D0)),
+                const SizedBox(height: 14),
 
                 ToggleYesNo(
                   label: 'Apakah Anda mengonsumsi minuman yang bersoda?',
                   value: s.konsumsiSoda,
                   hasError: s.errSoda,
-                  onChanged: isReadOnly ? null : (v) => setState(() => s.konsumsiSoda = v),
+                  onChanged: isReadOnly
+                      ? null
+                      : (v) => setState(() => s.konsumsiSoda = v),
                 ),
-                const SizedBox(height: 16),
-                const Divider(height: 1, color: AppColors.lightGray),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
+                const Divider(height: 1, color: Color(0xFFEBE3D0)),
+                const SizedBox(height: 14),
 
                 ToggleYesNo(
                   label: 'Apakah Anda mengonsumsi kopi?',
                   value: s.konsumsiKopi,
                   hasError: s.errKopi,
-                  onChanged: isReadOnly ? null : (v) => setState(() => s.konsumsiKopi = v),
+                  onChanged: isReadOnly
+                      ? null
+                      : (v) => setState(() => s.konsumsiKopi = v),
                 ),
               ],
             ),
           ),
 
-          // ── Conditional: Slider Makan Malam ──────────────────────────────
+          // ── KHUSUS MAKAN MALAM: Beban Pikiran & Aktivitas ─────────────────
           if (isMalam) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             SectionCard(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF276F8F).withValues(alpha: 0.09),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.nights_stay_rounded,
+                          color: Color(0xFF276F8F),
+                          size: 16,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Evaluasi Khusus Makan Malam',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF1C4E68),
+                              ),
+                            ),
+                            Text(
+                              'Beban pikiran dan aktivitas harian sebelum istirahat',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF7C8E97),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const Divider(height: 1, color: Color(0xFFEBE3D0)),
+                  const SizedBox(height: 14),
+
                   DiscreteSlider(
                     label: 'Seberapa berat beban pikiran Anda?',
                     iconEmoji: '🧠',
@@ -898,12 +1077,14 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                       'Sangat berat',
                     ],
                     value: s.bebanPikiran,
-                    onChanged: isReadOnly ? null : (v) =>
-                        setState(() => s.bebanPikiran = v),
+                    onChanged: isReadOnly
+                        ? null
+                        : (v) => setState(() => s.bebanPikiran = v),
                   ),
-                  const SizedBox(height: 16),
-                  const Divider(height: 1, color: AppColors.lightGray),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
+                  const Divider(height: 1, color: Color(0xFFEBE3D0)),
+                  const SizedBox(height: 14),
+
                   DiscreteSlider(
                     label: 'Seberapa berat beban aktivitas Anda?',
                     iconEmoji: '🏃',
@@ -915,50 +1096,86 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                       'Sangat berat',
                     ],
                     value: s.bebanAktivitas,
-                    onChanged: isReadOnly ? null : (v) =>
-                        setState(() => s.bebanAktivitas = v),
+                    onChanged: isReadOnly
+                        ? null
+                        : (v) => setState(() => s.bebanAktivitas = v),
                   ),
                 ],
               ),
             ),
           ],
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
-          // ── Tombol Simpan ────────────────────────────────────────────────
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isSaving || isReadOnly ? null : _save,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor:
-                    AppColors.primary.withValues(alpha: 0.5),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(50),
-                ),
-                elevation: 2,
-                shadowColor: AppColors.primary.withValues(alpha: 0.3),
+          // ── Tombol Simpan Modern Berstandar Beranda ───────────────────────
+          GestureDetector(
+            onTap: _isSaving || isReadOnly ? null : _save,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: double.infinity,
+              height: 54,
+              decoration: BoxDecoration(
+                gradient: isReadOnly
+                    ? LinearGradient(
+                        colors: [
+                          const Color(0xFF7C8E97).withValues(alpha: 0.6),
+                          const Color(0xFF7C8E97).withValues(alpha: 0.4),
+                        ],
+                      )
+                    : const LinearGradient(
+                        colors: [
+                          Color(0xFF276F8F),
+                          Color(0xFF1C4E68),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: isReadOnly
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: const Color(0xFF276F8F).withValues(alpha: 0.35),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
               ),
-              child: _isSaving
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
+              child: Center(
+                child: _isSaving
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isReadOnly
+                                ? Icons.check_circle_rounded
+                                : Icons.save_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            isReadOnly
+                                ? 'Data Sudah Tersimpan'
+                                : 'Simpan Data ${_activeSession.label}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
                       ),
-                    )
-                  : const Text(
-                      'Simpan',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
+              ),
             ),
           ),
         ],

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-/// Toggle biner Iya/Tidak (single-select).
+/// Toggle biner Iya/Tidak berdesain tombol pilihan modern berorientasi tengah tanpa ikon centang.
 ///
-/// Dua tombol pill berdampingan:
-/// - Terpilih: latar biru navy, teks putih bold
-/// - Tidak terpilih: latar putih, border tipis
+/// Dua kartu pilihan berdampingan:
+/// - Terpilih: Latar teal LAMON (0xFF276F8F), teks putih bold centered.
+/// - Belum terpilih: Latar krem lembut (0xFFFAFAF7), border krem (0xFFEBE3D0), teks navy centered.
 class ToggleYesNo extends StatelessWidget {
   final String label;
 
@@ -32,13 +32,14 @@ class ToggleYesNo extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
+          style: GoogleFonts.poppins(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: hasError ? Colors.red.shade700 : AppColors.primaryText,
+            color: hasError ? Colors.red.shade700 : const Color(0xFF1C4E68),
+            height: 1.35,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
@@ -48,7 +49,7 @@ class ToggleYesNo extends StatelessWidget {
                 onTap: isReadOnly ? null : () => onChanged?.call(true),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             Expanded(
               child: _ToggleButton(
                 label: 'Tidak',
@@ -59,14 +60,21 @@ class ToggleYesNo extends StatelessWidget {
           ],
         ),
         if (hasError) ...[
-          const SizedBox(height: 6),
-          Text(
-            'Pilih salah satu jawaban',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.red.shade600,
-              fontWeight: FontWeight.w500,
-            ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.error_outline_rounded,
+                  size: 14, color: Colors.red.shade600),
+              const SizedBox(width: 5),
+              Text(
+                'Pilih salah satu jawaban',
+                style: GoogleFonts.poppins(
+                  fontSize: 11.5,
+                  color: Colors.red.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ],
       ],
@@ -89,38 +97,44 @@ class _ToggleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
         alignment: Alignment.center,
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary
-              : Colors.white.withValues(alpha: 0.65),
-          borderRadius: BorderRadius.circular(50),
+          color: isSelected ? const Color(0xFF276F8F) : const Color(0xFFFAFAF7),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
-                ? AppColors.primary
-                : Colors.white.withValues(alpha: 0.6),
-            width: 1.4,
+                ? const Color(0xFF1C4E68)
+                : const Color(0xFFEBE3D0),
+            width: isSelected ? 1.5 : 1.2,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.18),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+                    color: const Color(0xFF276F8F).withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
                 ]
-              : [],
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
         ),
         child: Text(
           label,
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected ? Colors.white : AppColors.primaryText,
+          style: GoogleFonts.poppins(
+            fontSize: 13.5,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+            color: isSelected ? Colors.white : const Color(0xFF1C4E68),
           ),
         ),
       ),

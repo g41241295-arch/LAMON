@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/food_entry_model.dart';
 
-/// Segmented control berbentuk pill dengan 3 tab sesi makan.
+/// Segmented control modern berbentuk pill dengan 3 tab sesi makan:
+/// - Sarapan (06.00 - 09.29)
+/// - Makan Siang (10.00 - 15.59)
+/// - Makan Malam (16.00 - 20.00)
 ///
-/// - Tab aktif: latar putih + shadow tipis
-/// - Tab non-aktif: transparan
-/// - Diinisialisasi otomatis dari jam perangkat, tapi dapat diklik manual
+/// Tab aktif: Kartu putih solid, border lembut, bayangan halus, teks navy bold.
+/// Tab non-aktif: Transparan, teks abu-abu lembut.
 class MealSessionTab extends StatelessWidget {
   final MealSession activeSession;
   final ValueChanged<MealSession> onSessionChanged;
@@ -58,92 +60,87 @@ class MealSessionTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(50),
+        color: const Color(0xFFF2ECE1),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(
+          color: const Color(0xFFEBE3D0),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: MealSession.values.map((session) {
           final isActive = session == activeSession;
-          final isDone = submittedMap[session] == true;
+
           return Expanded(
             child: GestureDetector(
               onTap: () => onSessionChanged(session),
+              behavior: HitTestBehavior.opaque,
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
                 padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
                 decoration: BoxDecoration(
-                  color: isActive
-                      ? Colors.white.withValues(alpha: 0.85)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(50),
+                  color: isActive ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(22),
                   border: isActive
                       ? Border.all(
-                          color: Colors.white.withValues(alpha: 0.6),
-                          width: 1,
+                          color: const Color(0xFFEBE3D0),
+                          width: 1.2,
                         )
                       : null,
                   boxShadow: isActive
                       ? [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 6,
+                            color: const Color(0xFF276F8F).withValues(alpha: 0.08),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 4,
                             offset: const Offset(0, 1),
                           ),
                         ]
                       : [],
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Flexible(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  session.label,
-                                  textAlign: TextAlign.center,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: isActive
-                                        ? FontWeight.w800
-                                        : FontWeight.w500,
-                                    color: isActive
-                                        ? AppColors.primaryText
-                                        : AppColors.neutralGray,
-                                  ),
-                                ),
-                              ),
-                              if (isDone) ...[
-                                const SizedBox(width: 3),
-                                const Icon(
-                                  Icons.check_circle_rounded,
-                                  size: 13,
-                                  color: AppColors.successGreen,
-                                ),
-                              ],
-                            ],
-                          ),
-                          Text(
-                            _getTimeRange(session),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: isActive
-                                  ? AppColors.primaryText.withValues(alpha: 0.7)
-                                  : AppColors.neutralGray.withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ],
+                    Text(
+                      session.label,
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: isActive
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        color: isActive
+                            ? const Color(0xFF1C4E68)
+                            : const Color(0xFF7C8E97),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _getTimeRange(session),
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        fontSize: 10.5,
+                        fontWeight: isActive
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                        color: isActive
+                            ? const Color(0xFF276F8F)
+                            : const Color(0xFF9CB3C2),
                       ),
                     ),
                   ],
