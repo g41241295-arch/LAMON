@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../constants/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../constants/doctor_theme.dart';
 import '../../../utils/app_date_formatter.dart';
 import '../pilih_jam_praktik_screen.dart';
 
-/// Widget Kalender Bulanan Praktik Dokter buatan sendiri tanpa dependency eksternal.
+/// Widget Kalender Bulanan Praktik Dokter bergaya formal, bersih, dan profesional.
 class DoctorCalendarCard extends StatefulWidget {
   final String doctorId;
   final Map<String, List<String>> scheduleMap;
@@ -53,17 +54,10 @@ class _DoctorCalendarCardState extends State<DoctorCalendarCard> {
     final leadingEmpty = firstDayWeekday - 1; // 0 jika Senin
 
     return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFE2F0F9),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFC7E2F2), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+      decoration: DoctorTheme.cardDecoration(
+        color: Colors.white,
+        borderColor: DoctorTheme.cardBorder,
+        borderRadius: 20,
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -74,17 +68,17 @@ class _DoctorCalendarCardState extends State<DoctorCalendarCard> {
             children: [
               Text(
                 monthTitle,
-                style: const TextStyle(
-                  fontSize: 16,
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.primaryText,
+                  color: DoctorTheme.primaryText,
                 ),
               ),
               Row(
                 children: [
                   IconButton(
                     icon: const Icon(Icons.chevron_left_rounded,
-                        color: AppColors.primaryText),
+                        color: DoctorTheme.primaryText),
                     onPressed: _previousMonth,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -93,7 +87,7 @@ class _DoctorCalendarCardState extends State<DoctorCalendarCard> {
                   const SizedBox(width: 8),
                   IconButton(
                     icon: const Icon(Icons.chevron_right_rounded,
-                        color: AppColors.primaryText),
+                        color: DoctorTheme.primaryText),
                     onPressed: _nextMonth,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -177,15 +171,15 @@ class _DoctorCalendarCardState extends State<DoctorCalendarCard> {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: isToday
-                          ? AppColors.primary
+                          ? DoctorTheme.primary
                           : (hasSchedule
-                              ? const Color(0xFF76A8D0)
-                              : Colors.transparent),
+                              ? DoctorTheme.primaryLight.withValues(alpha: 0.45)
+                              : const Color(0xFFF1F5F9)),
                       width: isToday ? 2 : 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
+                        color: Colors.black.withValues(alpha: 0.02),
                         blurRadius: 2,
                         offset: const Offset(0, 1),
                       ),
@@ -197,14 +191,14 @@ class _DoctorCalendarCardState extends State<DoctorCalendarCard> {
                       // Angka Tanggal
                       Text(
                         '$dayNumber',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 13,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           color: isPast
-                              ? AppColors.neutralGray.withValues(alpha: 0.4)
+                              ? DoctorTheme.neutralGray.withValues(alpha: 0.4)
                               : (isToday
-                                  ? AppColors.primary
-                                  : AppColors.primaryText),
+                                  ? DoctorTheme.primary
+                                  : DoctorTheme.primaryText),
                         ),
                       ),
 
@@ -222,7 +216,7 @@ class _DoctorCalendarCardState extends State<DoctorCalendarCard> {
                                 width: 4,
                                 height: 4,
                                 decoration: const BoxDecoration(
-                                  color: Color(0xFFE5983A), // Aksen oranye
+                                  color: DoctorTheme.accentOrange, // Aksen oranye tenang
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -252,10 +246,10 @@ class _DayHeader extends StatelessWidget {
       child: Center(
         child: Text(
           label,
-          style: const TextStyle(
+          style: GoogleFonts.poppins(
             fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: AppColors.summaryCardSubtext,
+            fontWeight: FontWeight.w700,
+            color: DoctorTheme.secondaryText,
           ),
         ),
       ),

@@ -203,27 +203,40 @@ class ChatBubble extends StatelessWidget {
       );
     }
 
-    // Skema warna bubble biasa
+    // Skema warna bubble biasa:
+    // Sisi dokter: bubble dokter biru tua/teal dengan teks putih, bubble pasien putih dengan border tipis.
     Color bubbleColor;
     Color textColor;
     Border? bubbleBorder;
+    final bool hasTealBackground;
 
-    if (isMe) {
-      if (currentUserRole == 'doctor') {
-        // Bubble dokter (milik sendiri): kuning lembut
-        bubbleColor = const Color(0xFFFFF7D6);
-        textColor = AppColors.primaryText;
-        bubbleBorder = Border.all(color: const Color(0xFFF0E4B0), width: 1);
+    if (currentUserRole == 'doctor') {
+      if (isMe) {
+        // Bubble dokter (milik sendiri): biru tua/teal LAMON #1F5C7A
+        bubbleColor = const Color(0xFF1F5C7A);
+        textColor = Colors.white;
+        bubbleBorder = null;
+        hasTealBackground = true;
       } else {
+        // Bubble pasien (lawan bicara): putih dengan border tipis #EFE3D0
+        bubbleColor = Colors.white;
+        textColor = const Color(0xFF24435A);
+        bubbleBorder = Border.all(color: const Color(0xFFEFE3D0), width: 1.2);
+        hasTealBackground = false;
+      }
+    } else {
+      if (isMe) {
         // Bubble pasien (milik sendiri): teal-biru
         bubbleColor = AppColors.primary;
         textColor = Colors.white;
+        hasTealBackground = true;
+      } else {
+        // Bubble dokter (lawan bicara): biru lembut
+        bubbleColor = const Color(0xFFEDF5FA);
+        textColor = AppColors.primaryText;
+        bubbleBorder = Border.all(color: const Color(0xFFD6E8F3), width: 1);
+        hasTealBackground = false;
       }
-    } else {
-      // Bubble lawan bicara: biru lembut
-      bubbleColor = const Color(0xFFEDF5FA);
-      textColor = AppColors.primaryText;
-      bubbleBorder = Border.all(color: const Color(0xFFD6E8F3), width: 1);
     }
 
     return InkWell(
@@ -252,7 +265,8 @@ class ChatBubble extends StatelessWidget {
                 children: [
                   Container(
                     constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.72,
+                      maxWidth: MediaQuery.of(context).size.width *
+                          (currentUserRole == 'doctor' ? 0.78 : 0.72),
                     ),
                     decoration: BoxDecoration(
                       color: bubbleColor,
@@ -287,7 +301,7 @@ class ChatBubble extends StatelessWidget {
 
                           // ── Konten Lampiran Dokumen PDF ──
                           if (message.isFile && message.hasAttachment)
-                            _buildFileAttachment(context, isMe),
+                            _buildFileAttachment(context, hasTealBackground),
 
                           // ── Teks Pesan (atau Caption) ──
                           if (message.text.isNotEmpty)
@@ -309,42 +323,77 @@ class ChatBubble extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        statusText,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.neutralGray,
-                        ),
-                      ),
-                      if (ConsultationConstants.kShowAutoReplyLabel &&
-                          message.isAutoReply) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 1.5),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                              width: 0.5,
+                  if (currentUserRole == 'doctor')
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isMe) ...[
+                          Text(
+                            timeStr,
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              color: Color(0xFFCFE3EE),
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                          child: const Text(
-                            'Balasan otomatis',
-                            style: TextStyle(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
+                          const SizedBox(width: 4),
+                          Text(
+                            isRead ? '✓✓' : '✓',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFCFE3EE),
                             ),
                           ),
-                        ),
+                        ] else ...[
+                          Text(
+                            timeStr,
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              color: Color(0xFF6B8190),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
+                    )
+                  else
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          statusText,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.neutralGray,
+                          ),
+                        ),
+                        if (ConsultationConstants.kShowAutoReplyLabel &&
+                            message.isAutoReply) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                                width: 0.5,
+                              ),
+                            ),
+                            child: const Text(
+                              'Balasan otomatis',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -386,14 +435,16 @@ class ChatBubble extends StatelessWidget {
     return CircleAvatar(
       radius: 16,
       backgroundColor: isMe && currentUserRole == 'doctor'
-          ? const Color(0xFFFFF0B3)
+          ? const Color(0xFF1F5C7A).withValues(alpha: 0.12)
           : AppColors.primaryLight.withValues(alpha: 0.25),
       child: Icon(
         currentUserRole == 'doctor'
             ? Icons.medical_services_rounded
             : Icons.person_rounded,
         size: 16,
-        color: AppColors.primary,
+        color: currentUserRole == 'doctor'
+            ? const Color(0xFF1F5C7A)
+            : AppColors.primary,
       ),
     );
   }
@@ -461,7 +512,7 @@ class ChatBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildFileAttachment(BuildContext context, bool isMe) {
+  Widget _buildFileAttachment(BuildContext context, bool hasDarkBg) {
     final fileName = message.fileName ?? 'Dokumen.pdf';
     final fileSize = _formatFileSize(message.effectiveFileSize);
 
@@ -470,12 +521,12 @@ class ChatBubble extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isMe && currentUserRole == 'patient'
+          color: hasDarkBg
               ? Colors.white.withValues(alpha: 0.15)
               : Colors.black.withValues(alpha: 0.04),
           border: Border(
             bottom: BorderSide(
-              color: isMe && currentUserRole == 'patient' ? Colors.white24 : Colors.black12,
+              color: hasDarkBg ? Colors.white24 : Colors.black12,
             ),
           ),
         ),
@@ -504,7 +555,7 @@ class ChatBubble extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: isMe && currentUserRole == 'patient'
+                      color: hasDarkBg
                           ? Colors.white
                           : AppColors.primaryText,
                     ),
@@ -516,7 +567,7 @@ class ChatBubble extends StatelessWidget {
                     fileSize,
                     style: TextStyle(
                       fontSize: 11,
-                      color: isMe && currentUserRole == 'patient'
+                      color: hasDarkBg
                           ? Colors.white70
                           : AppColors.neutralGray,
                     ),
@@ -527,7 +578,7 @@ class ChatBubble extends StatelessWidget {
             Icon(
               Icons.open_in_new_rounded,
               size: 16,
-              color: isMe && currentUserRole == 'patient'
+              color: hasDarkBg
                   ? Colors.white70
                   : AppColors.neutralGray,
             ),

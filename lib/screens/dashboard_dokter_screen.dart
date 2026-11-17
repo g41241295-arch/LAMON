@@ -2,13 +2,12 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../constants/app_colors.dart';
+import '../constants/doctor_theme.dart';
 import '../models/consultation_model.dart';
 import '../models/doctor_model.dart';
 import '../services/doctor_service.dart';
 import '../services/fcm_service.dart';
 import '../widgets/app_header_pill.dart';
-import '../widgets/app_background.dart';
 import 'dokter/doctor_home_tab.dart';
 import 'dokter/doctor_messages_tab.dart';
 import 'dokter/doctor_profile_tab.dart';
@@ -249,7 +248,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => AppBackground(
+        builder: (_) => DoctorBackground(
           child: Scaffold(
             backgroundColor: Colors.transparent,
             body: SafeArea(
@@ -274,7 +273,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     );
   }
 
-  /// Buka layar Pesan sebagai halaman terpisah dengan header pill krem.
+  /// Buka layar Pesan sebagai halaman terpisah dengan header formal LAMON.
   void _openMessagesScreen({
     bool initialBelumDibalas = false,
     bool focusSearch = false,
@@ -282,27 +281,18 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => AppBackground(
+        builder: (_) => DoctorBackground(
           child: Scaffold(
             backgroundColor: Colors.transparent,
             body: SafeArea(
               bottom: true,
-              child: Column(
-                children: [
-                  AppHeaderPill(
-                    title: 'Pesan',
-                    onBack: () => Navigator.pop(context),
-                  ),
-                  Expanded(
-                    child: DoctorMessagesTab(
-                      key: ValueKey('msg_${initialBelumDibalas}_$focusSearch'),
-                      doctorId: _doctor?.id,
-                      consultations: _consultations,
-                      initialBelumDibalas: initialBelumDibalas,
-                      focusSearch: focusSearch,
-                    ),
-                  ),
-                ],
+              child: DoctorMessagesTab(
+                key: ValueKey('msg_${initialBelumDibalas}_$focusSearch'),
+                doctorId: _doctor?.id,
+                consultations: _consultations,
+                initialBelumDibalas: initialBelumDibalas,
+                focusSearch: focusSearch,
+                onBack: () => Navigator.pop(context),
               ),
             ),
           ),
@@ -314,100 +304,98 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoadingDoctor) {
-      return const AppBackground(
+      return const DoctorBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: AppColors.primary),
-              SizedBox(height: 16),
-              Text(
-                'Memuat profil dokter...',
-                style: TextStyle(
-                  color: AppColors.primaryText,
-                  fontWeight: FontWeight.w600,
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: DoctorTheme.primary),
+                SizedBox(height: 16),
+                Text(
+                  'Memuat profil dokter...',
+                  style: TextStyle(
+                    color: DoctorTheme.primaryText,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
     }
 
     if (_errorMessage != null || _doctor == null) {
-      return AppBackground(
+      return DoctorBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-        body: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFEBEE),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Icon(
-                      Icons.no_accounts_rounded,
-                      size: 64,
-                      color: Color(0xFFD32F2F),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Perhatian',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryText,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    _errorMessage ??
-                        'Akun dokter belum terhubung ke data dokter.',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.summaryCardSubtext,
-                      height: 1.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 28),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      final uid = FirebaseAuth.instance.currentUser?.uid;
-                      if (uid != null) {
-                        await FcmService.instance.cleanUpBeforeLogout(uid);
-                      }
-                      await FirebaseAuth.instance.signOut();
-                    },
-                    icon: const Icon(Icons.logout_rounded),
-                    label: const Text('Keluar'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFD32F2F),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+          body: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: DoctorTheme.alertRedBg,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: DoctorTheme.alertRedBorder,
+                          width: 1.2,
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
+                      child: const Icon(
+                        Icons.no_accounts_rounded,
+                        size: 64,
+                        color: DoctorTheme.alertRed,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 20),
+                    Text(
+                      'Perhatian',
+                      style: DoctorTheme.headingLarge(),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      _errorMessage ??
+                          'Akun dokter belum terhubung ke data dokter.',
+                      style: DoctorTheme.body(
+                        color: DoctorTheme.secondaryText,
+                      ).copyWith(height: 1.5),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 28),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final uid = FirebaseAuth.instance.currentUser?.uid;
+                        if (uid != null) {
+                          await FcmService.instance.cleanUpBeforeLogout(uid);
+                        }
+                        await FirebaseAuth.instance.signOut();
+                      },
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text('Keluar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: DoctorTheme.alertRed,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
+      );
     }
 
     // Hitung total pesan unread untuk badge kartu Pesan di Beranda (E.2: mengecualikan completed)
@@ -420,7 +408,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
               : 0),
     );
 
-    return AppBackground(
+    return DoctorBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
