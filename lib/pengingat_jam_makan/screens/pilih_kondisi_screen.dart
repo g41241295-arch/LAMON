@@ -32,8 +32,6 @@ class _PilihKondisiScreenState extends State<PilihKondisiScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final topPadding = MediaQuery.of(context).padding.top;
-
     return AppBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,

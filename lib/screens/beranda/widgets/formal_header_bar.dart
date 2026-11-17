@@ -107,27 +107,6 @@ class FormalHeaderBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Tentukan nama pengguna yang tampil (jika email, ambil username sebelum @)
-    final displayName = () {
-      final trimmed = userName.trim();
-      if (trimmed.isNotEmpty) {
-        if (trimmed.contains('@')) {
-          return trimmed.split('@').first;
-        }
-        return trimmed;
-      }
-      try {
-        final fbUser = FirebaseAuth.instance.currentUser;
-        if (fbUser?.displayName != null && fbUser!.displayName!.trim().isNotEmpty) {
-          return fbUser.displayName!.trim();
-        }
-        if (fbUser?.email != null && fbUser!.email!.trim().isNotEmpty) {
-          return fbUser.email!.trim().split('@').first;
-        }
-      } catch (_) {}
-      return 'Pengguna';
-    }();
-
     return Row(
       children: [
         // Avatar Profil + Teks LAMON
