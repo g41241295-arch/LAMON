@@ -271,3 +271,64 @@ class DoctorBackground extends StatelessWidget {
     );
   }
 }
+
+/// Komponen header seksi formal untuk area dokter.
+/// Menampilkan kotak ikon rounded 40x40 (radius 13, background putih, border #EFE3D0)
+/// di sebelah kiri judul (17sp bold #1F5C7A), dengan aksi opsional di sebelah kanan.
+class DoctorSectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Widget? trailing;
+
+  const DoctorSectionHeader({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(
+              color: DoctorTheme.cardBorder,
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            icon,
+            size: 20,
+            color: DoctorTheme.primary,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: DoctorTheme.primaryText,
+            ),
+          ),
+        ),
+        ?trailing,
+      ],
+    );
+  }
+}

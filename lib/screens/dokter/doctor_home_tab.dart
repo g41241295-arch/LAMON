@@ -203,51 +203,46 @@ class DoctorHomeTab extends StatelessWidget {
           const SizedBox(height: 24),
 
           // ── 7. Section Pesan Pasien ──
-          _buildSectionTitle(
+          const DoctorSectionHeader(
             icon: Icons.chat_bubble_rounded,
-            label: 'Pesan Pasien',
+            title: 'Pesan Pasien',
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
           // Kartu Pesan Masuk Tunggal dengan Pratinjau Pesan Terakhir
           _buildMessagesCard(context, consultations, totalUnreadMessages),
           const SizedBox(height: 24),
 
-          // ── 8. Section Menunggu Konfirmasi (Dengan Link "Lihat semua ›") ──
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildSectionTitle(
-                icon: Icons.hourglass_top_rounded,
-                label: 'Menunggu Konfirmasi',
-              ),
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => DoctorWaitingConfirmationScreen(
-                        doctorId: doctor.id,
-                        initialConsultations: consultations,
-                      ),
+          // ── 8. Section Menunggu Konfirmasi (Dengan Kotak Ikon & Link "Lihat semua ›") ──
+          DoctorSectionHeader(
+            icon: Icons.hourglass_empty_rounded,
+            title: 'Menunggu Konfirmasi',
+            trailing: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => DoctorWaitingConfirmationScreen(
+                      doctorId: doctor.id,
+                      initialConsultations: consultations,
                     ),
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-                  child: Text(
-                    'Lihat semua ›',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: DoctorTheme.primaryLight,
-                    ),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                child: Text(
+                  'Lihat semua ›',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: DoctorTheme.primaryLight,
                   ),
                 ),
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
           if (waitingConfirmationList.isEmpty)
             _buildEmptyConfirmationCard()
@@ -468,92 +463,19 @@ class DoctorHomeTab extends StatelessWidget {
             height: 1,
             color: Colors.white.withValues(alpha: 0.18),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
           if (hasSlots)
             Column(
-              children: todaySlots.map((slotStr) {
-                final parsed = PracticeSlot.fromDynamic(slotStr);
-                final isOngoing = _isSlotOngoing(parsed, now);
-                final timeDisplay = (parsed.startTime.isNotEmpty && parsed.endTime.isNotEmpty)
-                    ? '${parsed.startTime} - ${parsed.endTime} WIB'
-                    : parsed.timeRangeDisplay;
-
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: isOngoing
-                          ? Colors.white.withValues(alpha: 0.20)
-                          : Colors.white.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isOngoing
-                            ? Colors.white.withValues(alpha: 0.40)
-                            : Colors.white.withValues(alpha: 0.14),
-                        width: isOngoing ? 1.5 : 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          parsed.icon,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          parsed.label,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                          maxLines: 1,
-                          softWrap: false,
-                        ),
-                        if (isOngoing) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF2B544),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Sekarang',
-                              style: GoogleFonts.poppins(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFF4A3200),
-                              ),
-                            ),
-                          ),
-                        ],
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            timeDisplay,
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFFE3EEF5),
-                            ),
-                            maxLines: 1,
-                            softWrap: false,
-                          ),
-                        ),
-                      ],
-                    ),
+              children: [
+                for (int i = 0; i < todaySlots.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 14),
+                  _buildPracticeSlotRow(
+                    slotStr: todaySlots[i],
+                    now: now,
                   ),
-                );
-              }).toList(),
+                ],
+              ],
             )
           else
             Padding(
@@ -569,6 +491,107 @@ class DoctorHomeTab extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+
+  // ── Baris Sesi Praktik Dokter dengan Tab "Sekarang" di Pojok Kanan Atas ──
+  Widget _buildPracticeSlotRow({
+    required String slotStr,
+    required DateTime now,
+  }) {
+    final parsed = PracticeSlot.fromDynamic(slotStr);
+    final isOngoing = _isSlotOngoing(parsed, now);
+    final timeDisplay = (parsed.startTime.isNotEmpty && parsed.endTime.isNotEmpty)
+        ? '${parsed.startTime} - ${parsed.endTime} WIB'
+        : parsed.timeRangeDisplay;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          constraints: const BoxConstraints(minHeight: 52),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: isOngoing
+                ? Colors.white.withValues(alpha: 0.20)
+                : Colors.white.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isOngoing
+                  ? Colors.white.withValues(alpha: 0.42)
+                  : Colors.white.withValues(alpha: 0.14),
+              width: isOngoing ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                parsed.icon,
+                color: Colors.white,
+                size: 18,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                parsed.label,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+                maxLines: 1,
+                softWrap: false,
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: isOngoing
+                      ? Colors.white.withValues(alpha: 0.22)
+                      : Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  timeDisplay,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFFE3EEF5),
+                  ),
+                  maxLines: 1,
+                  softWrap: false,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (isOngoing)
+          Positioned(
+            top: -11,
+            right: 14,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                color: DoctorTheme.accentGold,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Text(
+                'Sekarang',
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF4A3200),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
