@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../providers/app_state.dart';
 import 'screening_scaffold.dart';
 import 'widgets/screening_avatars.dart';
@@ -13,6 +13,7 @@ class ScreeningHistoryScreen extends StatefulWidget {
 
 class _ScreeningHistoryScreenState extends State<ScreeningHistoryScreen> {
   bool? _hasHistory;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -35,53 +36,77 @@ class _ScreeningHistoryScreenState extends State<ScreeningHistoryScreen> {
   }
 
   void _onNext() async {
-    if (_hasHistory == null) return;
-    final appState = AppState.of(context);
+    if (_hasHistory == null || _isLoading) return;
 
-    // Tampilkan loading sebelum Firestore selesai
+    setState(() {
+      _isLoading = true;
+    });
+
+    final appState = AppState.of(context);
     final saved = await appState.completeScreening();
 
     if (!mounted) return;
 
+    setState(() {
+      _isLoading = false;
+    });
+
     if (!saved) {
-      // Simpan ke Firestore gagal — beri tahu user
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Gagal menyimpan data. Periksa koneksi internet Anda dan coba lagi.',
-            style: TextStyle(fontWeight: FontWeight.w600),
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Koneksi internet bermasalah. Data tersimpan lokal & akan disinkronkan otomatis.',
+                  style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
           ),
-          backgroundColor: Color(0xFFD32F2F),
+          backgroundColor: const Color(0xFFD97706),
           behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          duration: const Duration(seconds: 4),
         ),
       );
-      // Tetap navigasi ke success page karena data sudah tersimpan secara lokal,
-      // namun user sudah diberitahu bahwa sinkronisasi cloud gagal
     }
 
-    Navigator.pushNamed(context, '/screening/success');
+    Navigator.pushReplacementNamed(context, '/screening/success');
   }
 
   @override
   Widget build(BuildContext context) {
     return ScreeningScaffold(
-      title: 'Apakah Anda punya riwayat\npenyakit lambung?',
+      currentStep: 3,
+      totalSteps: 3,
+      title: 'Apakah Anda punya riwayat penyakit lambung?',
+      buttonText: 'Selesaikan Skrining',
       isButtonEnabled: _hasHistory != null,
+      isLoading: _isLoading,
       onNext: _onNext,
       content: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
           _buildOptionCard(
-            label: 'Iya',
-            avatar: const DoctorAvatar(size: 42),
+            label: 'Ya, Memiliki Riwayat',
+            subLabel: 'Pernah didiagnosis Maag, GERD, atau sering mengeluhkan nyeri ulu hati',
+            avatarContainerColor: const Color(0xFFFEF3C7),
+            avatarBorderColor: const Color(0xFFFDE68A),
+            avatar: const DoctorAvatar(size: 48),
             isSelected: _hasHistory == true,
             onTap: () => _onSelect(true),
           ),
-          const SizedBox(height: 18),
+
+          const SizedBox(height: 16),
+
           _buildOptionCard(
-            label: 'Tidak',
-            avatar: const PersonAvatar(size: 42),
+            label: 'Tidak Ada Riwayat',
+            subLabel: 'Kondisi lambung prima, tidak pernah ada keluhan penyakit lambung sebelumnya',
+            avatarContainerColor: const Color(0xFFD1FAE5),
+            avatarBorderColor: const Color(0xFFA7F3D0),
+            avatar: const PersonAvatar(size: 48),
             isSelected: _hasHistory == false,
             onTap: () => _onSelect(false),
           ),
@@ -92,65 +117,105 @@ class _ScreeningHistoryScreenState extends State<ScreeningHistoryScreen> {
 
   Widget _buildOptionCard({
     required String label,
+    required String subLabel,
+    required Color avatarContainerColor,
+    required Color avatarBorderColor,
     required Widget avatar,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(20),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
+        duration: const Duration(milliseconds: 220),
         curve: Curves.easeOut,
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFDCEDF7) : AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(16),
+          color: isSelected ? const Color(0xFFEAF4F8) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? const Color(0xFF5B95AF) : const Color(0xFFE2E8F0),
-            width: isSelected ? 1.8 : 1.2,
+            color: isSelected ? const Color(0xFF276F8F) : const Color(0xFFEBE3D0),
+            width: isSelected ? 2.0 : 1.2,
           ),
           boxShadow: [
             BoxShadow(
               color: isSelected
                   ? const Color(0xFF276F8F).withValues(alpha: 0.12)
-                  : Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
+                  : Colors.black.withValues(alpha: 0.03),
+              blurRadius: isSelected ? 14 : 8,
               offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Row(
           children: [
-            avatar,
+            // Avatar Badge
+            Container(
+              width: 58,
+              height: 58,
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: avatarContainerColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: avatarBorderColor, width: 1.2),
+              ),
+              child: Center(child: avatar),
+            ),
+
             const SizedBox(width: 16),
+
+            // Teks Label & SubLabel
             Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                  color: isSelected ? const Color(0xFF153E54) : const Color(0xFF334155),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15.5,
+                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                      color: const Color(0xFF1C4E68),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subLabel,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF5A7184),
+                      height: 1.35,
+                    ),
+                  ),
+                ],
               ),
             ),
-            if (isSelected)
-              Container(
-                width: 24,
-                height: 24,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFF276F8F),
+
+            const SizedBox(width: 10),
+
+            // Indikator Radio / Centang
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isSelected ? const Color(0xFF276F8F) : Colors.transparent,
+                border: Border.all(
+                  color: isSelected ? const Color(0xFF276F8F) : const Color(0xFFCBD5E1),
+                  width: isSelected ? 0 : 2.0,
                 ),
-                child: const Icon(
-                  Icons.check,
-                  size: 16,
-                  color: Colors.white,
-                ),
-              )
-            else
-              const SizedBox(width: 24, height: 24),
+              ),
+              child: isSelected
+                  ? const Icon(
+                      Icons.check_rounded,
+                      size: 16,
+                      color: Colors.white,
+                    )
+                  : null,
+            ),
           ],
         ),
       ),

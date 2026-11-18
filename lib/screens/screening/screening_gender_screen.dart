@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../providers/app_state.dart';
 import 'screening_scaffold.dart';
 import 'widgets/screening_avatars.dart';
@@ -36,30 +36,39 @@ class _ScreeningGenderScreenState extends State<ScreeningGenderScreen> {
 
   void _onNext() {
     if (_selectedGender == null) return;
-    Navigator.pushNamed(context, '/screening/birthdate');
+    Navigator.pushReplacementNamed(context, '/screening/birthdate');
   }
 
   @override
   Widget build(BuildContext context) {
     return ScreeningScaffold(
+      currentStep: 1,
+      totalSteps: 3,
       title: 'Apa jenis kelamin Anda?',
       isButtonEnabled: _selectedGender != null,
       onNext: _onNext,
       content: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
           _buildOptionCard(
-            label: 'Pria',
-            avatar: const BoyAvatar(size: 42),
-            isSelected: _selectedGender == 'Pria',
-            onTap: () => _onSelect('Pria'),
+            label: 'Laki-laki',
+            subLabel: 'Profil fisiologi pria',
+            avatarContainerColor: const Color(0xFFEBF3FA),
+            avatarBorderColor: const Color(0xFFBED8ED),
+            avatar: const BoyAvatar(size: 48),
+            isSelected: _selectedGender == 'Pria' || _selectedGender == 'Laki-laki',
+            onTap: () => _onSelect('Laki-laki'),
           ),
-          const SizedBox(height: 18),
+
+          const SizedBox(height: 16),
+
           _buildOptionCard(
-            label: 'Wanita',
-            avatar: const GirlAvatar(size: 42),
-            isSelected: _selectedGender == 'Wanita',
-            onTap: () => _onSelect('Wanita'),
+            label: 'Perempuan',
+            subLabel: 'Profil fisiologi wanita',
+            avatarContainerColor: const Color(0xFFFDE8E8),
+            avatarBorderColor: const Color(0xFFF7C2C2),
+            avatar: const GirlAvatar(size: 48),
+            isSelected: _selectedGender == 'Wanita' || _selectedGender == 'Perempuan',
+            onTap: () => _onSelect('Perempuan'),
           ),
         ],
       ),
@@ -68,65 +77,102 @@ class _ScreeningGenderScreenState extends State<ScreeningGenderScreen> {
 
   Widget _buildOptionCard({
     required String label,
+    required String subLabel,
+    required Color avatarContainerColor,
+    required Color avatarBorderColor,
     required Widget avatar,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(20),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
+        duration: const Duration(milliseconds: 220),
         curve: Curves.easeOut,
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFDCEDF7) : AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(16),
+          color: isSelected ? const Color(0xFFEAF4F8) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? const Color(0xFF5B95AF) : const Color(0xFFE2E8F0),
-            width: isSelected ? 1.8 : 1.2,
+            color: isSelected ? const Color(0xFF276F8F) : const Color(0xFFEBE3D0),
+            width: isSelected ? 2.0 : 1.2,
           ),
           boxShadow: [
             BoxShadow(
               color: isSelected
                   ? const Color(0xFF276F8F).withValues(alpha: 0.12)
-                  : Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
+                  : Colors.black.withValues(alpha: 0.03),
+              blurRadius: isSelected ? 14 : 8,
               offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Row(
           children: [
-            avatar,
+            // Avatar Badge
+            Container(
+              width: 58,
+              height: 58,
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: avatarContainerColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: avatarBorderColor, width: 1.2),
+              ),
+              child: Center(child: avatar),
+            ),
+
             const SizedBox(width: 16),
+
+            // Teks Label & SubLabel
             Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                  color: isSelected ? const Color(0xFF153E54) : const Color(0xFF334155),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                      color: const Color(0xFF1C4E68),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subLabel,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF5A7184),
+                    ),
+                  ),
+                ],
               ),
             ),
-            if (isSelected)
-              Container(
-                width: 24,
-                height: 24,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFF276F8F),
+
+            // Indikator Radio / Centang
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isSelected ? const Color(0xFF276F8F) : Colors.transparent,
+                border: Border.all(
+                  color: isSelected ? const Color(0xFF276F8F) : const Color(0xFFCBD5E1),
+                  width: isSelected ? 0 : 2.0,
                 ),
-                child: const Icon(
-                  Icons.check,
-                  size: 16,
-                  color: Colors.white,
-                ),
-              )
-            else
-              const SizedBox(width: 24, height: 24),
+              ),
+              child: isSelected
+                  ? const Icon(
+                      Icons.check_rounded,
+                      size: 16,
+                      color: Colors.white,
+                    )
+                  : null,
+            ),
           ],
         ),
       ),
