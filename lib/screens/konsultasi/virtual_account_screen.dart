@@ -112,7 +112,7 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
   void _handleTimeExpired() {
     if (_hasMarkedExpired) return;
     _hasMarkedExpired = true;
-    _consultationService.markConsultationExpired(widget.consultationId);
+    _consultationService.markAsExpired(widget.consultationId);
   }
 
   String _formatDuration(Duration d) {
@@ -153,7 +153,7 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
     setState(() => _isConfirming = true);
     final nav = Navigator.of(context);
     try {
-      await _consultationService.simulatePaymentSuccess(widget.consultationId);
+      await _consultationService.markAsPaid(widget.consultationId);
       if (mounted) {
         nav.pushNamedAndRemoveUntil(
           '/konsultasi/payment-success/${widget.consultationId}',

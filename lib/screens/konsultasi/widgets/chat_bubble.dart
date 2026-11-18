@@ -649,11 +649,11 @@ class ChatBubble extends StatelessWidget {
   }
 
   void _showAttachmentDetailsSheet(
-      BuildContext context, Map<String, dynamic> data) {
-    final fileName = data['fileName'] as String? ?? 'Dokumen.pdf';
-    final mimeType = data['mimeType'] as String? ?? 'application/pdf';
-    final sizeBytes = data['sizeBytes'] as int? ?? 0;
-    final b64 = data['base64Data'] as String? ?? '';
+      BuildContext context, AttachmentData data) {
+    final fileName = data.fileName;
+    final mimeType = data.mimeType;
+    final sizeBytes = data.sizeBytes;
+    final bytes = data.bytes;
 
     showModalBottomSheet(
       context: context,
@@ -757,9 +757,8 @@ class ChatBubble extends StatelessWidget {
                     ),
                     onPressed: () async {
                       Navigator.pop(ctx);
-                      if (b64.isEmpty) return;
+                      if (bytes.isEmpty) return;
                       try {
-                        final bytes = base64Decode(b64);
                         final ext = fileName.split('.').last;
                         final savedPath = await FilePicker.platform.saveFile(
                           dialogTitle: 'Simpan $fileName',

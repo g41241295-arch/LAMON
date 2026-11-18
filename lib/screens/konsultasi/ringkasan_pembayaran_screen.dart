@@ -547,19 +547,14 @@ class _RingkasanPembayaranScreenState extends State<RingkasanPembayaranScreen> {
 /// Garis putus-putus horizontal untuk invoice
 class _DashedLine extends StatelessWidget {
   final Color color;
-  final double height;
-  final double dashWidth;
-  final double dashGap;
 
-  const _DashedLine({
-    required this.color,
-    this.height = 1,
-    this.dashWidth = 6,
-    this.dashGap = 4,
-  });
+  const _DashedLine({required this.color});
 
   @override
   Widget build(BuildContext context) {
+    const dashWidth = 6.0;
+    const dashGap = 4.0;
+    const height = 1.0;
     return LayoutBuilder(
       builder: (context, constraints) {
         final boxWidth = constraints.constrainWidth();

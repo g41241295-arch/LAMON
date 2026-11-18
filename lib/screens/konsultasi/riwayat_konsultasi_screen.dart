@@ -653,9 +653,7 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
       );
     }
 
-    final scheduledDateStr = item.effectiveScheduledDate != null
-        ? AppDateFormatter.formatDateKey(item.effectiveScheduledDate!)
-        : 'Hari ini';
+    final scheduledDateStr = AppDateFormatter.formatDateKey(item.effectiveScheduledDate);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -938,9 +936,7 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
         ? '${AppDateFormatter.formatDateTime(item.completedAt!)} WIB'
         : 'Selesai';
 
-    final scheduledDateStr = item.effectiveScheduledDate != null
-        ? AppDateFormatter.formatDateKey(item.effectiveScheduledDate!)
-        : 'Sesuai jadwal';
+    final scheduledDateStr = AppDateFormatter.formatDateKey(item.effectiveScheduledDate);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),

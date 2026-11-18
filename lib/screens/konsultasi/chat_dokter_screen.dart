@@ -946,26 +946,10 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
 
     final isWaiting = _consultation?.isWaiting ?? false;
     final isCompleted = widget.readOnly || (_consultation?.isCompleted ?? false);
-    final String statusLabel;
-    final Color statusColor;
-    if (isCompleted) {
-      statusLabel = 'Konsultasi Selesai';
-      statusColor = AppColors.neutralGray;
-    } else if (isWaiting) {
-      statusLabel = 'Menunggu Konfirmasi';
-      statusColor = AppColors.warningYellow;
-    } else {
-      statusLabel = 'Konsultasi Berlangsung';
-      statusColor = AppColors.successGreen;
-    }
-
     final schedStr = AppDateFormatter.formatScheduledDateTime(
       _consultation?.effectiveScheduledDate,
       _consultation?.scheduledTime,
     );
-    final subtitleText = schedStr.isNotEmpty
-        ? '$statusLabel • $schedStr'
-        : statusLabel;
 
     final Widget chatContent = Stack(
       fit: StackFit.expand,
