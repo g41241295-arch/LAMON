@@ -7,6 +7,23 @@ class AppColors {
   static const Color bgGradientBottom = Color(0xFFF2EEDB);
   static const Color desktopBackground = Color(0xFFECE7BE);
 
+  /// Gradasi latar halaman formal (Warm Off-White LAMON)
+  /// Dipakai konsisten di Catat Makanan, Gastropedia, dan Konsultasi Dokter
+  static const LinearGradient pageGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [
+      bgGradientTop,
+      bgGradientMiddle,
+      bgGradientBottom,
+    ],
+  );
+
+  /// Warna Pill Judul Header Kuning (Identik antara Catat Makanan & Konsultasi Dokter)
+  static const Color titlePillYellowBg = Color(0xFFFFF7D6);
+  static const Color titlePillYellowBorder = Color(0xFFE8D7A5);
+  static const Color titlePillYellowText = Color(0xFF1C4E68);
+
   // Primary Brands
   static const Color primary = Color(0xFF276F8F);
   static const Color primaryDark = Color(0xFF1E5A74);

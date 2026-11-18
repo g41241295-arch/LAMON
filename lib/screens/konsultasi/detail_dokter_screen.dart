@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../constants/consultation_theme.dart';
 import '../../models/doctor_model.dart';
 import '../../services/consultation_service.dart';
 import '../../services/doctor_service.dart';
 import '../../utils/currency_formatter.dart';
-import '../../widgets/app_scaffold.dart';
 import 'widgets/doctor_avatar.dart';
 
-/// Layar Detail Dokter — menampilkan profil lengkap satu dokter.
+/// Layar Detail Dokter — menampilkan profil lengkap dokter dengan gaya formal modern.
 class DetailDokterScreen extends StatefulWidget {
   final String doctorId;
-  final DoctorModel? initialDoctor; // argumen dari navigasi kartu
+  final DoctorModel? initialDoctor;
 
   const DetailDokterScreen({
     super.key,
@@ -90,264 +90,219 @@ class _DetailDokterScreenState extends State<DetailDokterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () => Navigator.pop(context),
-          tooltip: 'Kembali',
-        ),
-        title: const Text('Konsultasi Dokter'),
-        centerTitle: true,
+    return Scaffold(
+      backgroundColor: ConsultationTheme.scaffoldBg,
+      appBar: const ConsultationHeader(
+        title: 'Detail Dokter',
       ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary))
-          : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(_error!,
+      body: SafeArea(
+        top: false,
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: ConsultationTheme.primary),
+              )
+            : _error != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        _error!,
                         textAlign: TextAlign.center,
-                        style:
-                            const TextStyle(color: AppColors.neutralGray)),
-                  ),
-                )
-              : _buildContent(context, _doctor!),
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: ConsultationTheme.secondaryText,
+                        ),
+                      ),
+                    ),
+                  )
+                : _buildContent(context, _doctor!),
+      ),
     );
   }
 
   Widget _buildContent(BuildContext context, DoctorModel doctor) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
         children: [
-          // ── Foto besar ──
+          // ── Foto Dokter ──────────────────────────────────────────────
           DoctorAvatar(
-            photoUrl: doctor.effectivePhotoUrl,
-            doctorId: doctor.id,
-            doctorName: doctor.name,
-            size: 100,
-            borderRadius: 20,
+            doctor: doctor,
+            size: 96,
+            borderRadius: 24,
+            showVerificationBadge: true,
+            isVerified: false,
+            badgeSize: 24,
           ),
           const SizedBox(height: 14),
 
-          // ── Nama ──
+          // ── Nama Dokter ───────────────────────────────────────────────
           Text(
             doctor.name,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: AppColors.primaryText,
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: ConsultationTheme.primary,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
 
-          // ── Spesialisasi + pengalaman ──
+          // ── Spesialisasi + Pengalaman ─────────────────────────────────
           Text(
             doctor.specialtyDisplay,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.neutralGray,
+            style: GoogleFonts.poppins(
+              fontSize: 13.5,
+              color: ConsultationTheme.secondaryText,
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
 
-          // ── Rating Dokter (Revisi 11 Bagian A.4) ──
+          // ── Rating Dokter ─────────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(
                 Icons.star_rounded,
                 size: 18,
-                color: Color(0xFFFFB300),
+                color: ConsultationTheme.gold,
               ),
               const SizedBox(width: 4),
               Text(
                 doctor.ratingCount > 0
                     ? '${doctor.averageRating.toStringAsFixed(1)} • ${doctor.ratingCount} penilaian'
                     : 'Belum ada penilaian',
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: doctor.ratingCount > 0
                       ? FontWeight.w700
                       : FontWeight.w500,
                   color: doctor.ratingCount > 0
-                      ? AppColors.primaryText
-                      : AppColors.neutralGray,
+                      ? ConsultationTheme.primary
+                      : ConsultationTheme.secondaryText,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
-          // ── Jam Operasional ──
-          if (doctor.operatingHours.isNotEmpty)
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              alignment: WrapAlignment.center,
-              children: doctor.operatingHours
-                  .map((h) => Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.access_time_rounded,
-                                size: 14, color: AppColors.primary),
-                            const SizedBox(width: 5),
-                            Text(
-                              h.display,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primaryText,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ))
-                  .toList(),
-            ),
-
-          const SizedBox(height: 16),
-
-          // ── Harga (highlight box) ──
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.primary.withValues(alpha: 0.12),
-                  AppColors.primaryLight.withValues(alpha: 0.06),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.25),
-              ),
-            ),
+          // ── Kotak Harga Sesi Konsultasi ──────────────────────────────
+          InfoCard(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Harga Konsultasi',
-                  style: TextStyle(
-                    fontSize: 15,
+                Text(
+                  'Biaya Sesi Konsultasi',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.primaryText,
+                    color: ConsultationTheme.secondaryText,
                   ),
                 ),
                 Text(
                   formatRupiah(doctor.price),
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.primary,
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: ConsultationTheme.teal,
                   ),
                 ),
               ],
             ),
           ),
+          const SizedBox(height: 16),
 
-          const SizedBox(height: 20),
-
-          // ── Detail Info ──
-          _buildInfoCard([
-            _InfoRow(
-              icon: Icons.school_rounded,
-              label: 'Alumni',
-              value: doctor.alumni.isNotEmpty ? doctor.alumni : '-',
-            ),
-            _InfoRow(
-              icon: Icons.local_hospital_rounded,
-              label: 'Tempat Praktik',
-              value: doctor.practiceLocation.isNotEmpty
-                  ? doctor.practiceLocation
-                  : '-',
-            ),
-            _InfoRow(
-              icon: Icons.badge_rounded,
-              label: 'Nomor STR',
-              value: doctor.strNumber.isNotEmpty ? doctor.strNumber : '-',
-            ),
-          ]),
-
-          const SizedBox(height: 24),
-
-          // ── Tombol Chat Dokter ──
-          Semantics(
-            label: 'Mulai Chat dengan ${doctor.name}',
-            button: true,
-            child: SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: () => _handleChatTap(doctor),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+          // ── Jam Operasional ──────────────────────────────────────────
+          if (doctor.operatingHours.isNotEmpty) ...[
+            InfoCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const MicroLabel('JAM OPERASIONAL PRAKTIK'),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: doctor.operatingHours.map((h) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: ConsultationTheme.softBg,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: ConsultationTheme.cardBorder,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.access_time_rounded,
+                              size: 14,
+                              color: ConsultationTheme.primary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              h.display,
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: ConsultationTheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
                   ),
-                ),
-                child: const Text(
-                  'Chat Dokter',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-        ],
-      ),
-    );
-  }
+            const SizedBox(height: 16),
+          ],
 
-  Widget _buildInfoCard(List<_InfoRow> rows) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2ECF2), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+          // ── Detail Kredensial Info Dokter ─────────────────────────────
+          InfoCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const MicroLabel('INFORMASI PRAKTIK & PENDIDIKAN'),
+                const SizedBox(height: 12),
+                _InfoRow(
+                  icon: Icons.school_rounded,
+                  label: 'Alumni',
+                  value: doctor.alumni.isNotEmpty ? doctor.alumni : '-',
+                ),
+                const SectionDivider(verticalPadding: 8),
+                _InfoRow(
+                  icon: Icons.local_hospital_rounded,
+                  label: 'Tempat Praktik',
+                  value: doctor.practiceLocation.isNotEmpty
+                      ? doctor.practiceLocation
+                      : '-',
+                ),
+                const SectionDivider(verticalPadding: 8),
+                _InfoRow(
+                  icon: Icons.badge_rounded,
+                  label: 'Nomor STR',
+                  value: doctor.strNumber.isNotEmpty ? doctor.strNumber : '-',
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // ── Tombol Utama Chat Dokter ───────────────────────────────────
+          PrimaryButton(
+            text: 'Chat Dokter',
+            width: double.infinity,
+            onPressed: () => _handleChatTap(doctor),
           ),
         ],
-      ),
-      child: Column(
-        children: rows
-            .expand((row) => [
-                  row,
-                  if (rows.last != row)
-                    Divider(
-                      height: 20,
-                      color: AppColors.lightGray.withValues(alpha: 0.8),
-                    ),
-                ])
-            .toList(),
       ),
     );
   }
@@ -369,7 +324,7 @@ class _InfoRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: AppColors.primary),
+        Icon(icon, size: 18, color: ConsultationTheme.teal),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -377,19 +332,19 @@ class _InfoRow extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.neutralGray,
+                style: GoogleFonts.poppins(
+                  fontSize: 11.5,
+                  color: ConsultationTheme.secondaryText,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryText,
+                style: GoogleFonts.poppins(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: ConsultationTheme.primary,
                 ),
               ),
             ],

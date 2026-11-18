@@ -1,16 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../constants/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../constants/consultation_theme.dart';
 import '../../models/consultation_model.dart';
 import '../../services/consultation_service.dart';
+import '../../services/payment_service.dart';
 import '../../utils/app_date_formatter.dart';
 import '../../utils/currency_formatter.dart';
-import '../../widgets/app_header_pill.dart';
-import '../../widgets/app_scaffold.dart';
-import '../screening/widgets/screening_avatars.dart';
 
-/// Layar Nomor Virtual Account — tampil setelah booking dibuat.
+/// Layar Status & Pembayaran Konsultasi (Midtrans Snap Sandbox).
 class VirtualAccountScreen extends StatefulWidget {
   final String consultationId;
 
@@ -23,26 +22,46 @@ class VirtualAccountScreen extends StatefulWidget {
 class _VirtualAccountScreenState extends State<VirtualAccountScreen>
     with WidgetsBindingObserver {
   final ConsultationService _consultationService = ConsultationService();
+  final PaymentService _paymentService = PaymentService.instance;
+
   ConsultationModel? _consultation;
+  StreamSubscription<ConsultationModel?>? _consultationSub;
+
   bool _isLoading = true;
-  bool _isConfirming = false;
+  bool _isCheckingStatus = false;
+  bool _isCreatingSnap = false;
+  bool _hasNavigatedToSuccess = false;
 
   Timer? _countdownTimer;
   Duration _remaining = Duration.zero;
   bool _isExpired = false;
-  bool _hasMarkedExpired = false;
+  String? _redirectUrl;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadConsultation();
+
+    // Dapatkan data live dari Firestore stream
+    _subscribeConsultation();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic>) {
+      if (args['redirectUrl'] is String && (args['redirectUrl'] as String).isNotEmpty) {
+        _redirectUrl = args['redirectUrl'] as String;
+      }
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _countdownTimer?.cancel();
+    _consultationSub?.cancel();
     super.dispose();
   }
 
@@ -50,24 +69,43 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _recalculateRemaining();
+      // Saat pengguna kembali dari browser Snap, periksa status otomatis
+      _handleCheckPaymentStatus(silent: true);
     }
   }
 
-  Future<void> _loadConsultation() async {
-    final data = await _consultationService.fetchById(widget.consultationId);
-    if (mounted) {
+  void _subscribeConsultation() {
+    _consultationSub?.cancel();
+    _consultationSub = _consultationService
+        .watchConsultation(widget.consultationId)
+        .listen((data) {
+      if (!mounted) return;
+
       setState(() {
         _consultation = data;
         _isLoading = false;
       });
+
       _startCountdownTimer();
-    }
+
+      // Jika status menjadi PAID dari backend / webhook, arahkan ke layar sukses
+      if (data != null && data.isPaid && !_hasNavigatedToSuccess) {
+        _hasNavigatedToSuccess = true;
+        Future.delayed(const Duration(milliseconds: 600), () {
+          if (mounted) {
+            Navigator.of(context).pushReplacementNamed(
+              '/konsultasi/payment-success/${widget.consultationId}',
+            );
+          }
+        });
+      }
+    });
   }
 
   void _startCountdownTimer() {
     _countdownTimer?.cancel();
     _recalculateRemaining();
-    if (!_isExpired) {
+    if (!_isExpired && (_consultation?.isPaymentPending ?? true)) {
       _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         _recalculateRemaining();
       });
@@ -77,7 +115,7 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
   void _recalculateRemaining() {
     if (_consultation == null) return;
 
-    if (_consultation!.isExpired) {
+    if (_consultation!.isExpired || _consultation!.isPaymentFailed) {
       _countdownTimer?.cancel();
       if (!_isExpired && mounted) {
         setState(() {
@@ -85,6 +123,11 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
           _remaining = Duration.zero;
         });
       }
+      return;
+    }
+
+    if (_consultation!.isPaid) {
+      _countdownTimer?.cancel();
       return;
     }
 
@@ -100,7 +143,6 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
           _isExpired = true;
         });
       }
-      _handleTimeExpired();
     } else {
       if (mounted) {
         setState(() {
@@ -111,580 +153,667 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
     }
   }
 
-  Future<void> _handleTimeExpired() async {
-    if (_hasMarkedExpired) return;
-    _hasMarkedExpired = true;
-    try {
-      await _consultationService.markAsExpired(widget.consultationId);
-    } catch (e) {
-      debugPrint('[VirtualAccountScreen] Error markAsExpired: $e');
+  String _formatDuration(Duration d) {
+    if (d.isNegative) return '00:00:00';
+    final hours = d.inHours.toString().padLeft(2, '0');
+    final minutes = (d.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
+  }
+
+  /// Membuka halaman pembayaran Snap Midtrans
+  Future<void> _openMidtransPayment() async {
+    if (_redirectUrl != null && _redirectUrl!.isNotEmpty) {
+      await _paymentService.openSnapPaymentUrl(_redirectUrl!);
+      return;
     }
+
+    setState(() => _isCreatingSnap = true);
+    try {
+      final snap = await _paymentService
+          .createTransaction(
+            consultationId: widget.consultationId,
+          )
+          .timeout(const Duration(seconds: 35));
+      _redirectUrl = snap.redirectUrl;
+      if (mounted && snap.redirectUrl.isNotEmpty) {
+        await _paymentService.openSnapPaymentUrl(snap.redirectUrl);
+      }
+    } catch (e) {
+      if (mounted) {
+        String mainMsg = 'Gagal membuka halaman pembayaran.';
+        String? subMsg;
+        if (e is PaymentException) {
+          mainMsg = e.message;
+          if (e.debugCode != null) subMsg = 'Kode: ${e.debugCode}';
+        } else {
+          mainMsg = e
+              .toString()
+              .replaceFirst('Exception: ', '')
+              .replaceFirst('HttpException: ', '');
+        }
+        showConsultationSnackBar(
+          context,
+          message: mainMsg,
+          subMessage: subMsg,
+          isError: true,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCreatingSnap = false);
+    }
+  }
+
+  /// Memanggil endpoint POST /api/check-payment di backend
+  Future<void> _handleCheckPaymentStatus({bool silent = false}) async {
+    if (_isCheckingStatus) return;
+    setState(() => _isCheckingStatus = true);
+
+    try {
+      final result = await _paymentService
+          .checkPaymentStatus(
+            consultationId: widget.consultationId,
+          )
+          .timeout(const Duration(seconds: 25));
+
+      if (!mounted) return;
+
+      if (result.paymentStatus == 'paid') {
+        if (!silent) {
+          showConsultationSnackBar(
+            context,
+            message: 'Pembayaran berhasil dikonfirmasi!',
+            isSuccess: true,
+          );
+        }
+      } else if (result.paymentStatus == 'pending') {
+        if (!silent) {
+          showConsultationSnackBar(
+            context,
+            message: 'Pembayaran masih berstatus pending. Silakan selesaikan tagihan.',
+          );
+        }
+      } else {
+        if (!silent) {
+          showConsultationSnackBar(
+            context,
+            message: 'Status pembayaran: ${result.paymentStatus}',
+          );
+        }
+      }
+    } catch (e) {
+      if (!silent && mounted) {
+        String mainMsg = 'Gagal memeriksa status pembayaran.';
+        String? subMsg;
+        if (e is PaymentException) {
+          mainMsg = e.message;
+          if (e.debugCode != null) subMsg = 'Kode: ${e.debugCode}';
+        } else {
+          mainMsg = e
+              .toString()
+              .replaceFirst('Exception: ', '')
+              .replaceFirst('HttpException: ', '');
+        }
+        showConsultationSnackBar(
+          context,
+          message: mainMsg,
+          subMessage: subMsg,
+          isError: true,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCheckingStatus = false);
+    }
+  }
+
+  void _copyText(BuildContext context, String text, String label) {
+    Clipboard.setData(ClipboardData(text: text));
+    showConsultationSnackBar(
+      context,
+      message: '$label berhasil disalin!',
+      isSuccess: true,
+    );
   }
 
   void _onBuatPesananBaru(BuildContext context) {
-    // Kembali ke daftar dokter
-    Navigator.of(context).popUntil((route) =>
-        route.isFirst ||
-        route.settings.name == '/konsultasi' ||
-        route.settings.name == '/beranda');
-  }
-
-  Future<void> _onMengerti(BuildContext context) async {
-    if (_isConfirming) return;
-
-    // Guard (A.6): Periksa lagi batas waktu pembayaran
-    if (_consultation != null) {
-      final now = DateTime.now();
-      if (_consultation!.effectivePaymentExpiresAt.isBefore(now)) {
-        setState(() {
-          _isExpired = true;
-          _remaining = Duration.zero;
-        });
-        _handleTimeExpired();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Waktu pembayaran telah habis. Silakan buat pesanan baru.'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        return;
-      }
-    }
-
-    setState(() => _isConfirming = true);
-    final nav = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await _consultationService.markAsPaid(widget.consultationId);
-      if (mounted) {
-        nav.pushNamed(
-          '/konsultasi/payment-success/${widget.consultationId}',
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Gagal memproses: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        setState(() => _isConfirming = false);
-      }
-    }
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/konsultasi',
+      (route) => route.settings.name == '/beranda' || route.isFirst,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      appBar: AppHeaderPill(title: 'Nomor Virtual Account'),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary))
-          : _consultation == null
-              ? const Center(child: Text('Data tidak ditemukan.'))
-              : _buildContent(context, _consultation!),
+    final c = _consultation;
+
+    return Scaffold(
+      backgroundColor: ConsultationTheme.scaffoldBg,
+      appBar: const ConsultationHeader(
+        title: 'Status Pembayaran',
+      ),
+      bottomNavigationBar:
+          c != null ? SafeArea(top: false, child: _buildBottomBar(context, c)) : null,
+      body: SafeArea(
+        top: false,
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: ConsultationTheme.primary),
+              )
+            : c == null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error_outline_rounded,
+                              size: 48, color: ConsultationTheme.red),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Data konsultasi tidak ditemukan.',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: ConsultationTheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // ── 1. Kartu Status Ringkas ────────────────────────────────
+                        _buildStatusCard(c),
+                        const SizedBox(height: 16),
+
+                        // ── 2. Kartu Timer Hitung Mundur ────────────────────────────
+                        if (!c.isPaid) ...[
+                          _buildTimerCard(c),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // ── 3. Kartu Fokus Transaksi & Aksi Bayar ────────────────────
+                        _buildTransactionCard(c),
+                        const SizedBox(height: 16),
+
+                        // ── 4. Kartu "Detail Pembayaran" ────────────────────────────
+                        _buildDetailPembayaranCard(c),
+                      ],
+                    ),
+                  ),
+      ),
     );
   }
 
-  Widget _buildContent(BuildContext context, ConsultationModel c) {
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+  /// Kartu status ringkas
+  Widget _buildStatusCard(ConsultationModel c) {
+    Color iconBg = ConsultationTheme.green;
+    IconData iconData = Icons.check_rounded;
+    String title = 'Menunggu Pembayaran';
+    String subtitle = 'Selesaikan pembayaran untuk mengonfirmasi sesi.';
+
+    if (c.isPaid) {
+      iconBg = ConsultationTheme.green;
+      iconData = Icons.check_rounded;
+      title = 'Pembayaran Berhasil';
+      subtitle = 'Jadwal konsultasi Anda telah diamankan.';
+    } else if (c.isPaidAfterExpiry) {
+      iconBg = const Color(0xFFE0913A);
+      iconData = Icons.warning_amber_rounded;
+      title = 'Pembayaran Selesai Lewat Batas';
+      subtitle = 'Pembayaran diterima setelah batas waktu. Hubungi kami untuk bantuan.';
+    } else if (_isExpired || c.isExpired) {
+      iconBg = ConsultationTheme.red;
+      iconData = Icons.access_time_filled_rounded;
+      title = 'Waktu Pembayaran Habis';
+      subtitle = 'Batas waktu bayar telah lewat. Silakan buat pesanan baru.';
+    } else if (c.isPaymentFailed) {
+      iconBg = ConsultationTheme.red;
+      iconData = Icons.cancel_rounded;
+      title = 'Pembayaran Gagal / Dibatalkan';
+      subtitle = 'Transaksi gagal diproses. Anda dapat mencoba kembali.';
+    }
+
+    return InfoCard(
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: iconBg,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              iconData,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 8),
-
-                // ── Ikon status ──
-                _isExpired
-                    ? Container(
-                        width: 90,
-                        height: 90,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFEBEE),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                              color: const Color(0xFFFFCDD2), width: 2),
-                        ),
-                        child: const Icon(
-                          Icons.timer_off_rounded,
-                          color: Color(0xFFD32F2F),
-                          size: 48,
-                        ),
-                      )
-                    : const GreenCheckmark3DBadge(size: 90),
-                const SizedBox(height: 16),
-
                 Text(
-                  _isExpired
-                      ? 'Waktu Pembayaran Habis'
-                      : 'Virtual Account Berhasil Dibuat!',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.primaryText,
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: ConsultationTheme.primary,
                   ),
-                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
-                  _isExpired
-                      ? 'Batas waktu 1 jam telah terlewati. Silakan buat pesanan baru.'
-                      : 'Salin nomor VA di bawah dan selesaikan pembayaran',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.neutralGray,
-                    fontWeight: FontWeight.w500,
+                  subtitle,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: ConsultationTheme.secondaryText,
                   ),
-                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 20),
-
-                // ── Kartu Hitung Mundur Batas Waktu Pembayaran (A.3) ──
-                _buildCountdownCard(),
-                const SizedBox(height: 16),
-
-                // ── Kartu Nomor VA ──
-                _buildVACard(context, c.virtualAccountNumber, c.paymentMethodName),
-                const SizedBox(height: 16),
-
-                // ── Kartu Detail Pembayaran ──
-                _buildDetailCard(c),
-                const SizedBox(height: 16),
               ],
             ),
           ),
-        ),
+        ],
+      ),
+    );
+  }
 
-        // ── Tombol Bawah (Saya Mengerti / Buat Pesanan Baru) ──
-        Container(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 12,
-                offset: const Offset(0, -3),
+  /// Kartu timer: hitung mundur batas pembayaran
+  Widget _buildTimerCard(ConsultationModel c) {
+    final timerString = _formatDuration(_remaining);
+    final expired = _isExpired || c.isExpired || c.isPaymentFailed;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: expired ? const Color(0xFFFFEBEE) : ConsultationTheme.lightBlueBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: expired ? const Color(0xFFFFCDD2) : ConsultationTheme.lightBlueBorder,
+          width: 1.2,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.timer_outlined,
+            size: 20,
+            color: expired ? ConsultationTheme.red : ConsultationTheme.primary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              expired ? 'Batas waktu:' : 'Selesaikan pembayaran dalam',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: expired ? ConsultationTheme.red : ConsultationTheme.primary,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: expired ? const Color(0xFFFFCDD2) : ConsultationTheme.lightBlueBorder,
+                width: 1,
+              ),
+            ),
+            child: Text(
+              expired ? '00:00:00' : timerString,
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: expired ? ConsultationTheme.red : ConsultationTheme.primary,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Kartu fokus transaksi Midtrans Snap
+  Widget _buildTransactionCard(ConsultationModel c) {
+    final orderId = c.paymentOrderId ?? c.orderId;
+    final totalStr = formatRupiah(c.totalFee);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF1F5C7A),
+            Color(0xFF2E85A8),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1F5C7A).withValues(alpha: 0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'MIDTRANS PAYMENT GATEWAY',
+                style: GoogleFonts.poppins(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.8,
+                  color: Colors.white.withValues(alpha: 0.85),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.20),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  c.isPaid ? 'LUNAS' : (c.isExpired ? 'EXPIRED' : 'SANDBOX'),
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ],
           ),
-          child: SafeArea(
-            top: false,
-            child: Semantics(
-              label: _isExpired ? 'Buat Pesanan Baru' : 'Saya Mengerti dan lanjutkan',
-              button: true,
-              child: SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _isConfirming
-                      ? null
-                      : (_isExpired
-                          ? () => _onBuatPesananBaru(context)
-                          : () => _onMengerti(context)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _isExpired
-                        ? AppColors.primary
-                        : AppColors.primary,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor:
-                        AppColors.primary.withValues(alpha: 0.5),
-                    elevation: 1,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: _isConfirming
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : Text(
-                          _isExpired ? 'Buat Pesanan Baru' : 'Saya Mengerti',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+          const SizedBox(height: 12),
+
+          // Total Tagihan Besar
+          Text(
+            totalStr,
+            style: GoogleFonts.poppins(
+              fontSize: 26,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            orderId.isNotEmpty ? 'Order ID: $orderId' : 'Konsultasi ID: ${c.id}',
+            style: GoogleFonts.poppins(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w400,
+              color: Colors.white.withValues(alpha: 0.82),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Tombol Aksi Buka Halaman Bayar jika masih pending
+          if (!c.isPaid && !_isExpired && !c.isExpired && !c.isPaymentFailed)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isCreatingSnap ? null : _openMidtransPayment,
+                icon: _isCreatingSnap
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: ConsultationTheme.primary,
                         ),
+                      )
+                    : const Icon(Icons.payment_rounded, size: 18),
+                label: Text(
+                  _isCreatingSnap ? 'Menyiapkan...' : 'Buka Halaman Pembayaran',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: ConsultationTheme.primary,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  /// Kartu "Detail Pembayaran"
+  Widget _buildDetailPembayaranCard(ConsultationModel c) {
+    final deadlineStr = AppDateFormatter.formatDateTime(c.effectivePaymentExpiresAt);
+    final orderId = c.paymentOrderId ?? c.orderId;
+
+    return InfoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const MicroLabel('DETAIL TRANSAKSI'),
+          const SizedBox(height: 12),
+
+          // Baris Dokter
+          _buildDetailRow(
+            label: 'Dokter',
+            value: c.doctorName,
+          ),
+          const SectionDivider(verticalPadding: 8),
+
+          // Baris Total Biaya
+          _buildDetailRow(
+            label: 'Total Tagihan',
+            value: formatRupiah(c.totalFee),
+            valueColor: ConsultationTheme.teal,
+            isBold: true,
+          ),
+          const SectionDivider(verticalPadding: 8),
+
+          // Baris Order ID
+          _buildDetailRow(
+            label: 'Order ID',
+            value: orderId.isNotEmpty ? orderId : '-',
+            trailingAction: orderId.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.copy_rounded, size: 16, color: ConsultationTheme.secondaryText),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => _copyText(context, orderId, 'Order ID'),
+                  )
+                : null,
+          ),
+          const SectionDivider(verticalPadding: 8),
+
+          // Baris Metode
+          _buildDetailRow(
+            label: 'Gateway / Jalur',
+            value: c.paymentType != null && c.paymentType!.isNotEmpty
+                ? c.paymentType!.toUpperCase()
+                : 'Midtrans Snap',
+          ),
+          const SectionDivider(verticalPadding: 8),
+
+          // Baris Batas Waktu Bayar
+          _buildDetailRow(
+            label: c.isPaid ? 'Waktu Lunas' : 'Batas Waktu Bayar',
+            value: c.isPaid && c.paidAt != null
+                ? AppDateFormatter.formatDateTime(c.paidAt!)
+                : deadlineStr,
+            valueColor: c.isPaid ? ConsultationTheme.green : ConsultationTheme.darkRed,
+            isBold: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow({
+    required String label,
+    required String value,
+    Color? valueColor,
+    bool isBold = false,
+    Widget? trailingAction,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: ConsultationTheme.secondaryText,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.end,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: isBold ? FontWeight.w700 : FontWeight.w600,
+                    color: valueColor ?? ConsultationTheme.primary,
+                  ),
+                ),
+              ),
+              if (trailingAction != null) ...[
+                const SizedBox(width: 6),
+                trailingAction,
+              ],
+            ],
           ),
         ),
       ],
     );
   }
 
-  /// Kartu hitung mundur (A.3 & A.5)
-  Widget _buildCountdownCard() {
-    if (_isExpired) {
+  /// Bar bawah melekat
+  Widget _buildBottomBar(BuildContext context, ConsultationModel c) {
+    if (c.isPaid) {
       return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFEBEE),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFFFCDD2), width: 1.2),
+          color: Colors.white,
+          border: const Border(top: BorderSide(color: ConsultationTheme.cardBorder, width: 1.2)),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.warning_amber_rounded,
-                color: Color(0xFFD32F2F), size: 22),
-            SizedBox(width: 8),
-            Text(
-              'Waktu pembayaran habis',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFFD32F2F),
-              ),
-            ),
-          ],
+        child: PrimaryButton(
+          text: 'Buka Ruang Chat',
+          icon: Icons.chat_bubble_rounded,
+          onPressed: () {
+            Navigator.of(context).pushReplacementNamed(
+              '/konsultasi/chat/${c.id}',
+              arguments: {
+                'initialConsultation': c,
+                'patientUid': c.patientUid,
+              },
+            );
+          },
         ),
       );
     }
 
-    final isUrgent = _remaining < const Duration(minutes: 10);
-    final minutes = _remaining.inMinutes;
-    final seconds = _remaining.inSeconds % 60;
-    final timeStr =
-        '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-
-    final bgColor = isUrgent ? const Color(0xFFFFF3E0) : const Color(0xFFE8F4F8);
-    final borderColor =
-        isUrgent ? const Color(0xFFFFB74D) : const Color(0xFFBCE0F0);
-    final textColor =
-        isUrgent ? const Color(0xFFE65100) : AppColors.primary;
+    final isFailedOrExpired = _isExpired || c.isExpired || c.isPaymentFailed;
 
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor, width: 1.2),
+        color: Colors.white,
+        border: const Border(
+          top: BorderSide(
+            color: ConsultationTheme.cardBorder,
+            width: 1.2,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.timer_outlined, color: textColor, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'Selesaikan pembayaran dalam',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primaryText,
-                ),
-              ),
-            ],
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: isUrgent ? const Color(0xFFFFE0B2) : Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: borderColor, width: 1),
-            ),
-            child: Text(
-              timeStr,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-                color: textColor,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVACard(
-      BuildContext context, String vaNumber, String bankName) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2ECF2), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
-            offset: const Offset(0, 3),
+            offset: const Offset(0, -3),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.account_balance_rounded,
-                  size: 18, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Nomor Virtual Account ($bankName)',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.neutralGray,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              // Nomor VA 1 baris tidak terpotong
-              Expanded(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    vaNumber,
-                    maxLines: 1,
-                    softWrap: false,
-                    style: const TextStyle(
-                      fontSize: 21,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primaryText,
-                      letterSpacing: 1.0,
-                      fontFeatures: [FontFeature.tabularFigures()],
-                    ),
+      child: isFailedOrExpired
+          ? Row(
+              children: [
+                Expanded(
+                  child: SecondaryButton(
+                    text: 'Pesanan Baru',
+                    onPressed: () => _onBuatPesananBaru(context),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              // Tombol Salin Ringkas
-              Semantics(
-                label: 'Salin nomor virtual account',
-                button: true,
-                child: OutlinedButton.icon(
-                  onPressed: () => _copyVA(context, vaNumber),
-                  icon: const Icon(Icons.copy_rounded, size: 14),
-                  label: const Text('Salin'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary, width: 1.3),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 6),
-                    textStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: PrimaryButton(
+                    text: 'Coba Bayar Lagi',
+                    icon: Icons.refresh_rounded,
+                    onPressed: _openMidtransPayment,
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailCard(ConsultationModel c) {
-    final deadlineStr = AppDateFormatter.formatPaymentDeadline(c.effectivePaymentExpiresAt);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2ECF2), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Detail Pembayaran',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: AppColors.primaryText,
+              ],
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isCheckingStatus ? null : () => _handleCheckPaymentStatus(),
+                        icon: _isCheckingStatus
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.sync_rounded, size: 16),
+                        label: Text(
+                          _isCheckingStatus ? 'Memeriksa...' : 'Cek Status',
+                          style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: ConsultationTheme.primary,
+                          side: const BorderSide(color: ConsultationTheme.primary, width: 1.2),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: PrimaryButton(
+                        text: 'Bayar Sekarang',
+                        onPressed: _openMidtransPayment,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 14),
-          _BankDetailRow(
-            label: 'Bank',
-            bankName: c.paymentMethodName,
-            bankId: c.paymentMethod,
-          ),
-          const Divider(height: 16, color: Color(0xFFF0F4F7)),
-          _DetailRow(label: 'Nama Dokter', value: c.doctorName),
-          const Divider(height: 16, color: Color(0xFFF0F4F7)),
-          _DetailRow(
-            label: 'Total Transaksi',
-            value: formatRupiah(c.totalFee),
-            isHighlight: true,
-          ),
-          const Divider(height: 16, color: Color(0xFFF0F4F7)),
-          _DetailRow(label: 'Order ID', value: c.orderId),
-          const Divider(height: 16, color: Color(0xFFF0F4F7)),
-          _DetailRow(
-            label: 'Batas Waktu Bayar',
-            value: deadlineStr,
-            valueColor: const Color(0xFFC62828),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _copyVA(BuildContext context, String vaNumber) {
-    Clipboard.setData(ClipboardData(text: vaNumber));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('✅ Nomor VA berhasil disalin!'),
-        backgroundColor: AppColors.successGreen,
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 2),
-      ),
     );
   }
 }
-
-class _BankDetailRow extends StatelessWidget {
-  final String label;
-  final String bankName;
-  final String bankId;
-
-  const _BankDetailRow({
-    required this.label,
-    required this.bankName,
-    required this.bankId,
-  });
-
-  /// Nama file logo bank dengan suffix -removebg-preview.png
-  String get _bankAssetPath {
-    final fileName = bankId == 'jatim'
-        ? 'bank_jatim-removebg-preview.png'
-        : '$bankId-removebg-preview.png';
-    return 'assets/images/banks/$fileName';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            color: AppColors.neutralGray,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        // Logo saja (tanpa teks nama bank) — nama tetap tersedia
-        // via Semantics untuk aksesibilitas (pembaca layar)
-        Semantics(
-          label: bankName,
-          child: Container(
-            height: 32,
-            width: 72,
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: const Color(0xFFE8EFF5),
-                width: 1,
-              ),
-            ),
-            child: Image.asset(
-              _bankAssetPath,
-              fit: BoxFit.contain,
-              errorBuilder: (_, _, _) => const Icon(
-                Icons.account_balance_rounded,
-                size: 18,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool isHighlight;
-  final Color? valueColor;
-
-  const _DetailRow({
-    required this.label,
-    required this.value,
-    this.isHighlight = false,
-    this.valueColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            color: AppColors.neutralGray,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            style: TextStyle(
-              fontSize: isHighlight ? 15 : 13,
-              fontWeight:
-                  isHighlight ? FontWeight.w900 : FontWeight.w700,
-              color: valueColor ??
-                  (isHighlight ? AppColors.primary : AppColors.primaryText),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-

@@ -459,15 +459,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      backgroundGradient: const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFFFCFBF7),
-          Color(0xFFF7F4EB),
-          Color(0xFFF2EEDB),
-        ],
-      ),
+      backgroundGradient: AppColors.pageGradient,
       resizeToAvoidBottomInset: true,
       body: _isLoading
           ? const Center(
@@ -527,10 +519,10 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7D6),
+                  color: AppColors.titlePillYellowBg,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: const Color(0xFFE8D7A5),
+                    color: AppColors.titlePillYellowBorder,
                     width: 1.2,
                   ),
                   boxShadow: [
@@ -546,7 +538,7 @@ class _CatatMakananScreenState extends State<CatatMakananScreen> {
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1C4E68),
+                    color: AppColors.titlePillYellowText,
                     letterSpacing: 0.2,
                   ),
                 ),

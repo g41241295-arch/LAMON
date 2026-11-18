@@ -1,18 +1,18 @@
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../constants/app_colors.dart';
 import '../../../constants/consultation_constants.dart';
+import '../../../constants/consultation_theme.dart';
 import '../../../models/consultation_model.dart';
 import '../../../services/attachment_service.dart';
 import 'doctor_avatar.dart';
 
 /// Widget bubble pesan chat yang mendukung peran Pasien maupun Dokter.
-/// - Bubble sendiri selalu di sebelah kanan.
-/// - Bubble lawan bicara di sebelah kiri.
-/// - Mendukung teks, gambar (zoomable), dan dokumen PDF.
-/// - Menampilkan status "Dibaca HH.mm" atau "Terkirim HH.mm".
+/// - Bubble pasien: latar biru tua #1F5C7A, teks putih 13, radius 16/16/4/16, status di bawah bubble.
+/// - Bubble dokter: latar putih, border krem #EFE3D0, teks #24435A, radius 16/16/16/4, avatar bulat 30.
+/// - Memperbaiki bug tinggi bubble dengan mainAxisSize: MainAxisSize.min dan pengecekan lampiran yang ketat.
 class ChatBubble extends StatelessWidget {
   final ChatMessage message;
   final String currentUserRole; // 'patient' | 'doctor'
@@ -43,39 +43,33 @@ class ChatBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final timeStr = _formatTime(message.sentAt);
 
-    // Kartu Rekomendasi Dokter khusus (D.4)
+    // ── Kartu Rekomendasi Dokter Khusus ─────────────────────────────────────
     if (message.type == 'consultation_summary') {
       return Center(
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFFF0FDF4),
+            color: const Color(0xFFF1FAF5),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFF86EFAC), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            border: Border.all(color: const Color(0xFFBFE3CE), width: 1.2),
+            boxShadow: ConsultationTheme.cardShadow,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
-                children: const [
-                  Icon(Icons.medical_information_rounded,
-                      color: Color(0xFF15803D), size: 20),
-                  SizedBox(width: 8),
+                children: [
+                  const Icon(Icons.medical_information_rounded,
+                      color: ConsultationTheme.green, size: 20),
+                  const SizedBox(width: 8),
                   Text(
                     'Rekomendasi Dokter',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF15803D),
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: ConsultationTheme.green,
                     ),
                   ),
                 ],
@@ -83,9 +77,9 @@ class ChatBubble extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 message.text,
-                style: const TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 13,
-                  color: AppColors.primaryText,
+                  color: const Color(0xFF24435A),
                   height: 1.45,
                   fontWeight: FontWeight.w500,
                 ),
@@ -95,9 +89,9 @@ class ChatBubble extends StatelessWidget {
                 alignment: Alignment.bottomRight,
                 child: Text(
                   timeStr,
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 11,
-                    color: AppColors.neutralGray,
+                    color: ConsultationTheme.secondaryText,
                   ),
                 ),
               ),
@@ -110,25 +104,29 @@ class ChatBubble extends StatelessWidget {
     final isMe = (currentUserRole == 'doctor' && message.isDoctor) ||
         (currentUserRole == 'patient' && message.isPatient);
 
-    // Cek apakah pesan sudah dibaca lawan bicara
     final isRead = lastReadByPeerAt != null &&
         (lastReadByPeerAt!.isAfter(message.sentAt) ||
             lastReadByPeerAt!.isAtSameMomentAs(message.sentAt));
 
     final editLabel = message.isEdited ? 'Diedit • ' : '';
+
+    // Status terkirim / dibaca
     final statusText = isMe
-        ? (isRead ? '${editLabel}Dibaca $timeStr' : '${editLabel}Terkirim $timeStr')
+        ? (isRead ? '${editLabel}Dibaca $timeStr ✓✓' : '${editLabel}Terkirim $timeStr ✓')
         : '$editLabel$timeStr';
 
-    // ── Kasus Pesan Dihapus untuk Semua Orang (Bagian C.3) ──
+    // ── Kasus Pesan Dihapus untuk Semua Orang ──────────────────────────────
     if (message.deletedForEveryone) {
-      final deletedText = isMe ? 'Anda menghapus pesan ini' : 'Pesan ini telah dihapus';
+      final deletedText =
+          isMe ? 'Anda menghapus pesan ini' : 'Pesan ini telah dihapus';
       return InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          color: isSelected ? AppColors.primary.withValues(alpha: 0.12) : Colors.transparent,
+          color: isSelected
+              ? ConsultationTheme.primary.withValues(alpha: 0.12)
+              : Colors.transparent,
           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
           child: Row(
             mainAxisAlignment:
@@ -141,22 +139,24 @@ class ChatBubble extends StatelessWidget {
               ],
               Flexible(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment:
                       isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                   children: [
                     Container(
                       constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width * 0.72,
+                        maxWidth: MediaQuery.of(context).size.width * 0.78,
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF1F5F9),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                         borderRadius: BorderRadius.only(
-                          topLeft: const Radius.circular(18),
-                          topRight: const Radius.circular(18),
-                          bottomLeft: Radius.circular(isMe ? 18 : 4),
-                          bottomRight: Radius.circular(isMe ? 4 : 18),
+                          topLeft: const Radius.circular(16),
+                          topRight: const Radius.circular(16),
+                          bottomLeft: Radius.circular(isMe ? 16 : 4),
+                          bottomRight: Radius.circular(isMe ? 4 : 16),
                         ),
                       ),
                       child: Row(
@@ -171,10 +171,10 @@ class ChatBubble extends StatelessWidget {
                           Flexible(
                             child: Text(
                               deletedText,
-                              style: const TextStyle(
+                              style: GoogleFonts.poppins(
                                 fontSize: 13,
                                 fontStyle: FontStyle.italic,
-                                color: Color(0xFF64748B),
+                                color: const Color(0xFF64748B),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -185,15 +185,15 @@ class ChatBubble extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       timeStr,
-                      style: const TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 11,
-                        color: AppColors.neutralGray,
+                        color: ConsultationTheme.secondaryText,
                       ),
                     ),
                   ],
                 ),
               ),
-              if (isMe) ...[
+              if (isMe && currentUserRole == 'doctor') ...[
                 const SizedBox(width: 8),
                 _buildMeAvatar(isMe),
               ],
@@ -203,104 +203,131 @@ class ChatBubble extends StatelessWidget {
       );
     }
 
-    // Skema warna bubble biasa:
-    // Sisi dokter: bubble dokter biru tua/teal dengan teks putih, bubble pasien putih dengan border tipis.
-    Color bubbleColor;
-    Color textColor;
-    Border? bubbleBorder;
+    // ── Skema Warna & Bentuk Bubble ────────────────────────────────────────
+    final Color bubbleColor;
+    final Color textColor;
+    final Border? bubbleBorder;
+    final BorderRadius borderRadius;
     final bool hasTealBackground;
 
     if (currentUserRole == 'doctor') {
       if (isMe) {
-        // Bubble dokter (milik sendiri): biru tua/teal LAMON #1F5C7A
-        bubbleColor = const Color(0xFF1F5C7A);
+        bubbleColor = ConsultationTheme.primary;
         textColor = Colors.white;
         bubbleBorder = null;
         hasTealBackground = true;
+        borderRadius = const BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+          bottomLeft: Radius.circular(16),
+          bottomRight: Radius.circular(4),
+        );
       } else {
-        // Bubble pasien (lawan bicara): putih dengan border tipis #EFE3D0
         bubbleColor = Colors.white;
         textColor = const Color(0xFF24435A);
-        bubbleBorder = Border.all(color: const Color(0xFFEFE3D0), width: 1.2);
+        bubbleBorder = Border.all(color: ConsultationTheme.cardBorder, width: 1);
         hasTealBackground = false;
+        borderRadius = const BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+          bottomLeft: Radius.circular(4),
+          bottomRight: Radius.circular(16),
+        );
       }
     } else {
+      // Sisi Pasien
       if (isMe) {
-        // Bubble pasien (milik sendiri): teal-biru
-        bubbleColor = AppColors.primary;
+        // Bubble pasien: rata kanan, latar biru tua #1F5C7A, teks putih 13, radius 16/16/4/16
+        bubbleColor = ConsultationTheme.primary;
         textColor = Colors.white;
+        bubbleBorder = null;
         hasTealBackground = true;
+        borderRadius = const BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+          bottomLeft: Radius.circular(16),
+          bottomRight: Radius.circular(4),
+        );
       } else {
-        // Bubble dokter (lawan bicara): biru lembut
-        bubbleColor = const Color(0xFFEDF5FA);
-        textColor = AppColors.primaryText;
-        bubbleBorder = Border.all(color: const Color(0xFFD6E8F3), width: 1);
+        // Bubble dokter: rata kiri, latar putih, border krem #EFE3D0, teks #24435A, radius 16/16/16/4
+        bubbleColor = Colors.white;
+        textColor = const Color(0xFF24435A);
+        bubbleBorder = Border.all(color: ConsultationTheme.cardBorder, width: 1);
         hasTealBackground = false;
+        borderRadius = const BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+          bottomLeft: Radius.circular(4),
+          bottomRight: Radius.circular(16),
+        );
       }
     }
+
+    // Cek apakah ada lampiran gambar yang valid
+    final hasValidImage = message.isImage &&
+        message.attachmentUrl != null &&
+        message.attachmentUrl!.trim().isNotEmpty;
+
+    // Cek apakah ada lampiran file yang valid
+    final hasValidFile = message.isFile &&
+        ((message.attachmentUrl != null && message.attachmentUrl!.trim().isNotEmpty) ||
+            (message.attachmentId != null && message.attachmentId!.trim().isNotEmpty));
 
     return InkWell(
       onTap: onTap,
       onLongPress: onLongPress,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        color: isSelected ? AppColors.primary.withValues(alpha: 0.12) : Colors.transparent,
+        color: isSelected
+            ? ConsultationTheme.primary.withValues(alpha: 0.12)
+            : Colors.transparent,
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
         child: Row(
           mainAxisAlignment:
               isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Avatar lawan bicara (kiri)
+            // Avatar lawan bicara di kiri
             if (!isMe) ...[
               _buildPeerAvatar(),
               const SizedBox(width: 8),
             ],
 
-            // Bubble konten
+            // Bubble konten (bebas bug tinggi besar, mainAxisSize: min)
             Flexible(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment:
                     isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                 children: [
                   Container(
                     constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width *
-                          (currentUserRole == 'doctor' ? 0.78 : 0.72),
+                      maxWidth: MediaQuery.of(context).size.width * 0.78,
                     ),
                     decoration: BoxDecoration(
                       color: bubbleColor,
                       border: bubbleBorder,
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(18),
-                        topRight: const Radius.circular(18),
-                        bottomLeft: Radius.circular(isMe ? 18 : 4),
-                        bottomRight: Radius.circular(isMe ? 4 : 18),
-                      ),
+                      borderRadius: borderRadius,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
+                          color: const Color(0x0D1F5C7A),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(18),
-                        topRight: const Radius.circular(18),
-                        bottomLeft: Radius.circular(isMe ? 18 : 4),
-                        bottomRight: Radius.circular(isMe ? 4 : 18),
-                      ),
+                      borderRadius: borderRadius,
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // ── Konten Lampiran Gambar ──
-                          if (message.isImage && message.hasAttachment)
+                          if (hasValidImage)
                             _buildImageAttachment(context),
 
                           // ── Konten Lampiran Dokumen PDF ──
-                          if (message.isFile && message.hasAttachment)
+                          if (hasValidFile)
                             _buildFileAttachment(context, hasTealBackground),
 
                           // ── Teks Pesan (atau Caption) ──
@@ -310,9 +337,9 @@ class ChatBubble extends StatelessWidget {
                                   horizontal: 14, vertical: 10),
                               child: Text(
                                 message.text,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w400,
                                   color: textColor,
                                   height: 1.4,
                                 ),
@@ -323,83 +350,48 @@ class ChatBubble extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 3),
-                  if (currentUserRole == 'doctor')
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isMe) ...[
-                          Text(
-                            timeStr,
-                            style: const TextStyle(
+
+                  // Waktu & Status di Bawah Bubble
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        statusText,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: ConsultationTheme.secondaryText,
+                        ),
+                      ),
+                      if (!isMe &&
+                          ConsultationConstants.kShowAutoReplyLabel &&
+                          message.isAutoReply) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: ConsultationTheme.lightBlue,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Balasan otomatis',
+                            style: GoogleFonts.poppins(
                               fontSize: 10.5,
-                              color: Color(0xFFCFE3EE),
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
+                              color: ConsultationTheme.primary,
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            isRead ? '✓✓' : '✓',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFCFE3EE),
-                            ),
-                          ),
-                        ] else ...[
-                          Text(
-                            timeStr,
-                            style: const TextStyle(
-                              fontSize: 10.5,
-                              color: Color(0xFF6B8190),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ],
-                    )
-                  else
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          statusText,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.neutralGray,
                           ),
                         ),
-                        if (ConsultationConstants.kShowAutoReplyLabel &&
-                            message.isAutoReply) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 1.5),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: AppColors.primary.withValues(alpha: 0.3),
-                                width: 0.5,
-                              ),
-                            ),
-                            child: const Text(
-                              'Balasan otomatis',
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ),
-                        ],
                       ],
-                    ),
+                    ],
+                  ),
                 ],
               ),
             ),
 
-            // Avatar diri sendiri (kanan)
-            if (isMe) ...[
+            // Avatar diri sendiri (hanya jika role dokter)
+            if (isMe && currentUserRole == 'doctor') ...[
               const SizedBox(width: 8),
               _buildMeAvatar(isMe),
             ],
@@ -413,19 +405,19 @@ class ChatBubble extends StatelessWidget {
     if (currentUserRole == 'patient') {
       return DoctorAvatar(
         photoUrl: peerPhotoUrl,
-        size: 32,
-        borderRadius: 10,
+        size: 30,
+        isCircle: true,
       );
     }
     return CircleAvatar(
-      radius: 16,
-      backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
+      radius: 15,
+      backgroundColor: ConsultationTheme.lightBlue,
       child: Text(
         peerInitials,
-        style: const TextStyle(
-          fontSize: 12,
+        style: GoogleFonts.poppins(
+          fontSize: 11,
           fontWeight: FontWeight.bold,
-          color: AppColors.primary,
+          color: ConsultationTheme.primary,
         ),
       ),
     );
@@ -433,36 +425,38 @@ class ChatBubble extends StatelessWidget {
 
   Widget _buildMeAvatar(bool isMe) {
     return CircleAvatar(
-      radius: 16,
-      backgroundColor: isMe && currentUserRole == 'doctor'
-          ? const Color(0xFF1F5C7A).withValues(alpha: 0.12)
-          : AppColors.primaryLight.withValues(alpha: 0.25),
-      child: Icon(
-        currentUserRole == 'doctor'
-            ? Icons.medical_services_rounded
-            : Icons.person_rounded,
-        size: 16,
-        color: currentUserRole == 'doctor'
-            ? const Color(0xFF1F5C7A)
-            : AppColors.primary,
+      radius: 15,
+      backgroundColor: ConsultationTheme.primary.withValues(alpha: 0.12),
+      child: const Icon(
+        Icons.medical_services_rounded,
+        size: 15,
+        color: ConsultationTheme.primary,
       ),
     );
   }
 
   Widget _buildImageAttachment(BuildContext context) {
-    final url = message.attachmentUrl!;
+    final rawUrl = message.attachmentUrl ?? '';
+    final url = rawUrl.trim();
+    if (url.isEmpty) return const SizedBox.shrink();
+
     final isBase64 = url.startsWith('data:image');
 
     Widget imageWidget;
     if (isBase64) {
-      final base64String = url.split(',').last;
-      final bytes = base64Decode(base64String);
-      imageWidget = Image.memory(
-        bytes,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: 180,
-      );
+      try {
+        final base64String = url.split(',').last;
+        final bytes = base64Decode(base64String);
+        imageWidget = Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: 180,
+          errorBuilder: (_, _, _) => const SizedBox.shrink(),
+        );
+      } catch (_) {
+        return const SizedBox.shrink();
+      }
     } else if (url.startsWith('http://') || url.startsWith('https://')) {
       imageWidget = Image.network(
         url,
@@ -472,20 +466,14 @@ class ChatBubble extends StatelessWidget {
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
           return Container(
-            height: 180,
+            height: 140,
             color: Colors.black12,
             child: const Center(
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
           );
         },
-        errorBuilder: (_, _, _) => Container(
-          height: 120,
-          color: Colors.black12,
-          child: const Center(
-            child: Icon(Icons.broken_image_rounded, color: Colors.grey),
-          ),
-        ),
+        errorBuilder: (_, _, _) => const SizedBox.shrink(),
       );
     } else {
       imageWidget = Image.asset(
@@ -493,13 +481,7 @@ class ChatBubble extends StatelessWidget {
         fit: BoxFit.cover,
         width: double.infinity,
         height: 180,
-        errorBuilder: (_, _, _) => Container(
-          height: 120,
-          color: Colors.black12,
-          child: const Center(
-            child: Icon(Icons.broken_image_rounded, color: Colors.grey),
-          ),
-        ),
+        errorBuilder: (_, _, _) => const SizedBox.shrink(),
       );
     }
 
@@ -552,12 +534,12 @@ class ChatBubble extends StatelessWidget {
                 children: [
                   Text(
                     fileName,
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: hasDarkBg
                           ? Colors.white
-                          : AppColors.primaryText,
+                          : ConsultationTheme.primary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -565,11 +547,11 @@ class ChatBubble extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     fileSize,
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 11,
                       color: hasDarkBg
                           ? Colors.white70
-                          : AppColors.neutralGray,
+                          : ConsultationTheme.secondaryText,
                     ),
                   ),
                 ],
@@ -578,9 +560,7 @@ class ChatBubble extends StatelessWidget {
             Icon(
               Icons.open_in_new_rounded,
               size: 16,
-              color: hasDarkBg
-                  ? Colors.white70
-                  : AppColors.neutralGray,
+              color: hasDarkBg ? Colors.white70 : ConsultationTheme.secondaryText,
             ),
           ],
         ),
@@ -597,7 +577,6 @@ class ChatBubble extends StatelessWidget {
   }
 
   Future<void> _openDocument(BuildContext context) async {
-    // 1. Jika dokumen disimpan secara base64 di subkoleksi attachments Firestore (Revisi 12)
     if (message.attachmentId != null && message.attachmentId!.isNotEmpty) {
       showDialog(
         context: context,
@@ -636,11 +615,10 @@ class ChatBubble extends StatelessWidget {
 
         if (data == null) {
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Dokumen tidak ditemukan atau telah dihapus.'),
-                behavior: SnackBarBehavior.floating,
-              ),
+            showConsultationSnackBar(
+              context,
+              message: 'Dokumen tidak ditemukan atau telah dihapus.',
+              isError: true,
             );
           }
           return;
@@ -651,168 +629,185 @@ class ChatBubble extends StatelessWidget {
       } catch (e) {
         if (context.mounted) {
           Navigator.of(context, rootNavigator: true).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Gagal memuat dokumen: $e'),
-              behavior: SnackBarBehavior.floating,
-            ),
+          showConsultationSnackBar(
+            context,
+            message: 'Gagal memuat dokumen: $e',
+            isError: true,
           );
         }
       }
       return;
     }
 
-    // 2. Fallback untuk pesan lama dengan URL eksternal / storage
     final url = message.attachmentUrl;
-    if (url == null || url.isEmpty) return;
-
-    final uri = Uri.tryParse(url);
-    if (uri != null && await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tidak dapat membuka file dokumen ini.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+    if (url != null && url.isNotEmpty) {
+      final uri = Uri.tryParse(url);
+      if (uri != null && await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
     }
   }
 
-  void _showAttachmentDetailsSheet(BuildContext context, AttachmentData data) {
+  void _showAttachmentDetailsSheet(
+      BuildContext context, AttachmentData data) {
+    final fileName = data.fileName;
+    final mimeType = data.mimeType;
+    final sizeBytes = data.sizeBytes;
+    final bytes = data.bytes;
+
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetCtx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD9CDB8),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFEBEE),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.picture_as_pdf_rounded,
-                        color: Color(0xFFD32F2F),
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            data.fileName,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primaryText,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            _formatFileSize(data.sizeBytes),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.neutralGray,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Dokumen medis/hasil lab ini disimpan secara aman di Firestore (paket Spark tanpa Firebase Storage).',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: AppColors.neutralGray,
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEBEE),
+                    borderRadius: BorderRadius.circular(10),
                   ),
+                  child: const Icon(Icons.picture_as_pdf_rounded,
+                      color: Color(0xFFD32F2F), size: 26),
                 ),
-                const SizedBox(height: 20),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    Navigator.pop(sheetCtx);
-                    try {
-                      final savedPath = await FilePicker.platform.saveFile(
-                        dialogTitle: 'Simpan Dokumen PDF',
-                        fileName: data.fileName,
-                        type: FileType.custom,
-                        allowedExtensions: ['pdf'],
-                        bytes: data.bytes,
-                      );
-                      if (savedPath != null && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Berkas berhasil disimpan: $savedPath'),
-                            backgroundColor: AppColors.successGreen,
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      }
-                    } catch (saveErr) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Gagal menyimpan berkas: $saveErr'),
-                            backgroundColor: Colors.red,
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  icon: const Icon(Icons.download_rounded),
-                  label: const Text('Simpan ke Perangkat'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        fileName,
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: ConsultationTheme.primary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${_formatFileSize(sizeBytes)} • $mimeType',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: ConsultationTheme.secondaryText,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      side: const BorderSide(color: ConsultationTheme.cardBorder),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Tutup',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        color: ConsultationTheme.secondaryText,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.download_rounded, size: 18),
+                    label: const Text('Simpan'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ConsultationTheme.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      if (bytes.isEmpty) return;
+                      try {
+                        final ext = fileName.split('.').last;
+                        final savedPath = await FilePicker.platform.saveFile(
+                          dialogTitle: 'Simpan $fileName',
+                          fileName: fileName,
+                          type: FileType.custom,
+                          allowedExtensions: [ext],
+                          bytes: bytes,
+                        );
+                        if (savedPath != null && context.mounted) {
+                          showConsultationSnackBar(
+                            context,
+                            message: 'Berkas disimpan di $savedPath',
+                            isSuccess: true,
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          showConsultationSnackBar(
+                            context,
+                            message: 'Gagal menyimpan berkas: $e',
+                            isError: true,
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
+  String _formatTime(DateTime dt) {
+    final hour = dt.hour.toString().padLeft(2, '0');
+    final minute = dt.minute.toString().padLeft(2, '0');
+    return '$hour.$minute';
+  }
+
   String _formatFileSize(int? bytes) {
-    if (bytes == null || bytes == 0) return 'PDF';
+    if (bytes == null || bytes <= 0) return '';
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
-
-  String _formatTime(DateTime dt) {
-    final h = dt.hour.toString().padLeft(2, '0');
-    final m = dt.minute.toString().padLeft(2, '0');
-    return '$h.$m';
-  }
 }
 
-/// Layar Full Screen Image Viewer dengan InteractiveViewer (pinch-to-zoom).
 class _FullScreenImageViewer extends StatelessWidget {
   final String url;
   final bool isBase64;
@@ -821,35 +816,25 @@ class _FullScreenImageViewer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget imageWidget;
+    Widget img;
     if (isBase64) {
       final base64String = url.split(',').last;
-      final bytes = base64Decode(base64String);
-      imageWidget = Image.memory(bytes, fit: BoxFit.contain);
+      img = Image.memory(base64Decode(base64String), fit: BoxFit.contain);
     } else if (url.startsWith('http://') || url.startsWith('https://')) {
-      imageWidget = Image.network(url, fit: BoxFit.contain);
+      img = Image.network(url, fit: BoxFit.contain);
     } else {
-      imageWidget = Image.asset(url, fit: BoxFit.contain);
+      img = Image.asset(url, fit: BoxFit.contain);
     }
 
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close_rounded),
-          onPressed: () => Navigator.pop(context),
-          tooltip: 'Tutup',
-        ),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Center(
-        child: InteractiveViewer(
-          minScale: 0.5,
-          maxScale: 4.0,
-          child: imageWidget,
-        ),
+        child: InteractiveViewer(child: img),
       ),
     );
   }

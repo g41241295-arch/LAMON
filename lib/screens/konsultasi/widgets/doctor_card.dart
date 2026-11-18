@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../../constants/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../constants/consultation_theme.dart';
 import '../../../models/doctor_model.dart';
 import '../../../utils/currency_formatter.dart';
 import 'doctor_avatar.dart';
 
 export 'doctor_avatar.dart';
 
-/// Widget kartu dokter untuk tab "Pilih Dokter" dan "Rekomendasi".
-/// Memiliki susunan dan tinggi konsisten antar kartu.
+/// Kartu dokter formal untuk tab "Pilih Dokter" dan "Rekomendasi".
 class DoctorCard extends StatelessWidget {
   final DoctorModel doctor;
   final VoidCallback onTapCard;
@@ -26,322 +26,360 @@ class DoctorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTapCard,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: AppColors.glassCardBackground,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: const Color(0xFFE2ECF2),
-            width: 1.2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Baris Atas: Foto rounded square + info nama, spesialisasi, harga ──
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Foto dokter (76x76, rounded 16)
-                  DoctorAvatar(
-                    photoUrl: doctor.effectivePhotoUrl,
-                    doctorId: doctor.id,
-                    doctorName: doctor.name,
-                    size: 76,
-                    borderRadius: 16,
-                  ),
-                  const SizedBox(width: 14),
+    final primaryHour = doctor.primaryHour?.display ??
+        (doctor.operatingHours.isNotEmpty
+            ? doctor.operatingHours.first.display
+            : 'Sesuai jadwal');
 
-                  // Info dokter
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          doctor.name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primaryText,
+    final hasMultipleHours = doctor.operatingHours.length > 1 && onTapJamLainnya != null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: ConsultationTheme.cardBorder,
+          width: 1,
+        ),
+        boxShadow: ConsultationTheme.cardShadow,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTapCard,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── a. Baris Atas: DoctorAvatar + Info Dokter ─────────────────────
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DoctorAvatar(
+                      doctor: doctor,
+                      size: 72,
+                      borderRadius: 18,
+                      showVerificationBadge: false, // Disembunyikan aman karena belum ada field verifikasi di DB
+                      isVerified: false,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            doctor.name,
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: ConsultationTheme.primary,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 3),
-                        if (isRecommended) ...[
+                          const SizedBox(height: 3),
                           Text(
                             doctor.specialty,
-                            style: const TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 12,
-                              color: AppColors.neutralGray,
+                              color: ConsultationTheme.secondaryText,
                               fontWeight: FontWeight.w500,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${doctor.consultationsHandled} konsultasi ditangani • ${doctor.experienceYears} tahun pengalaman',
-                            style: const TextStyle(
-                              fontSize: 11.5,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ] else ...[
-                          Text(
-                            doctor.specialtyDisplay,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.neutralGray,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                        const SizedBox(height: 4),
-                        // Baris Rating Agregat (Revisi 11 Bagian A.4)
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.star_rounded,
-                              size: 15,
-                              color: Color(0xFFFFB300),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              doctor.ratingCount > 0
-                                  ? '${doctor.averageRating.toStringAsFixed(1)} (${doctor.ratingCount})'
-                                  : 'Belum ada penilaian',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: doctor.ratingCount > 0
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                                color: doctor.ratingCount > 0
-                                    ? AppColors.primaryText
-                                    : AppColors.neutralGray,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        // Baris Chip Harga & Penanda Rekomendasi
-                        Row(
-                          children: [
+                          const SizedBox(height: 6),
+                          if (isRecommended) ...[
+                            // Chip Rekomendasi emas
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
+                                  horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.08),
+                                color: ConsultationTheme.goldBg,
                                 borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                formatRupiah(doctor.price),
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.primary,
+                                border: Border.all(
+                                  color: ConsultationTheme.goldBorder,
+                                  width: 1,
                                 ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    size: 13,
+                                    color: Color(0xFFF2B544),
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'Rekomendasi',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: ConsultationTheme.goldText,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            if (isRecommended) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFF3CD),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color: const Color(0xFFFFD54F), width: 1),
+                            if (doctor.consultationsHandled > 0) ...[
+                              const SizedBox(height: 3),
+                              Text(
+                                '${doctor.consultationsHandled} konsultasi ditangani',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.5,
+                                  color: ConsultationTheme.secondaryText,
+                                  fontWeight: FontWeight.w500,
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(Icons.star_rounded,
-                                        size: 13, color: Color(0xFFF57F17)),
-                                    SizedBox(width: 3),
-                                    Text(
-                                      'Rekomendasi',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        color: Color(0xFFE65100),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.clip,
                               ),
                             ],
+                          ] else ...[
+                            // Status Praktik Hari ini (hijau) bila ada jadwal praktik
+                            if (doctor.operatingHours.isNotEmpty)
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 7,
+                                    height: 7,
+                                    decoration: const BoxDecoration(
+                                      color: ConsultationTheme.greenDot,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Praktik hari ini',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: ConsultationTheme.green,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // ── b. Baris Statistik Tiga Kolom dalam kotak #F7F3EB ──────────
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: ConsultationTheme.softBg,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: ConsultationTheme.cardBorder,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Kolom 1: Rating
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.star_rounded,
+                                  size: 16,
+                                  color: ConsultationTheme.gold,
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  doctor.ratingCount > 0
+                                      ? doctor.averageRating.toStringAsFixed(1)
+                                      : '—',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: ConsultationTheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              doctor.ratingCount > 0
+                                  ? 'Rating (${doctor.ratingCount})'
+                                  : 'Rating',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w500,
+                                color: ConsultationTheme.secondaryText,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ],
                         ),
-                      ],
+                      ),
+                      Container(
+                        width: 1,
+                        height: 26,
+                        color: ConsultationTheme.divider,
+                      ),
+
+                      // Kolom 2: Pengalaman
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${doctor.experienceYears} th',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: ConsultationTheme.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Pengalaman',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w500,
+                                color: ConsultationTheme.secondaryText,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 26,
+                        color: ConsultationTheme.divider,
+                      ),
+
+                      // Kolom 3: Biaya Sesi
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              formatRupiah(doctor.price),
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: ConsultationTheme.primary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'per sesi',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w500,
+                                color: ConsultationTheme.secondaryText,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // ── c. Baris Jam Operasional ────────────────────────────────────
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.access_time_rounded,
+                      size: 15,
+                      color: ConsultationTheme.secondaryText,
                     ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 14),
-
-              // ── Baris Tengah: Label Jam Operasional saja ──
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(
-                    Icons.access_time_rounded,
-                    size: 14,
-                    color: AppColors.neutralGray,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'Jam Operasional',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.neutralGray,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(width: 6),
+                    Text(
+                      'JAM OPERASIONAL',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.8,
+                        color: ConsultationTheme.secondaryText,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                    const Spacer(),
+                    Text(
+                      primaryHour,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: ConsultationTheme.primary,
+                      ),
+                    ),
+                    if (hasMultipleHours) ...[
+                      const SizedBox(width: 6),
+                      InkWell(
+                        onTap: onTapJamLainnya,
+                        borderRadius: BorderRadius.circular(6),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          child: Text(
+                            '+Lainnya',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: ConsultationTheme.teal,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 14),
 
-              const SizedBox(height: 8),
-
-              // Chip jam operasional membentang penuh (Expanded) + kotak Jam Lainnya sejajar
-              _buildOperatingHoursRow(),
-
-              const SizedBox(height: 14),
-
-              // ── Baris Bawah: Tombol Chat Dokter lebar penuh, tinggi 48 ──
-              Semantics(
-                label: 'Chat Dokter ${doctor.name}',
-                button: true,
-                child: SizedBox(
+                // ── d. Tombol Utama: Chat Dokter dengan ikon panah putih ────────
+                SizedBox(
                   width: double.infinity,
-                  height: 48,
                   child: ElevatedButton(
                     onPressed: onTapChatButton,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: ConsultationTheme.primary,
                       foregroundColor: Colors.white,
                       elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Chat Dokter',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-
-  Widget _buildOperatingHoursRow() {
-    final hasJamLainnya =
-        doctor.operatingHours.length > 1 && onTapJamLainnya != null;
-    final hoursToShow =
-        doctor.operatingHours.take(hasJamLainnya ? 2 : 3).toList();
-
-    final List<Widget> children = [];
-
-    for (int i = 0; i < hoursToShow.length; i++) {
-      if (i > 0) children.add(const SizedBox(width: 8));
-      final h = hoursToShow[i];
-      children.add(
-        Expanded(
-          child: Container(
-            height: 34,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F7FA),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: const Color(0xFFE2ECF2),
-                width: 1,
-              ),
-            ),
-            child: Center(
-              child: Text(
-                h.display,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primaryText,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (hasJamLainnya) {
-      if (children.isNotEmpty) children.add(const SizedBox(width: 8));
-      children.add(
-        Expanded(
-          child: GestureDetector(
-            onTap: onTapJamLainnya,
-            child: Container(
-              height: 34,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F7FA),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: const Color(0xFFE2ECF2),
-                  width: 1,
-                ),
-              ),
-              child: const Center(
-                child: Text(
-                  'Jam Lainnya',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (children.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Row(children: children);
-  }
 }
-

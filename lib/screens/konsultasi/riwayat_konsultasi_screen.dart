@@ -1,20 +1,22 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/consultation_constants.dart';
+import '../../constants/consultation_theme.dart';
 import '../../models/consultation_model.dart';
 import '../../models/doctor_model.dart';
 import '../../services/consultation_retention_service.dart';
 import '../../services/consultation_service.dart';
 import '../../services/doctor_service.dart';
 import '../../utils/app_date_formatter.dart';
-import '../../widgets/app_header_pill.dart';
 import '../../widgets/app_scaffold.dart';
 import 'chat_dokter_screen.dart';
 import 'widgets/doctor_avatar.dart';
 
 /// Layar Riwayat Konsultasi (Sisi Pasien).
-/// Menampilkan daftar konsultasi berstatus "completed" yang dikelompokkan per tanggal.
+/// Menampilkan daftar konsultasi dengan filter tab segmented ("Semua", "Berlangsung", "Selesai"),
+/// kartu formal profesional, dan bottom sheet beri penilaian terpadu.
 class RiwayatKonsultasiScreen extends StatefulWidget {
   const RiwayatKonsultasiScreen({super.key});
 
@@ -27,11 +29,11 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
   final ConsultationService _consultationService = ConsultationService();
   final DoctorService _doctorService = DoctorService();
   bool _isNavigating = false;
+  String _selectedFilter = 'semua'; // 'semua' | 'berlangsung' | 'selesai'
 
   @override
   void initState() {
     super.initState();
-    // Trigger pembersihan background 60 hari untuk pasien (Revisi 10 Bagian D)
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null && uid.isNotEmpty) {
       ConsultationRetentionService.instance.runRetentionCleanup(
@@ -41,15 +43,11 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
     }
   }
 
-  Future<void> _handleChatUlang(
-      BuildContext context, ConsultationModel consultation) async {
+  Future<void> _handleChatUlang(ConsultationModel consultation) async {
     if (_isNavigating) return;
     setState(() => _isNavigating = true);
 
-    // Capture navigator & messenger before async gap
     final nav = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-
     try {
       DoctorModel? doctor =
           await _doctorService.getDoctorById(consultation.doctorId);
@@ -76,19 +74,16 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('Gagal memulai chat ulang: $e'),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-        ),
+      showConsultationSnackBar(
+        context,
+        message: 'Gagal memulai chat ulang: $e',
+        isError: true,
       );
     } finally {
       if (mounted) setState(() => _isNavigating = false);
     }
   }
 
-  /// Mengelompokkan konsultasi per tanggal (yyyy-MM-dd)
   Map<String, List<ConsultationModel>> _groupByDate(
       List<ConsultationModel> list) {
     final Map<String, List<ConsultationModel>> grouped = {};
@@ -104,27 +99,37 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text('Hapus dari riwayat?',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          'Hapus dari riwayat?',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         content: Text(
-          'Konsultasi dengan ${item.doctorName} akan disembunyikan dari riwayat Anda. Catatan dokter tetap tersimpan normal.',
-          style: const TextStyle(fontSize: 13, color: AppColors.primaryText),
+          'Konsultasi dengan ${item.doctorName} akan disembunyikan dari riwayat Anda.',
+          style: GoogleFonts.poppins(
+              fontSize: 13, color: ConsultationTheme.secondaryText),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            child: Text(
+              'Batal',
+              style: GoogleFonts.poppins(color: ConsultationTheme.secondaryText),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: ConsultationTheme.red,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                  borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Hapus'),
+            child: Text(
+              'Hapus',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -139,37 +144,29 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
         );
 
         if (!mounted) return;
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Konsultasi dihapus dari riwayat'),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(
-              label: 'Urungkan',
-              textColor: Colors.amberAccent,
-              onPressed: () async {
-                try {
-                  await _consultationService.hideConsultationFromHistory(
-                    consultationId: item.id,
-                    patientUid: item.patientUid,
-                    hidden: false,
-                  );
-                } catch (e) {
-                  debugPrint('Gagal membatalkan penghapusan: $e');
-                }
-              },
-            ),
+        showConsultationSnackBar(
+          context,
+          message: 'Konsultasi dihapus dari riwayat',
+          action: SnackBarAction(
+            label: 'Urungkan',
+            textColor: ConsultationTheme.gold,
+            onPressed: () async {
+              try {
+                await _consultationService.hideConsultationFromHistory(
+                  consultationId: item.id,
+                  patientUid: item.patientUid,
+                  hidden: false,
+                );
+              } catch (_) {}
+            },
           ),
         );
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Gagal menghapus riwayat: $e'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
+          showConsultationSnackBar(
+            context,
+            message: 'Gagal menghapus riwayat: $e',
+            isError: true,
           );
         }
       }
@@ -186,11 +183,9 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
     }).toList();
 
     if (oldList.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Tidak ada riwayat lama.'),
-          behavior: SnackBarBehavior.floating,
-        ),
+      showConsultationSnackBar(
+        context,
+        message: 'Tidak ada riwayat lama yang perlu dibersihkan.',
       );
       return;
     }
@@ -198,27 +193,37 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text('Bersihkan riwayat lama',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          'Bersihkan riwayat lama',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         content: Text(
-          'Terdapat ${oldList.length} riwayat konsultasi yang lebih dari 30 hari. Apakah Anda yakin ingin menghapusnya dari riwayat Anda?',
-          style: const TextStyle(fontSize: 13, color: AppColors.primaryText),
+          'Terdapat ${oldList.length} riwayat konsultasi yang lebih dari 30 hari. Apakah Anda yakin ingin menghapusnya?',
+          style: GoogleFonts.poppins(
+              fontSize: 13, color: ConsultationTheme.secondaryText),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            child: Text(
+              'Batal',
+              style: GoogleFonts.poppins(color: ConsultationTheme.secondaryText),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: ConsultationTheme.red,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                  borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Bersihkan'),
+            child: Text(
+              'Bersihkan',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -228,22 +233,17 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
       try {
         final count = await _consultationService.cleanOldConsultationHistory();
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                '$count riwayat konsultasi lama berhasil dibersihkan'),
-            backgroundColor: AppColors.successGreen,
-            behavior: SnackBarBehavior.floating,
-          ),
+        showConsultationSnackBar(
+          context,
+          message: '$count riwayat konsultasi lama berhasil dibersihkan',
+          isSuccess: true,
         );
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Gagal membersihkan riwayat: $e'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
+          showConsultationSnackBar(
+            context,
+            message: 'Gagal membersihkan riwayat: $e',
+            isError: true,
           );
         }
       }
@@ -259,325 +259,382 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
         final completedList =
             allList.where((c) => c.isCompleted && !c.hiddenByPatient).toList();
 
-        return AppScaffold(
-          appBar: AppHeaderPill(
-            title: 'Riwayat Konsultasi',
-            rightAction: PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert_rounded,
-                  color: AppColors.primaryText),
+        final ongoingList = allList
+            .where((c) => (c.isActive || c.isWaiting) && !c.hiddenByPatient)
+            .toList();
+
+        ongoingList.sort((a, b) {
+          final timeA = a.lastMessageAt ?? a.createdAt;
+          final timeB = b.lastMessageAt ?? b.createdAt;
+          return timeB.compareTo(timeA);
+        });
+
+        completedList.sort((a, b) {
+          final timeA = a.completedAt ?? a.createdAt;
+          final timeB = b.completedAt ?? b.createdAt;
+          return timeB.compareTo(timeA);
+        });
+
+        // Popup menu titik tiga bulat 44: kartu putih radius 16, border krem, bayangan tipis
+        final rightMenu = Theme(
+          data: Theme.of(context).copyWith(
+            cardColor: Colors.white,
+            popupMenuTheme: PopupMenuThemeData(
+              color: Colors.white,
+              elevation: 4,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              onSelected: (val) {
-                if (val == 'clean_old') {
-                  _showCleanOldHistoryDialog(completedList);
-                }
-              },
-              itemBuilder: (ctx) => [
-                const PopupMenuItem(
-                  value: 'clean_old',
-                  child: Row(
-                    children: [
-                      Icon(Icons.cleaning_services_rounded,
-                          size: 18, color: AppColors.primary),
-                      SizedBox(width: 10),
-                      Text('Bersihkan riwayat lama',
-                          style: TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                ),
-              ],
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(
+                    color: ConsultationTheme.cardBorder, width: 1),
+              ),
             ),
           ),
-          body: Builder(
-            builder: (context) {
-              // ── 1. State Loading ──
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(color: AppColors.primary),
-                      SizedBox(height: 14),
-                      Text(
-                        'Memuat riwayat konsultasi...',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.summaryCardSubtext,
-                          fontWeight: FontWeight.w500,
-                        ),
+          child: PopupMenuButton<String>(
+            padding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(
+                  color: ConsultationTheme.cardBorder, width: 1),
+            ),
+            icon: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: ConsultationTheme.cardBorder,
+                  width: 1.2,
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x0A1F5C7A),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.more_vert_rounded,
+                color: ConsultationTheme.primary,
+                size: 20,
+              ),
+            ),
+            onSelected: (val) {
+              if (val == 'clean_old') {
+                _showCleanOldHistoryDialog(completedList);
+              }
+            },
+            itemBuilder: (ctx) => [
+              PopupMenuItem(
+                value: 'clean_old',
+                child: Row(
+                  children: [
+                    const Icon(Icons.cleaning_services_rounded,
+                        size: 18, color: ConsultationTheme.primary),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Bersihkan riwayat lama',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: ConsultationTheme.primary,
                       ),
-                    ],
-                  ),
-                );
-              }
-
-              // ── 2. State Error (Tampil sebagai error, bukan empty) ──
-              if (snapshot.hasError) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade50,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.error_outline_rounded,
-                              color: Colors.red, size: 32),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Gagal Memuat Riwayat',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryText,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          '${snapshot.error}',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.summaryCardSubtext,
-                          ),
-                        ),
-                      ],
                     ),
-                  ),
-                );
-              }
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
 
-              // ── Pisahkan Sisi Klien: Sedang Berlangsung vs Selesai ──
-              final ongoingList = allList
-                  .where((c) => (c.isActive || c.isWaiting) && !c.hiddenByPatient)
-                  .toList();
+        return AppScaffold(
+          backgroundGradient: AppColors.pageGradient,
+          appBar: ConsultationHeader(
+            title: 'Riwayat Konsultasi',
+            rightAction: rightMenu,
+          ),
+          body: Builder(
+              builder: (context) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                        color: ConsultationTheme.primary),
+                  );
+                }
 
-              ongoingList.sort((a, b) {
-                final timeA = a.lastMessageAt ?? a.createdAt;
-                final timeB = b.lastMessageAt ?? b.createdAt;
-                return timeB.compareTo(timeA);
-              });
-
-              completedList.sort((a, b) {
-                final timeA = a.completedAt ?? a.createdAt;
-                final timeB = b.completedAt ?? b.createdAt;
-                return timeB.compareTo(timeA);
-              });
-
-              // ── 3. State Kosong (Empty) hanya jika kedua bagian kosong ──
-              if (ongoingList.isEmpty && completedList.isEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.history_rounded,
-                            size: 40,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          'Belum ada riwayat konsultasi',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryText,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Konsultasi yang sedang berlangsung dan yang sudah selesai akan tampil di halaman ini.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.summaryCardSubtext,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        _buildRetentionInfoBanner(),
-                      ],
-                    ),
-                  ),
-                );
-              }
-
-              // ── 4. Tampilan Riwayat Konsultasi (Dua Bagian) ──
-              final groupedCompleted = _groupByDate(completedList);
-              final sortedDateKeys = groupedCompleted.keys.toList();
-
-              return ListView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-                children: [
-                  // ══════════════════════════════════════════════════════════════
-                  // BAGIAN ATAS: Sedang Berlangsung (hanya jika ada)
-                  // ══════════════════════════════════════════════════════════════
-                  if (ongoingList.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4, bottom: 12),
-                      child: Row(
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
-                            width: 8,
-                            height: 8,
+                            width: 64,
+                            height: 64,
                             decoration: const BoxDecoration(
-                              color: AppColors.successGreen,
+                              color: ConsultationTheme.lightBlue,
                               shape: BoxShape.circle,
                             ),
+                            child: const Icon(
+                              Icons.error_outline_rounded,
+                              size: 32,
+                              color: ConsultationTheme.primary,
+                            ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(height: 16),
                           Text(
-                            'Sedang Berlangsung (${ongoingList.length})',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primaryText,
+                            'Gagal memuat riwayat',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: ConsultationTheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '${snapshot.error}',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: ConsultationTheme.secondaryText,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    ...ongoingList.map((item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 14),
-                          child: _buildOngoingConsultationCard(context, item),
-                        )),
-                    const SizedBox(height: 10),
-                  ],
+                  );
+                }
 
-                  // ══════════════════════════════════════════════════════════════
-                  // BAGIAN BAWAH: Selesai (hanya jika ada)
-                  // ══════════════════════════════════════════════════════════════
-                  if (completedList.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8, bottom: 12),
-                      child: Row(
+                if (ongoingList.isEmpty && completedList.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
-                            Icons.check_circle_outline_rounded,
-                            size: 16,
-                            color: AppColors.neutralGray,
+                          Container(
+                            width: 76,
+                            height: 76,
+                            decoration: const BoxDecoration(
+                              color: ConsultationTheme.lightBlue,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.history_rounded,
+                              size: 38,
+                              color: ConsultationTheme.primary,
+                            ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(height: 18),
                           Text(
-                            'Selesai (${completedList.length})',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primaryText,
+                            'Belum ada riwayat konsultasi',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: ConsultationTheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Konsultasi yang sedang berlangsung dan yang sudah selesai akan tampil di halaman ini.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: ConsultationTheme.secondaryText,
+                              height: 1.4,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    ...sortedDateKeys.expand((dateKey) {
-                      final items = groupedCompleted[dateKey]!;
-                      final firstDate =
-                          items.first.completedAt ?? items.first.createdAt;
-                      final formattedHeaderDate =
-                          AppDateFormatter.formatLongDate(firstDate);
+                  );
+                }
 
-                      return [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4, bottom: 10),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_today_rounded,
-                                size: 14,
-                                color: AppColors.primary,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                formattedHeaderDate,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primaryText,
-                                ),
-                              ),
-                            ],
+                final showOngoing =
+                    _selectedFilter == 'semua' || _selectedFilter == 'berlangsung';
+                final showCompleted =
+                    _selectedFilter == 'semua' || _selectedFilter == 'selesai';
+
+                final groupedCompleted = _groupByDate(completedList);
+                final sortedDateKeys = groupedCompleted.keys.toList();
+
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  children: [
+                    // ── Filter Chip: "Semua", "Berlangsung", "Selesai" ────────
+                    _buildFilterChips(),
+                    const SizedBox(height: 16),
+
+                    // ══════════════════════════════════════════════════════════════
+                    // 5. RIWAYAT KONSULTASI: SEDANG BERLANGSUNG
+                    // ══════════════════════════════════════════════════════════════
+                    if (showOngoing && ongoingList.isNotEmpty) ...[
+                      _buildSectionHeaderOngoing(ongoingList.length),
+                      const SizedBox(height: 12),
+                      ...ongoingList.map(
+                        (item) => _buildOngoingCard(context, item),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+
+                    // ══════════════════════════════════════════════════════════════
+                    // 6. RIWAYAT KONSULTASI: SELESAI
+                    // ══════════════════════════════════════════════════════════════
+                    if (showCompleted && completedList.isNotEmpty) ...[
+                      ...sortedDateKeys.expand((dateKey) {
+                        final items = groupedCompleted[dateKey]!;
+                        final firstDate =
+                            items.first.completedAt ?? items.first.createdAt;
+                        final formattedHeaderDate =
+                            AppDateFormatter.formatLongDate(firstDate);
+
+                        return [
+                          _buildDateGroupHeader(formattedHeaderDate),
+                          const SizedBox(height: 10),
+                          ...items.map(
+                            (item) => _buildCompletedCard(context, item),
                           ),
-                        ),
-                        ...items.map((item) => Padding(
-                              padding: const EdgeInsets.only(bottom: 14),
-                              child: _buildConsultationHistoryCard(context, item),
-                            )),
-                      ];
-                    }),
+                          const SizedBox(height: 12),
+                        ];
+                      }),
+                    ],
+
+                    // Pesan kosong jika filter aktif tidak menemukan item
+                    if ((_selectedFilter == 'berlangsung' && ongoingList.isEmpty) ||
+                        (_selectedFilter == 'selesai' && completedList.isEmpty))
+                      _buildEmptyFilterState(),
+
+                    // Keterangan retensi 60 hari
+                    _buildRetentionBanner(),
                   ],
-                  const SizedBox(height: 8),
-                  _buildRetentionInfoBanner(),
-                ],
-              );
-            },
-          ),
+                );
+              },
+            ),
         );
       },
     );
   }
 
-  Widget _buildRetentionInfoBanner() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Center(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.info_outline_rounded,
-                size: 13, color: AppColors.neutralGray.withValues(alpha: 0.7)),
-            const SizedBox(width: 6),
-            const Text(
-              'Chat dihapus otomatis 60 hari setelah aktivitas terakhir.',
-              style: TextStyle(
-                fontSize: 11,
-                color: AppColors.neutralGray,
-                fontWeight: FontWeight.w500,
-              ),
+  /// Filter chip: "Semua", "Berlangsung", "Selesai".
+  /// Aktif: biru tua teks putih. Tidak aktif: putih, border #D9CDB8, teks biru tua.
+  Widget _buildFilterChips() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildFilterChipItem('Semua', 'semua'),
+          const SizedBox(width: 8),
+          _buildFilterChipItem('Berlangsung', 'berlangsung'),
+          const SizedBox(width: 8),
+          _buildFilterChipItem('Selesai', 'selesai'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChipItem(String label, String value) {
+    final isSelected = _selectedFilter == value;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedFilter = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? ConsultationTheme.primary : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? ConsultationTheme.primary : const Color(0xFFD9CDB8),
+            width: 1.2,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x081F5C7A),
+              blurRadius: 4,
+              offset: Offset(0, 1),
             ),
           ],
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? Colors.white : ConsultationTheme.primary,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildOngoingConsultationCard(
-      BuildContext context, ConsultationModel item) {
-    final isActive = item.isActive;
+  /// Judul bagian: titik hijau 10px + "Sedang Berlangsung" (bold 16) + chip kecil jumlah (latar #EAF3F8, teks biru tua)
+  Widget _buildSectionHeaderOngoing(int count) {
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: const BoxDecoration(
+            color: ConsultationTheme.greenDot,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          'Sedang Berlangsung',
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: ConsultationTheme.primary,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: ConsultationTheme.lightBlueBg,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            '$count',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: ConsultationTheme.primary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
-    final badgeBg = isActive ? const Color(0xFFE8F5E9) : const Color(0xFFFFF8E1);
-    final badgeBorder =
-        isActive ? const Color(0xFFC8E6C9) : const Color(0xFFFFECB3);
-    final badgeColor =
-        isActive ? const Color(0xFF2E7D32) : const Color(0xFFB45309);
-    final badgeDotColor =
-        isActive ? AppColors.successGreen : const Color(0xFFB45309);
-    final badgeText = isActive ? 'Berlangsung' : 'Menunggu Konfirmasi';
+  /// Pengelompokan per tanggal: label mikro tanggal dengan garis tipis memanjang di kanan
+  Widget _buildDateGroupHeader(String dateText) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          MicroLabel(
+            dateText,
+            color: ConsultationTheme.secondaryText,
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Divider(
+              color: ConsultationTheme.cardBorder,
+              thickness: 1,
+              height: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-    final buttonLabel = isActive ? 'Lanjutkan Chat' : 'Buka Chat';
+  /// 5. Kartu Konsultasi: Sedang Berlangsung
+  Widget _buildOngoingCard(BuildContext context, ConsultationModel item) {
+    final isWaiting = item.isWaiting;
 
     void openLiveChat() {
       Navigator.push(
@@ -588,601 +645,570 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
             isDoctor: false,
             patientUid: item.patientUid,
             initialConsultation: item,
-            readOnly: false, // LIVE CHAT!
+            readOnly: false,
           ),
         ),
       );
     }
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: openLiveChat,
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.cardBackground,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: isActive
-                  ? AppColors.successGreen.withValues(alpha: 0.35)
-                  : const Color(0xFFE2ECF2),
-              width: 1.2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Baris Atas: Label & Badge Status
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Konsultasi Dokter',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.summaryCardSubtext,
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: badgeBg,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: badgeBorder, width: 1),
-                    ),
-                    child: Row(
+    final scheduledDateStr = AppDateFormatter.formatDateKey(item.effectiveScheduledDate);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: ConsultationTheme.cardBorder,
+          width: 1,
+        ),
+        boxShadow: ConsultationTheme.cardShadow,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: openLiveChat,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // a. Baris atas: label mikro "KONSULTASI DOKTER" di kiri, status di kanan
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const MicroLabel('KONSULTASI DOKTER'),
+                    Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          width: 6,
-                          height: 6,
+                          width: 7,
+                          height: 7,
                           decoration: BoxDecoration(
-                            color: badgeDotColor,
+                            color: isWaiting
+                                ? ConsultationTheme.orange
+                                : ConsultationTheme.greenDot,
                             shape: BoxShape.circle,
                           ),
                         ),
                         const SizedBox(width: 5),
                         Text(
-                          badgeText,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: badgeColor,
+                          isWaiting ? 'Menunggu Konfirmasi' : 'Berlangsung',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: isWaiting
+                                ? const Color(0xFFB5651D)
+                                : ConsultationTheme.green,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Baris Tengah: Foto, Nama, Spesialisasi, dan Waktu Praktik
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  DoctorAvatar(
-                    photoUrl: item.effectiveDoctorPhotoUrl,
-                    doctorId: item.doctorId,
-                    doctorName: item.doctorName,
-                    size: 56,
-                    borderRadius: 14,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.doctorName,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryText,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          item.doctorSpecialty,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.summaryCardSubtext,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.access_time_rounded,
-                              size: 14,
-                              color: AppColors.primary,
-                            ),
-                            const SizedBox(width: 5),
-                            Expanded(
-                              child: Text(
-                                AppDateFormatter.formatScheduledDateTime(
-                                  item.effectiveScheduledDate,
-                                  item.scheduledTime,
-                                ),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              // Cuplikan Pesan Terakhir Satu Baris (Ellipsis) dengan Jamnya
-              if (item.lastMessageText != null &&
-                  item.lastMessageText!.trim().isNotEmpty) ...[
+                  ],
+                ),
                 const SizedBox(height: 12),
+
+                // b. Baris dokter: DoctorAvatar 56x56 radius 16, nama bold 15, spesialis
+                Row(
+                  children: [
+                    DoctorAvatar(
+                      photoUrl: item.effectiveDoctorPhotoUrl,
+                      doctorId: item.doctorId,
+                      doctorName: item.doctorName,
+                      size: 56,
+                      borderRadius: 16,
+                      showVerificationBadge: true,
+                      isVerified: false,
+                      badgeSize: 18,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.doctorName,
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: ConsultationTheme.primary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            item.doctorSpecialty,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: ConsultationTheme.secondaryText,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // c. Kotak dua kolom: latar #F7F3EB, border krem, radius 14, dipisah garis tipis: TANGGAL & JAM
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFEDF2F7)),
+                    color: ConsultationTheme.softBg,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: ConsultationTheme.cardBorder,
+                      width: 1,
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.chat_bubble_outline_rounded,
-                        size: 13,
-                        color: AppColors.neutralGray,
-                      ),
-                      const SizedBox(width: 6),
+                      // Kolom TANGGAL
                       Expanded(
-                        child: Text(
-                          item.lastMessageText!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.primaryText,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const MicroLabel('TANGGAL'),
+                            const SizedBox(height: 2),
+                            Text(
+                              scheduledDateStr,
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: ConsultationTheme.primary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ),
-                      if (item.lastMessageAt != null) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          AppDateFormatter.formatTime(item.lastMessageAt!),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.neutralGray,
-                            fontWeight: FontWeight.w500,
-                          ),
+                      Container(
+                        width: 1,
+                        height: 26,
+                        color: ConsultationTheme.divider,
+                      ),
+                      const SizedBox(width: 14),
+                      // Kolom JAM
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const MicroLabel('JAM'),
+                            const SizedBox(height: 2),
+                            Text(
+                              item.scheduledTime.isNotEmpty
+                                  ? item.scheduledTime
+                                  : '18.00 – 21.00',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: ConsultationTheme.primary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ],
                   ),
                 ),
-              ],
 
-              const SizedBox(height: 12),
-              const Divider(height: 1, color: Color(0xFFEEF3F6)),
-              const SizedBox(height: 12),
-
-              // Baris Bawah: Badge Pesan Belum Dibaca + Tombol Utama Pill Terisi
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (item.unreadForPatient > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade600,
-                        borderRadius: BorderRadius.circular(12),
+                // d. Cuplikan pesan terakhir: kotak #F7F3EB, ikon chat, teks 1 baris ellipsis, jam kecil
+                if (item.lastMessageText != null &&
+                    item.lastMessageText!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: ConsultationTheme.softBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: ConsultationTheme.cardBorder,
+                        width: 1,
                       ),
-                      child: Text(
-                        '${item.unreadForPatient} belum dibaca',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          size: 14,
+                          color: ConsultationTheme.secondaryText,
                         ),
-                      ),
-                    )
-                  else
-                    const SizedBox.shrink(),
-                  ElevatedButton.icon(
-                    onPressed: openLiveChat,
-                    icon: const Icon(Icons.chat_rounded, size: 16),
-                    label: Text(buttonLabel),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            item.lastMessageText!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: ConsultationTheme.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        if (item.lastMessageAt != null) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            AppDateFormatter.formatTime(item.lastMessageAt!),
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: ConsultationTheme.secondaryText,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],
-              ),
-            ],
+                const SizedBox(height: 12),
+
+                // e. Baris bawah: badge merah "N belum dibaca" di kiri (bila ada) + tombol "Buka Chat" di kanan
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (item.unreadForPatient > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: ConsultationTheme.red,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${item.unreadForPatient} belum dibaca',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      )
+                    else
+                      const SizedBox.shrink(),
+                    ElevatedButton.icon(
+                      onPressed: openLiveChat,
+                      icon: const Icon(Icons.chat_bubble_rounded,
+                          size: 15, color: Colors.white),
+                      label: Text(
+                        'Buka Chat',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ConsultationTheme.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 18, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildConsultationHistoryCard(
-      BuildContext context, ConsultationModel item) {
-    final finishTime = item.completedAt ?? item.createdAt;
-    final finishTimeStr = AppDateFormatter.formatFullDateTime(finishTime);
+  /// 6. Kartu Konsultasi: Selesai
+  Widget _buildCompletedCard(BuildContext context, ConsultationModel item) {
+    final completedTimeStr = item.completedAt != null
+        ? '${AppDateFormatter.formatDateTime(item.completedAt!)} WIB'
+        : 'Selesai';
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ChatDokterScreen(
-                consultationId: item.id,
-                isDoctor: false,
-                patientUid: item.patientUid,
-                initialConsultation: item,
-                readOnly: true,
-              ),
+    final scheduledDateStr = AppDateFormatter.formatDateKey(item.effectiveScheduledDate);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: ConsultationTheme.cardBorder,
+          width: 1,
+        ),
+        boxShadow: ConsultationTheme.cardShadow,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // a. Baris atas: label mikro "KONSULTASI SELESAI" dan di kanan status "● Selesai" + titik tiga
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const MicroLabel('KONSULTASI SELESAI'),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: ConsultationTheme.greenDot,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      'Selesai',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: ConsultationTheme.green,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      icon: const Icon(
+                        Icons.more_vert_rounded,
+                        size: 18,
+                        color: ConsultationTheme.secondaryText,
+                      ),
+                      onPressed: () => _confirmDeleteConsultation(item),
+                      tooltip: 'Hapus dari riwayat',
+                    ),
+                  ],
+                ),
+              ],
             ),
-          );
-        },
-        onLongPress: () => _confirmDeleteConsultation(item),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.cardBackground,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE2ECF2), width: 1.2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Baris Atas: Judul "Konsultasi dengan" & Badge Status "Selesai" (Hijau) + Menu Opsi
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Konsultasi dengan',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.summaryCardSubtext,
+            const SizedBox(height: 12),
+
+            // b. Baris dokter (DoctorAvatar 56x56 radius 16) + kotak TANGGAL/JAM
+            Row(
+              children: [
+                DoctorAvatar(
+                  photoUrl: item.effectiveDoctorPhotoUrl,
+                  doctorId: item.doctorId,
+                  doctorName: item.doctorName,
+                  size: 56,
+                  borderRadius: 16,
+                  showVerificationBadge: true,
+                  isVerified: false,
+                  badgeSize: 18,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.doctorName,
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: ConsultationTheme.primary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.doctorSpecialty,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: ConsultationTheme.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Kotak dua kolom TANGGAL / JAM
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: ConsultationTheme.softBg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: ConsultationTheme.cardBorder,
+                  width: 1,
                 ),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              child: Row(
                 children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8F5E9),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFC8E6C9), width: 1),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.check_circle_rounded,
-                          size: 13,
-                          color: Color(0xFF2E7D32),
-                        ),
-                        SizedBox(width: 4),
+                        const MicroLabel('TANGGAL'),
+                        const SizedBox(height: 2),
                         Text(
-                          'Selesai',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2E7D32),
+                          scheduledDateStr,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: ConsultationTheme.primary,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  PopupMenuButton<String>(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    icon: const Icon(Icons.more_vert_rounded,
-                        size: 18, color: AppColors.neutralGray),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    onSelected: (val) {
-                      if (val == 'delete') {
-                        _confirmDeleteConsultation(item);
-                      }
-                    },
-                    itemBuilder: (ctx) => [
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete_outline_rounded,
-                                size: 16, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Hapus dari riwayat',
-                                style: TextStyle(
-                                    fontSize: 12, color: Colors.red)),
-                          ],
+                  Container(
+                    width: 1,
+                    height: 26,
+                    color: ConsultationTheme.divider,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const MicroLabel('JAM'),
+                        const SizedBox(height: 2),
+                        Text(
+                          item.scheduledTime.isNotEmpty
+                              ? item.scheduledTime
+                              : '18.00 – 21.00',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: ConsultationTheme.primary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
+            ),
 
-          // Baris Tengah: Foto, Nama, Spesialisasi Dokter, dan Jam Konsultasi
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              DoctorAvatar(
-                photoUrl: item.effectiveDoctorPhotoUrl,
-                doctorId: item.doctorId,
-                doctorName: item.doctorName,
-                size: 56,
-                borderRadius: 14,
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.doctorName,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryText,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      item.doctorSpecialty,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.summaryCardSubtext,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.access_time_rounded,
-                          size: 14,
-                          color: AppColors.primary,
-                        ),
-                        const SizedBox(width: 5),
-                        Expanded(
-                          child: Text(
-                            AppDateFormatter.formatScheduledDateTime(
-                              item.effectiveScheduledDate,
-                              item.scheduledTime,
-                            ),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          // Cuplikan Rekomendasi Dokter (D.6 & D.7)
-          if (item.doctorRecommendation != null &&
-              item.doctorRecommendation!.trim().isNotEmpty) ...[
-            const SizedBox(height: 10),
-            InkWell(
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18)),
-                    title: const Row(
-                      children: [
-                        Icon(Icons.assignment_turned_in_rounded,
-                            color: AppColors.successGreen, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Rekomendasi Dokter',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryText,
-                          ),
-                        ),
-                      ],
-                    ),
-                    content: SingleChildScrollView(
-                      child: Text(
-                        item.doctorRecommendation!,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          height: 1.5,
-                          color: AppColors.primaryText,
-                        ),
-                      ),
-                    ),
-                    actions: [
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Tutup'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
+            // c. Kotak Rekomendasi Dokter: latar #F1FAF5, border #BFE3CE, radius 14
+            if (item.doctorRecommendation != null &&
+                item.doctorRecommendation!.trim().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
                 width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF0FDF4),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                  color: const Color(0xFFF1FAF5),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: const Color(0xFFBFE3CE),
+                    width: 1,
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.assignment_turned_in_rounded,
-                            size: 13, color: AppColors.successGreen),
-                        SizedBox(width: 5),
-                        Text(
-                          'Rekomendasi Dokter',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF166534),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
+                    const MicroLabel('REKOMENDASI DOKTER',
+                        color: ConsultationTheme.green),
+                    const SizedBox(height: 6),
                     Text(
                       item.doctorRecommendation!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF15803D),
-                        height: 1.3,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: const Color(0xFF24435A),
+                        height: 1.4,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+            const SizedBox(height: 10),
 
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: Color(0xFFEEF3F6)),
-          const SizedBox(height: 12),
-
-          // Baris Tanggal & Jam Lengkap
-          Row(
-            children: [
-              const Icon(
-                Icons.event_available_rounded,
-                size: 14,
-                color: AppColors.summaryCardSubtext,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  'Waktu Selesai: $finishTimeStr',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.summaryCardSubtext,
-                    fontWeight: FontWeight.w500,
+            // d. Baris kecil dengan ikon kalender-centang: "Selesai pada [tanggal, jam WIB]"
+            Row(
+              children: [
+                const Icon(
+                  Icons.event_available_rounded,
+                  size: 15,
+                  color: ConsultationTheme.secondaryText,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Selesai pada $completedTimeStr',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: ConsultationTheme.secondaryText,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Penilaian Konsultasi (Revisi 11 Bagian A)
-          _buildRatingSection(context, item),
-
-          const SizedBox(height: 14),
-
-          // Tombol Chat Ulang (Pill Outline)
-          Align(
-            alignment: Alignment.centerRight,
-            child: OutlinedButton.icon(
-              onPressed: () => _handleChatUlang(context, item),
-              icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('Chat Ulang'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.primary, width: 1.2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              ),
+              ],
             ),
-          ),
-        ],
+            const SectionDivider(verticalPadding: 10),
+
+            // e. Baris bawah: kiri bintang penilaian + kanan tombol sekunder "Chat Ulang"
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Kiri: Penilaian
+                _buildRatingSection(context, item),
+
+                // Kanan: Tombol sekunder Chat Ulang
+                OutlinedButton.icon(
+                  onPressed: () => _handleChatUlang(item),
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  label: Text(
+                    'Chat Ulang',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: ConsultationTheme.primary,
+                    side: const BorderSide(
+                      color: ConsultationTheme.primary,
+                      width: 1.5,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  ),
-);
+    );
   }
 
-  /// Menampilkan status penilaian pada kartu konsultasi selesai (Revisi 11 Bagian A)
+  /// Status penilaian pada baris bawah kartu selesai:
+  /// kiri bintang penilaian 18px (emas terisi, abu outline bila belum)
+  /// dengan di bawahnya "Penilaian Anda: 5/5" (12, #5E7585) atau tautan "Beri penilaian" (teal, semi-bold, garis bawah)
   Widget _buildRatingSection(BuildContext context, ConsultationModel item) {
     if (item.isRated) {
       final rating = item.rating!;
-      return Row(
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: List.generate(
@@ -1193,50 +1219,49 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                     : Icons.star_outline_rounded,
                 size: 18,
                 color: index < rating
-                    ? const Color(0xFFFFB300)
-                    : const Color(0xFFBDBDBD),
+                    ? ConsultationTheme.gold
+                    : const Color(0xFFD9CDB8),
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(height: 2),
           Text(
             'Penilaian Anda: $rating/5',
-            style: const TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.primaryText,
+              fontWeight: FontWeight.w500,
+              color: ConsultationTheme.secondaryText,
             ),
           ),
         ],
       );
     }
 
-    // Belum dinilai: 5 bintang KOSONG (outline/abu), teks "Beri penilaian", bisa diketuk
     return InkWell(
       onTap: () => _showRatingBottomSheet(context, item),
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: List.generate(
                 5,
-                (index) => const Icon(
+                (_) => const Icon(
                   Icons.star_outline_rounded,
                   size: 18,
-                  color: Color(0xFFBDBDBD),
+                  color: Color(0xFFD9CDB8),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            const Text(
+            const SizedBox(height: 2),
+            Text(
               'Beri penilaian',
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: AppColors.primary,
+                color: ConsultationTheme.teal,
                 decoration: TextDecoration.underline,
               ),
             ),
@@ -1246,7 +1271,9 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
     );
   }
 
-  /// Menampilkan bottom sheet interaktif untuk memberi penilaian (Revisi 11 Bagian A.2)
+  /// 7. BOTTOM SHEET BERI PENILAIAN
+  /// Sheet putih, sudut atas radius 28, handle abu di tengah atas, padding 12x20x24.
+  /// Latar belakang diredupkan dengan overlay biru tua transparan (~42%).
   void _showRatingBottomSheet(BuildContext context, ConsultationModel item) {
     if (item.isRated) return;
 
@@ -1254,21 +1281,30 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      barrierColor: const Color(0xFF1F5C7A).withValues(alpha: 0.42),
       builder: (bottomSheetContext) {
         int selectedRating = 0;
         bool isSubmitting = false;
         String? errorMessage;
-        String? errorCode;
+
+        final ratingLabels = [
+          '',
+          '1 Buruk',
+          '2 Kurang',
+          '3 Cukup',
+          '4 Baik',
+          '5 Sangat Baik',
+        ];
 
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
             final bottomInset = MediaQuery.viewInsetsOf(ctx).bottom;
 
             return Container(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + bottomInset),
+              padding: EdgeInsets.fromLTRB(20, 12, 20, 24 + bottomInset),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               ),
               child: SafeArea(
                 top: false,
@@ -1276,26 +1312,31 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Handle abu di tengah atas
                     Center(
                       child: Container(
-                        width: 40,
+                        width: 38,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
+                          color: const Color(0xFFD9CDB8),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Info Dokter: foto, nama, spesialisasi
+
+                    // Baris dokter: DoctorAvatar 56x56 radius 16, nama, spesialis
                     Row(
                       children: [
                         DoctorAvatar(
                           photoUrl: item.effectiveDoctorPhotoUrl,
                           doctorId: item.doctorId,
                           doctorName: item.doctorName,
-                          size: 52,
-                          borderRadius: 14,
+                          size: 56,
+                          borderRadius: 16,
+                          showVerificationBadge: true,
+                          isVerified: false,
+                          badgeSize: 18,
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -1304,47 +1345,44 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                             children: [
                               Text(
                                 item.doctorName,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primaryText,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: ConsultationTheme.primary,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 3),
+                              const SizedBox(height: 2),
                               Text(
                                 item.doctorSpecialty,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.summaryCardSubtext,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w500,
+                                  color: ConsultationTheme.secondaryText,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 18),
-                    const Divider(height: 1, color: Color(0xFFE8EFF5)),
-                    const SizedBox(height: 16),
+                    const SectionDivider(verticalPadding: 14),
 
-                    const Center(
+                    // Judul tengah bold 18
+                    Center(
                       child: Text(
                         'Beri Penilaian Konsultasi',
-                        style: TextStyle(
-                          fontSize: 16,
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.primaryText,
+                          color: ConsultationTheme.primary,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
 
-                    // 5 Bintang Besar Interaktif (1-5)
+                    // Lima bintang besar 36 dengan jarak 10
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(5, (index) {
@@ -1357,96 +1395,98 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                                   setSheetState(() {
                                     selectedRating = starNumber;
                                     errorMessage = null;
-                                    errorCode = null;
                                   });
                                 },
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 5),
                             child: Icon(
                               isFilled
                                   ? Icons.star_rounded
                                   : Icons.star_outline_rounded,
-                              size: 42,
+                              size: 36,
                               color: isFilled
-                                  ? const Color(0xFFFFB300)
-                                  : const Color(0xFFBDBDBD),
+                                  ? ConsultationTheme.gold
+                                  : const Color(0xFFD9CDB8),
                             ),
                           ),
                         );
                       }),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
 
-                    // Keterangan sekali kirim dan tidak bisa diedit
-                    const Center(
+                    // Label teks di bawah bintang (1 Buruk, 2 Kurang, 3 Cukup, 4 Baik, 5 Sangat Baik)
+                    // Warna teal, semi-bold 14, disembunyikan sampai ada bintang dipilih
+                    SizedBox(
+                      height: 22,
+                      child: Center(
+                        child: selectedRating > 0
+                            ? Text(
+                                ratingLabels[selectedRating],
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: ConsultationTheme.teal,
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Catatan miring
+                    Center(
                       child: Text(
                         'Penilaian tidak dapat diubah setelah dikirim.',
-                        style: TextStyle(
-                          fontSize: 12,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.5,
                           fontStyle: FontStyle.italic,
-                          color: AppColors.neutralGray,
+                          color: ConsultationTheme.secondaryText,
                         ),
                       ),
                     ),
 
                     if (errorMessage != null) ...[
                       const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFEBEE),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFFFCDD2)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              errorMessage!,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFFD32F2F),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            if (errorCode != null && errorCode!.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Text(
-                                  'Kode: $errorCode',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.red.shade800,
-                                  ),
-                                ),
-                              ),
-                          ],
+                      Text(
+                        errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: ConsultationTheme.red,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
 
                     const SizedBox(height: 20),
 
-                    // Tombol Batal & Kirim penilaian
+                    // Dua tombol: "Batal" dan "Kirim penilaian" (rasio lebar 1:2)
                     Row(
                       children: [
                         Expanded(
+                          flex: 1,
                           child: OutlinedButton(
                             onPressed: isSubmitting
                                 ? null
                                 : () => Navigator.pop(bottomSheetContext),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.neutralGray,
+                              foregroundColor: ConsultationTheme.secondaryText,
                               side: const BorderSide(
-                                  color: AppColors.inputBorder),
+                                  color: Color(0xFFD9CDB8), width: 1.2),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               padding:
                                   const EdgeInsets.symmetric(vertical: 13),
                             ),
-                            child: const Text('Batal'),
+                            child: Text(
+                              'Batal',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: ConsultationTheme.secondaryText,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1459,7 +1499,6 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                                     setSheetState(() {
                                       isSubmitting = true;
                                       errorMessage = null;
-                                      errorCode = null;
                                     });
 
                                     try {
@@ -1475,37 +1514,30 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                                         Navigator.pop(bottomSheetContext);
                                       }
                                       if (context.mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                                'Terima kasih atas penilaiannya'),
-                                            backgroundColor:
-                                                AppColors.successGreen,
-                                            behavior: SnackBarBehavior.floating,
-                                          ),
+                                        showConsultationSnackBar(
+                                          context,
+                                          message:
+                                              'Terima kasih atas penilaiannya',
+                                          isSuccess: true,
                                         );
                                       }
                                     } catch (e) {
-                                      debugPrint('[RiwayatKonsultasiScreen] Error submit rating: $e');
                                       if (bottomSheetContext.mounted) {
                                         setSheetState(() {
                                           isSubmitting = false;
                                           errorMessage =
-                                              'Gagal mengirim penilaian. Coba lagi.';
-                                          errorCode = e.toString().length > 60
-                                              ? e.toString().substring(0, 60)
-                                              : e.toString();
+                                              'Gagal mengirim penilaian: $e';
                                         });
                                       }
                                     }
                                   },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
+                              backgroundColor: ConsultationTheme.primary,
                               foregroundColor: Colors.white,
                               disabledBackgroundColor:
-                                  AppColors.primary.withValues(alpha: 0.35),
+                                  ConsultationTheme.disabledButton,
                               disabledForegroundColor: Colors.white70,
+                              elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
                               ),
@@ -1518,14 +1550,17 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                                     height: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: Colors.white,
+                                      valueColor:
+                                          AlwaysStoppedAnimation<Color>(
+                                              Colors.white),
                                     ),
                                   )
-                                : const Text(
+                                : Text(
                                     'Kirim penilaian',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
                                       fontSize: 14,
+                                      color: Colors.white,
                                     ),
                                   ),
                           ),
@@ -1539,6 +1574,48 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildEmptyFilterState() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Center(
+        child: Text(
+          'Tidak ada riwayat untuk filter ini.',
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: ConsultationTheme.secondaryText,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRetentionBanner() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.info_outline_rounded,
+              size: 14,
+              color: ConsultationTheme.secondaryText,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Chat dihapus otomatis 60 hari setelah aktivitas terakhir.',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: ConsultationTheme.secondaryText,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
