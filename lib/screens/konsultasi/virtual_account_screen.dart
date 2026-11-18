@@ -482,10 +482,28 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
     );
   }
 
-  /// Kartu fokus transaksi Midtrans Snap
+  /// Kartu fokus rincian total pembayaran
   Widget _buildTransactionCard(ConsultationModel c) {
     final orderId = c.paymentOrderId ?? c.orderId;
     final totalStr = formatRupiah(c.totalFee);
+
+    final String statusLabel;
+    final Color badgeBg;
+    final Color dotColor;
+
+    if (c.isPaid) {
+      statusLabel = 'LUNAS';
+      badgeBg = const Color(0xFF2E7D32).withValues(alpha: 0.85);
+      dotColor = Colors.white;
+    } else if (c.isExpired || _isExpired) {
+      statusLabel = 'KEDALUWARSA';
+      badgeBg = const Color(0xFFC62828).withValues(alpha: 0.85);
+      dotColor = Colors.white;
+    } else {
+      statusLabel = 'MENUNGGU';
+      badgeBg = Colors.white.withValues(alpha: 0.22);
+      dotColor = const Color(0xFFFFD54F);
+    }
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -494,14 +512,14 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF1F5C7A),
-            Color(0xFF2E85A8),
+            Color(0xFF1B4E6B),
+            Color(0xFF28799E),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1F5C7A).withValues(alpha: 0.25),
+            color: const Color(0xFF1B4E6B).withValues(alpha: 0.25),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -513,28 +531,54 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'MIDTRANS PAYMENT GATEWAY',
-                style: GoogleFonts.poppins(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.8,
-                  color: Colors.white.withValues(alpha: 0.85),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.account_balance_wallet_outlined,
+                    size: 15,
+                    color: Colors.white70,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'TOTAL PEMBAYARAN',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.8,
+                      color: Colors.white.withValues(alpha: 0.90),
+                    ),
+                  ),
+                ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.20),
-                  borderRadius: BorderRadius.circular(8),
+                  color: badgeBg,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(
-                  c.isPaid ? 'LUNAS' : (c.isExpired ? 'EXPIRED' : 'SANDBOX'),
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: dotColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      statusLabel,
+                      style: GoogleFonts.poppins(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -545,7 +589,7 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
           Text(
             totalStr,
             style: GoogleFonts.poppins(
-              fontSize: 26,
+              fontSize: 28,
               fontWeight: FontWeight.w700,
               color: Colors.white,
               letterSpacing: 0.5,
@@ -553,11 +597,11 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
           ),
           const SizedBox(height: 6),
           Text(
-            orderId.isNotEmpty ? 'Order ID: $orderId' : 'Konsultasi ID: ${c.id}',
+            orderId.isNotEmpty ? 'No. Pesanan: $orderId' : 'ID Konsultasi: ${c.id}',
             style: GoogleFonts.poppins(
-              fontSize: 11.5,
+              fontSize: 12,
               fontWeight: FontWeight.w400,
-              color: Colors.white.withValues(alpha: 0.82),
+              color: Colors.white.withValues(alpha: 0.85),
             ),
           ),
           const SizedBox(height: 16),
@@ -579,7 +623,7 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
                       )
                     : const Icon(Icons.payment_rounded, size: 18),
                 label: Text(
-                  _isCreatingSnap ? 'Menyiapkan...' : 'Buka Halaman Pembayaran',
+                  _isCreatingSnap ? 'Menyiapkan Pembayaran...' : 'Buka Halaman Pembayaran',
                   style: GoogleFonts.poppins(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w700,
@@ -652,10 +696,10 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
 
           // Baris Metode
           _buildDetailRow(
-            label: 'Gateway / Jalur',
+            label: 'Metode Pembayaran',
             value: c.paymentType != null && c.paymentType!.isNotEmpty
                 ? c.paymentType!.toUpperCase()
-                : 'Midtrans Snap',
+                : 'Pembayaran Digital Otomatis',
           ),
           const SectionDivider(verticalPadding: 8),
 

@@ -5,7 +5,7 @@
 class PaymentConfig {
   PaymentConfig._();
 
-  static const String _defaultUrl = 'http://10.0.2.2:3000';
+  static const String _defaultUrl = 'https://payment-backend-omega-five.vercel.app';
 
   static const String backendBaseUrl = String.fromEnvironment(
     'PAYMENT_BACKEND_URL',
