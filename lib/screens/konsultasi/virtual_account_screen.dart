@@ -634,11 +634,17 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
             label: 'Order ID',
             value: orderId.isNotEmpty ? orderId : '-',
             trailingAction: orderId.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.copy_rounded, size: 16, color: ConsultationTheme.secondaryText),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () => _copyText(context, orderId, 'Order ID'),
+                ? InkWell(
+                    onTap: () => _copyText(context, orderId, 'Order ID'),
+                    borderRadius: BorderRadius.circular(4),
+                    child: const Padding(
+                      padding: EdgeInsets.all(2),
+                      child: Icon(
+                        Icons.copy_rounded,
+                        size: 15,
+                        color: ConsultationTheme.secondaryText,
+                      ),
+                    ),
                   )
                 : null,
           ),
@@ -675,7 +681,7 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
     Widget? trailingAction,
   }) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           label,
@@ -686,18 +692,22 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
           ),
         ),
         const SizedBox(width: 12),
-        Flexible(
+        Expanded(
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Flexible(
                 child: Text(
                   value,
                   textAlign: TextAlign.end,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
-                    fontSize: 13,
+                    fontSize: label == 'Order ID' ? 12 : 13,
                     fontWeight: isBold ? FontWeight.w700 : FontWeight.w600,
                     color: valueColor ?? ConsultationTheme.primary,
+                    letterSpacing: label == 'Order ID' ? -0.2 : null,
                   ),
                 ),
               ),
