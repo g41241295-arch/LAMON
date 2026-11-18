@@ -35,3 +35,18 @@ android/local.properties
 **/generated_plugin_registrant.cc
 **/generated_plugins.cmake
 **/GeneratedPluginRegistrant.swift
+
+# Environment Variables & Secrets (Midtrans & Firebase Service Account)
+.env
+.env.*
+!.env.example
+*.env
+*serviceAccount*.json
+*service-account*.json
+firebase-service-account*.json
+serviceAccountKey.json
+payment-backend/.env
+payment-backend/*.env
+!payment-backend/.env.example
+payment-backend/*serviceAccount*.json
+payment-backend/*service-account*.json

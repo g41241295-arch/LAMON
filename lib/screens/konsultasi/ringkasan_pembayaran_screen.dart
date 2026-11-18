@@ -7,6 +7,7 @@ import '../../constants/practice_slot_constants.dart';
 import '../../models/doctor_model.dart';
 import '../../services/consultation_service.dart';
 import '../../services/doctor_service.dart';
+import '../../services/payment_service.dart';
 import '../../utils/app_date_formatter.dart';
 import '../../utils/currency_formatter.dart';
 import 'widgets/doctor_avatar.dart';
@@ -35,6 +36,10 @@ class _RingkasanPembayaranScreenState extends State<RingkasanPembayaranScreen> {
   @override
   void initState() {
     super.initState();
+    if (ConsultationConstants.paymentMethods.isNotEmpty) {
+      _selectedMethodId = ConsultationConstants.paymentMethods.first.id;
+      _selectedMethodName = ConsultationConstants.paymentMethods.first.name;
+    }
     _activeHours = _doctor.operatingHours;
     _checkTodaySchedule();
   }
@@ -521,12 +526,30 @@ class _RingkasanPembayaranScreenState extends State<RingkasanPembayaranScreen> {
         paymentMethodName: _selectedMethodName!,
         scheduledDate: scheduledDate,
       );
+
+      // Buat transaksi pembayaran Midtrans Snap via Backend
+      SnapTransactionResult? snapResult;
+      try {
+        snapResult = await PaymentService.instance.createTransaction(
+          consultationId: consultationId,
+        );
+
+        if (snapResult.redirectUrl.isNotEmpty) {
+          // Buka halaman pembayaran Snap di In-App Browser
+          await PaymentService.instance.openSnapPaymentUrl(snapResult.redirectUrl);
+        }
+      } catch (err) {
+        debugPrint('[RingkasanPembayaran] Catatan Snap: $err');
+      }
+
       if (mounted) {
         nav.pushNamed(
           '/konsultasi/virtual-account/$consultationId',
           arguments: {
             'consultationId': consultationId,
             'paymentMethodName': _selectedMethodName,
+            'redirectUrl': snapResult?.redirectUrl,
+            'orderId': snapResult?.orderId,
           },
         );
       }
@@ -534,7 +557,7 @@ class _RingkasanPembayaranScreenState extends State<RingkasanPembayaranScreen> {
       if (mounted) {
         showConsultationSnackBar(
           context,
-          message: 'Gagal membuat konsultasi: $e',
+          message: 'Gagal memulai pembayaran. Coba lagi: $e',
           isError: true,
         );
       }

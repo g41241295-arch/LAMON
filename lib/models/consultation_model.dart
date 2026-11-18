@@ -2,17 +2,36 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Status pembayaran konsultasi.
 enum PaymentStatus {
+  unpaid,
   pending,
   paid,
-  expired;
+  failed,
+  expired,
+  paidAfterExpiry;
 
-  String get value => name; // "pending" / "paid" / "expired"
+  String get value {
+    if (this == PaymentStatus.paidAfterExpiry) return 'paid_after_expiry';
+    return name;
+  }
 
   static PaymentStatus fromString(String? s) {
-    return PaymentStatus.values.firstWhere(
-      (e) => e.value == s,
-      orElse: () => PaymentStatus.pending,
-    );
+    switch (s) {
+      case 'unpaid':
+        return PaymentStatus.unpaid;
+      case 'pending':
+        return PaymentStatus.pending;
+      case 'paid':
+        return PaymentStatus.paid;
+      case 'failed':
+        return PaymentStatus.failed;
+      case 'expired':
+        return PaymentStatus.expired;
+      case 'paid_after_expiry':
+      case 'paidAfterExpiry':
+        return PaymentStatus.paidAfterExpiry;
+      default:
+        return PaymentStatus.unpaid;
+    }
   }
 }
 
@@ -105,6 +124,12 @@ class ConsultationModel {
   final bool autoReplySent;
   final bool lastMessageIsAutoReply;
 
+  // Revisi 14: Integrasi Midtrans
+  final String? paymentOrderId;
+  final String? paymentType;
+  final DateTime? paidAt;
+  final int? paymentGrossAmount;
+
   const ConsultationModel({
     required this.id,
     required this.doctorId,
@@ -150,6 +175,10 @@ class ConsultationModel {
     this.hiddenByDoctorAt,
     this.autoReplySent = false,
     this.lastMessageIsAutoReply = false,
+    this.paymentOrderId,
+    this.paymentType,
+    this.paidAt,
+    this.paymentGrossAmount,
   });
 
   /// Apakah konsultasi ini sudah dinilai oleh pasien
@@ -157,6 +186,21 @@ class ConsultationModel {
 
   /// Konsultasi sudah expired batas waktu pembayaran.
   bool get isExpired => paymentStatus == PaymentStatus.expired;
+
+  /// Apakah pembayaran sudah lunas
+  bool get isPaid => paymentStatus == PaymentStatus.paid;
+
+  /// Apakah pembayaran sedang menunggu diproses/dibayar
+  bool get isPaymentPending => paymentStatus == PaymentStatus.pending;
+
+  /// Apakah booking baru dibuat dan belum ada transaksi bayar
+  bool get isUnpaid => paymentStatus == PaymentStatus.unpaid;
+
+  /// Apakah pembayaran gagal atau dibatalkan
+  bool get isPaymentFailed => paymentStatus == PaymentStatus.failed;
+
+  /// Kasus tepi: Lunas setelah konsultasi kedaluwarsa
+  bool get isPaidAfterExpiry => paymentStatus == PaymentStatus.paidAfterExpiry;
 
   /// Batas waktu pembayaran yang efektif (fallback ke paymentDeadline jika paymentExpiresAt null).
   DateTime get effectivePaymentExpiresAt => paymentExpiresAt ?? paymentDeadline;
@@ -261,6 +305,10 @@ class ConsultationModel {
     DateTime? hiddenByDoctorAt,
     bool? autoReplySent,
     bool? lastMessageIsAutoReply,
+    String? paymentOrderId,
+    String? paymentType,
+    DateTime? paidAt,
+    int? paymentGrossAmount,
   }) {
     return ConsultationModel(
       id: id ?? this.id,
@@ -309,6 +357,10 @@ class ConsultationModel {
       autoReplySent: autoReplySent ?? this.autoReplySent,
       lastMessageIsAutoReply:
           lastMessageIsAutoReply ?? this.lastMessageIsAutoReply,
+      paymentOrderId: paymentOrderId ?? this.paymentOrderId,
+      paymentType: paymentType ?? this.paymentType,
+      paidAt: paidAt ?? this.paidAt,
+      paymentGrossAmount: paymentGrossAmount ?? this.paymentGrossAmount,
     );
   }
 
@@ -375,6 +427,10 @@ class ConsultationModel {
       autoReplySent: data['autoReplySent'] as bool? ?? false,
       lastMessageIsAutoReply:
           data['lastMessageIsAutoReply'] as bool? ?? false,
+      paymentOrderId: data['paymentOrderId'] as String?,
+      paymentType: data['paymentType'] as String?,
+      paidAt: (data['paidAt'] as Timestamp?)?.toDate(),
+      paymentGrossAmount: (data['paymentGrossAmount'] as num?)?.toInt(),
     );
   }
 
@@ -392,6 +448,10 @@ class ConsultationModel {
         'virtualAccountNumber': virtualAccountNumber,
         'orderId': orderId,
         'paymentStatus': paymentStatus.value,
+        if (paymentOrderId != null) 'paymentOrderId': paymentOrderId,
+        if (paymentType != null) 'paymentType': paymentType,
+        if (paidAt != null) 'paidAt': Timestamp.fromDate(paidAt!),
+        if (paymentGrossAmount != null) 'paymentGrossAmount': paymentGrossAmount,
         'paymentDeadline': Timestamp.fromDate(paymentDeadline),
         if (paymentExpiresAt != null)
           'paymentExpiresAt': Timestamp.fromDate(paymentExpiresAt!),

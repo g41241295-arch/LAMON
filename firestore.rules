@@ -80,17 +80,29 @@ service cloud.firestore {
         // Pasien pemilik dapat membaca semua status
         allow read: if isSignedIn() && request.auth.uid == userId;
 
-        // Pasien membuat konsultasi baru
-        allow create: if isSignedIn() && request.auth.uid == userId;
+        // Pasien membuat konsultasi baru (Revisi 14):
+        // HANYA dengan paymentStatus == 'unpaid' dan status == 'waiting'.
+        // Klien TIDAK BOLEH membuat dokumen dengan status lunas (paid) atau field pembayaran terisi.
+        allow create: if isSignedIn() && request.auth.uid == userId
+                      && (!('paymentStatus' in request.resource.data) || request.resource.data.paymentStatus == 'unpaid')
+                      && (!('status' in request.resource.data) || request.resource.data.status == 'waiting')
+                      && (!('paidAt' in request.resource.data))
+                      && (!('paymentGrossAmount' in request.resource.data));
 
-        // Pasien update: pasien TIDAK BOLEH menandai status completed (hanya dokter yang berwenang)
-        // Pasien boleh mengubah hiddenByPatient, lastReadByPatientAt, chatExpired, dsb.
-        // Aturan Rating (Revisi 11 Bagian A & C): Pasien pemilik HANYA boleh mengisi rating jika status completed,
+        // Pasien update (Revisi 14):
+        // Klien pasien TIDAK BOLEH mengubah status konsultasi (hanya dokter atau backend).
+        // Klien pasien TIDAK BOLEH menulis atau memodifikasi field pembayaran:
+        // paymentStatus, paymentOrderId, paymentType, paidAt, paymentGrossAmount.
+        // Pembaruan status pembayaran HANYA dapat dilakukan oleh Backend via Firebase Admin SDK.
+        // Aturan Rating (Revisi 11): Pasien pemilik HANYA boleh mengisi rating jika status completed,
         // rating belum pernah diisi, nilai integer 1..5, dan operasi rating hanya mengubah 'rating' dan 'ratedAt'.
         allow update: if isSignedIn() && request.auth.uid == userId
-                      && (!('status' in request.resource.data.diff(resource.data).affectedKeys()) ||
-                          request.resource.data.status != 'completed' ||
-                          resource.data.status == 'completed')
+                      && !('status' in request.resource.data.diff(resource.data).affectedKeys())
+                      && !('paymentStatus' in request.resource.data.diff(resource.data).affectedKeys())
+                      && !('paymentOrderId' in request.resource.data.diff(resource.data).affectedKeys())
+                      && !('paymentType' in request.resource.data.diff(resource.data).affectedKeys())
+                      && !('paidAt' in request.resource.data.diff(resource.data).affectedKeys())
+                      && !('paymentGrossAmount' in request.resource.data.diff(resource.data).affectedKeys())
                       && (
                         !('rating' in request.resource.data.diff(resource.data).affectedKeys()) ||
                         (
@@ -114,10 +126,13 @@ service cloud.firestore {
 
         // Dokter hanya boleh update field-field status dan pesan tertentu,
         // dengan pembatasan transisi status: waiting -> active (konfirmasi) atau active -> completed / waiting -> completed (selesai).
-        // Mendukung penulisan completedAt, doctorRecommendation, lastMessageId, chatExpired,
-        // serta soft-hide dokter: hiddenByDoctor dan hiddenByDoctorAt (Revisi 11 Bagian B & C)
-        // dan lastMessageIsAutoReply (Revisi 12).
+        // Dokter TIDAK BOLEH mengubah field pembayaran (Revisi 14).
         allow update: if isDoctorForDoc(resource.data)
+                      && !('paymentStatus' in request.resource.data.diff(resource.data).affectedKeys())
+                      && !('paymentOrderId' in request.resource.data.diff(resource.data).affectedKeys())
+                      && !('paymentType' in request.resource.data.diff(resource.data).affectedKeys())
+                      && !('paidAt' in request.resource.data.diff(resource.data).affectedKeys())
+                      && !('paymentGrossAmount' in request.resource.data.diff(resource.data).affectedKeys())
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                            'status', 'doctorConfirmedAt', 'lastMessageText', 
                            'lastMessageAt', 'lastMessageSenderType', 
@@ -361,6 +376,15 @@ service cloud.firestore {
         allow read: if isSignedIn();
         allow write: if isDoctor() && myDoctorId() == doctorId;
       }
+    }
+
+    // ── 9. Koleksi Pembayaran (Revisi 14 - Midtrans Snap Gateway) ───────────
+    // Path: /payments/{orderId}
+    // Dibuat dan diperbarui HANYA oleh Backend Layanan Pembayaran terpisah
+    // menggunakan Firebase Admin SDK (melewati Firestore Security Rules).
+    // Klien (pasien maupun dokter) TIDAK memiliki akses baca maupun tulis langsung.
+    match /payments/{orderId} {
+      allow read, write: if false;
     }
   }
 }

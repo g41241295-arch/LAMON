@@ -151,7 +151,7 @@ class ConsultationService {
       paymentMethodName: paymentMethodName,
       virtualAccountNumber: vaNumber,
       orderId: orderId,
-      paymentStatus: PaymentStatus.pending,
+      paymentStatus: PaymentStatus.unpaid,
       paymentDeadline: expiresAt,
       paymentExpiresAt: expiresAt,
       scheduledDate: effectiveScheduledDate,
