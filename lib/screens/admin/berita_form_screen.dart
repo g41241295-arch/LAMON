@@ -8,7 +8,6 @@ import '../../models/berita_article_model.dart';
 import '../../services/berita/berita_service.dart';
 import '../../utils/app_exception.dart';
 import '../../widgets/admin/admin_widgets.dart';
-import '../../widgets/app_header_pill.dart';
 import '../../widgets/berita/berita_image.dart';
 
 const List<String> _kKategori = [
@@ -115,9 +114,9 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF134563),
+              primary: AppColors.textPrimary,
               onPrimary: Colors.white,
-              onSurface: Color(0xFF1E293B),
+              onSurface: AppColors.textPrimary,
             ),
           ),
           child: child!,
@@ -342,9 +341,18 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
       content: Row(children: [
         const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
         const SizedBox(width: 10),
-        Expanded(child: Text(msg, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600))),
+        Expanded(
+          child: Text(
+            msg,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ]),
-      backgroundColor: AppColors.adminRed,
+      backgroundColor: AppColors.textPrimary,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.all(16),
@@ -357,9 +365,18 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
       content: Row(children: [
         const Icon(Icons.check_circle_outline_rounded, color: Colors.white),
         const SizedBox(width: 10),
-        Expanded(child: Text(msg, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600))),
+        Expanded(
+          child: Text(
+            msg,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ]),
-      backgroundColor: AppColors.successGreen,
+      backgroundColor: AppColors.textPrimary,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.all(16),
@@ -406,6 +423,87 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
     setState(() {});
   }
 
+  // ── Header Form (Disamakan dengan Catat Makanan & Tambah Gastropedia) ─────
+
+  Widget _buildFormHeader() {
+    final title = _isEditMode ? 'Edit Artikel Berita' : 'Tambah Artikel Berita';
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Tombol Kembali (bulat putih)
+          InkWell(
+            onTap: () => Navigator.of(context).pop(),
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceCard,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.softBlue, width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.arrow_back_rounded,
+                  color: AppColors.textPrimary,
+                  size: 22,
+                ),
+              ),
+            ),
+          ),
+
+          // Pill Judul: disamakan persis dengan pill "Catat Makanan" Pengguna
+          Expanded(
+            child: Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7D6),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: const Color(0xFFE8D7A5),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1C4E68),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Penyeimbang lebar kanan
+          const SizedBox(width: 40, height: 40),
+        ],
+      ),
+    );
+  }
+
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -414,16 +512,23 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
     final String publishButtonText = isAlreadyPublished ? 'Simpan Perubahan' : 'Terbitkan';
 
     return AdminScaffold(
-      header: AppHeaderPill(
-        title: _isEditMode ? 'Edit Artikel Berita' : 'Tambah Artikel Berita',
+      backgroundGradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          AppColors.bgGradientTop,
+          AppColors.bgGradientMiddle,
+          AppColors.bgGradientBottom,
+        ],
       ),
+      header: _buildFormHeader(),
       body: SafeArea(
         top: false,
         child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
-            20,
-            8,
-            20,
+            16,
+            12,
+            16,
             32 + MediaQuery.of(context).padding.bottom,
           ),
           child: Column(
@@ -441,7 +546,7 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
                 errorText: _judulError,
                 onChanged: (_) => setState(() => _judulError = null),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
 
               // ── 3. Kategori ─────────────────────────────────────────────────
               _buildLabel('Kategori'),
@@ -451,10 +556,16 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
                 const SizedBox(height: 4),
                 Padding(
                   padding: const EdgeInsets.only(left: 4),
-                  child: Text(_kategoriError!, style: GoogleFonts.poppins(fontSize: 12, color: AppColors.adminRed)),
+                  child: Text(
+                    _kategoriError!,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: AppColors.adminRed,
+                    ),
+                  ),
                 ),
               ],
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
 
               // ── 4. Tanggal Terbit ───────────────────────────────────────────
               _buildLabel('Tanggal Terbit'),
@@ -464,10 +575,16 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
                 const SizedBox(height: 4),
                 Padding(
                   padding: const EdgeInsets.only(left: 4),
-                  child: Text(_tanggalError!, style: GoogleFonts.poppins(fontSize: 12, color: AppColors.adminRed)),
+                  child: Text(
+                    _tanggalError!,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: AppColors.adminRed,
+                    ),
+                  ),
                 ),
               ],
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
 
               // ── 5. Ringkasan Singkat ────────────────────────────────────────
               AdminInputField(
@@ -478,7 +595,7 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
                 errorText: _ringkasanError,
                 onChanged: (_) => setState(() => _ringkasanError = null),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
 
               // ── 6. Penjelasan Lengkap (editor markdown) ────────────────────
               _buildLabel('Penjelasan Lengkap'),
@@ -488,10 +605,16 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
                 const SizedBox(height: 4),
                 Padding(
                   padding: const EdgeInsets.only(left: 4),
-                  child: Text(_penjelasanError!, style: GoogleFonts.poppins(fontSize: 12, color: AppColors.adminRed)),
+                  child: Text(
+                    _penjelasanError!,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: AppColors.adminRed,
+                    ),
+                  ),
                 ),
               ],
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
 
               // ── 7. Sumber (opsional) ────────────────────────────────────────
               AdminInputField(
@@ -499,7 +622,7 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
                 hint: 'Nama media/sumber artikel',
                 controller: _sumberNamaCtrl,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 20),
 
               // ── 8. Link Sumber (opsional) ───────────────────────────────────
               AdminInputField(
@@ -525,7 +648,7 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
       style: GoogleFonts.poppins(
         fontSize: 14,
         fontWeight: FontWeight.w600,
-        color: AppColors.primaryText,
+        color: AppColors.textPrimary,
       ),
     );
   }
@@ -533,24 +656,19 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
   // ── Upload gambar sampul ──────────────────────────────────────────────────
 
   Widget _buildImagePicker() {
-    final bool hasImage = _imageFile != null || (_existingImageUrl != null && _existingImageUrl!.isNotEmpty);
+    final bool hasImage = _imageFile != null ||
+        (_existingImageUrl != null && _existingImageUrl!.isNotEmpty);
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.inputBorder, width: 1.4),
-      ),
+    return AdminDashedBorderBox(
+      borderColor: AppColors.softBlue,
+      backgroundColor: AppColors.surfaceCard,
+      borderRadius: 16,
+      strokeWidth: 1.5,
       child: Column(
         children: [
-          Container(
+          SizedBox(
             height: 160,
             width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(15),
-            ),
             child: _isUploading
                 ? Center(
                     child: Column(
@@ -561,8 +679,8 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
                           height: 32,
                           child: CircularProgressIndicator(
                             value: _uploadProgress > 0 ? _uploadProgress : null,
-                            strokeWidth: 3,
-                            color: const Color(0xFF134563),
+                            strokeWidth: 2.5,
+                            color: AppColors.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -571,7 +689,7 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF134563),
+                            color: AppColors.textPrimary,
                           ),
                         ),
                       ],
@@ -580,16 +698,27 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
                 : _imageFile != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(15),
-                        child: Image.file(_imageFile!, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
+                        child: Image.file(
+                          _imageFile!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                        ),
                       )
-                    : (_existingImageUrl != null && _existingImageUrl!.isNotEmpty)
+                    : (_existingImageUrl != null &&
+                            _existingImageUrl!.isNotEmpty)
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(15),
                             child: BeritaImage(
-                              gambarUrl: (_existingImageUrl!.startsWith('http') || _existingImageUrl!.startsWith('data:image'))
+                              gambarUrl: (_existingImageUrl!.startsWith('http') ||
+                                      _existingImageUrl!
+                                          .startsWith('data:image'))
                                   ? _existingImageUrl
                                   : null,
-                              gambarAsset: _existingImageUrl!.startsWith('assets/') ? _existingImageUrl : null,
+                              gambarAsset:
+                                  _existingImageUrl!.startsWith('assets/')
+                                      ? _existingImageUrl
+                                      : null,
                               width: double.infinity,
                               height: double.infinity,
                               fit: BoxFit.cover,
@@ -602,17 +731,26 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
                           ),
           ),
           if (hasImage && !_isUploading) ...[
+            const Divider(height: 1, color: AppColors.softBlue),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton.icon(
                     onPressed: _isSaving ? null : _pickImage,
-                    icon: const Icon(Icons.photo_library_outlined, size: 16, color: Color(0xFF134563)),
+                    icon: const Icon(
+                      Icons.photo_library_outlined,
+                      size: 16,
+                      color: AppColors.textPrimary,
+                    ),
                     label: Text(
                       'Ganti Gambar',
-                      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF134563)),
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -625,10 +763,18 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
                               _existingImageUrl = null;
                             });
                           },
-                    icon: const Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.adminRed),
+                    icon: const Icon(
+                      Icons.delete_outline_rounded,
+                      size: 16,
+                      color: AppColors.textPrimary,
+                    ),
                     label: Text(
                       'Hapus Gambar',
-                      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.adminRed),
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                 ],
@@ -645,16 +791,36 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.add_photo_alternate_outlined, size: 36, color: AppColors.adminBlue.withValues(alpha: 0.6)),
-          const SizedBox(height: 8),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: const BoxDecoration(
+              color: AppColors.softBlue,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.add_photo_alternate_outlined,
+              size: 24,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 10),
           Text(
             'Unggah Gambar Sampul',
-            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.adminBlue),
+            style: GoogleFonts.poppins(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           Text(
             'Format JPG/PNG, maks. 2MB',
-            style: GoogleFonts.poppins(fontSize: 11, color: AppColors.neutralGray),
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.normal,
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -676,24 +842,21 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
           }),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: selected ? const Color(0xFF134563) : Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              color: selected ? AppColors.textPrimary : AppColors.surfaceCard,
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: selected ? const Color(0xFF134563) : AppColors.inputBorder,
-                width: 1.4,
+                color: selected ? AppColors.textPrimary : AppColors.softBlue,
+                width: 1.2,
               ),
-              boxShadow: selected
-                  ? [BoxShadow(color: const Color(0xFF134563).withValues(alpha: 0.2), blurRadius: 6, offset: const Offset(0, 2))]
-                  : [],
             ),
             child: Text(
               kat,
               style: GoogleFonts.poppins(
                 fontSize: 13,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                color: selected ? Colors.white : AppColors.primaryText,
+                color: selected ? Colors.white : AppColors.textPrimary,
               ),
             ),
           ),
@@ -708,35 +871,48 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
     final dateText = _tanggal != null
         ? _formatDateIndo(_tanggal!)
         : 'Pilih tanggal terbit';
+    final hasError = _tanggalError != null && _tanggalError!.isNotEmpty;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       onTap: _isSaving ? null : _selectDate,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: _tanggalError != null ? AppColors.adminRed : AppColors.inputBorder,
-            width: 1.4,
+            color: hasError
+                ? AppColors.adminRed
+                : AppColors.softBlue.withOpacity(0.5),
+            width: hasError ? 1.5 : 1.0,
           ),
         ),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today_rounded, color: Color(0xFF134563), size: 18),
+            const Icon(
+              Icons.calendar_today_rounded,
+              color: AppColors.textPrimary,
+              size: 18,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 dateText,
                 style: GoogleFonts.poppins(
                   fontSize: 14,
-                  color: _tanggal != null ? AppColors.primaryText : AppColors.neutralGray,
-                  fontWeight: FontWeight.w500,
+                  color: _tanggal != null
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
+                  fontWeight: FontWeight.normal,
                 ),
               ),
             ),
-            const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.neutralGray, size: 20),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: AppColors.textSecondary,
+              size: 20,
+            ),
           ],
         ),
       ),
@@ -746,24 +922,28 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
   // ── Editor markdown + toolbar ─────────────────────────────────────────────
 
   Widget _buildMarkdownEditor() {
+    final hasError = _penjelasanError != null && _penjelasanError!.isNotEmpty;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _penjelasanError != null ? AppColors.adminRed : AppColors.inputBorder,
-          width: 1.4,
+          color: hasError ? AppColors.adminRed : AppColors.softBlue,
+          width: hasError ? 1.5 : 1.2,
         ),
       ),
       child: Column(
         children: [
-          // Toolbar format teks
+          // Toolbar format teks (menyatu dengan latar softBlue, tanpa tulisan Markdown didukung)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: const BoxDecoration(
+              color: AppColors.softBlue,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(11),
+                topRight: Radius.circular(11),
+              ),
             ),
             child: Row(
               children: [
@@ -772,38 +952,43 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
                   tooltip: 'Tebal (**teks**)',
                   onTap: () => _insertMarkdown('**'),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 6),
                 _buildToolbarButton(
                   icon: Icons.format_italic_rounded,
                   tooltip: 'Miring (_teks_)',
                   onTap: () => _insertMarkdown('_'),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 6),
                 _buildToolbarButton(
                   icon: Icons.format_list_bulleted_rounded,
                   tooltip: 'Daftar butir (- butir)',
                   onTap: () => _insertMarkdown('- '),
-                ),
-                const Spacer(),
-                Text(
-                  'Markdown didukung',
-                  style: GoogleFonts.poppins(fontSize: 11, color: AppColors.neutralGray),
                 ),
               ],
             ),
           ),
           // Area input teks
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: TextField(
               controller: _penjelasanCtrl,
               maxLines: 12,
               minLines: 8,
-              style: GoogleFonts.poppins(fontSize: 14, height: 1.6, color: AppColors.primaryText),
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                height: 1.6,
+                color: AppColors.textPrimary,
+              ),
               decoration: InputDecoration(
                 border: InputBorder.none,
-                hintText: 'Tulis isi lengkap artikel di sini...\n\nGunakan toolbar di atas untuk format teks tebal, miring, atau daftar butir (- butir).',
-                hintStyle: GoogleFonts.poppins(fontSize: 13, color: AppColors.neutralGray, height: 1.6),
+                hintText:
+                    'Tulis isi lengkap artikel di sini...\n\nGunakan toolbar di atas untuk format teks tebal, miring, atau daftar butir (- butir).',
+                hintStyle: GoogleFonts.poppins(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.normal,
+                  color: AppColors.textSecondary,
+                  height: 1.6,
+                ),
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
               ),
@@ -823,15 +1008,15 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
     return Tooltip(
       message: tooltip,
       child: InkWell(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: const Color(0xFFE8F4FB),
-            borderRadius: BorderRadius.circular(8),
+            color: AppColors.surfaceCard.withOpacity(0.75),
+            borderRadius: BorderRadius.circular(6),
           ),
-          child: Icon(icon, size: 18, color: const Color(0xFF134563)),
+          child: Icon(icon, size: 18, color: AppColors.textPrimary),
         ),
       ),
     );
@@ -847,20 +1032,23 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
         // Tombol Simpan Draft
         Expanded(
           child: SizedBox(
-            height: 50,
+            height: 52,
             child: OutlinedButton(
               onPressed: isBusy ? null : () => _save(forPublish: false),
               style: OutlinedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFF9DB),
-                side: const BorderSide(color: Color(0xFF134563), width: 1.4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                backgroundColor: AppColors.surfaceCard,
+                foregroundColor: AppColors.textPrimary,
+                side: const BorderSide(color: AppColors.textPrimary, width: 1.4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: Text(
                 'Simpan Draft',
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF134563),
+                  color: AppColors.textPrimary,
                 ),
               ),
             ),
@@ -870,20 +1058,25 @@ class _BeritaFormScreenState extends State<BeritaFormScreen> {
         // Tombol Terbitkan / Simpan Perubahan
         Expanded(
           child: SizedBox(
-            height: 50,
+            height: 52,
             child: ElevatedButton(
               onPressed: isBusy ? null : () => _save(forPublish: true),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF134563),
+                backgroundColor: AppColors.textPrimary,
                 foregroundColor: Colors.white,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: isBusy
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : Text(
                       publishLabel,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
 import '../../models/gastropedia_item_model.dart';
+import '../../services/rating_monitoring_service.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/gastropedia/gastropedia_accordion.dart';
 
@@ -659,7 +660,23 @@ class _DetailRatingCardState extends State<_DetailRatingCard> {
         setState(() {
           _rating = saved;
         });
+        RatingMonitoringService.instance.ensureLocalGastropediaRatingSynced(
+          item: widget.item,
+          localRating: saved,
+        );
+      } else {
+        final remoteRating = await RatingMonitoringService.instance
+            .fetchUserGastropediaRating(widget.item.id);
+        if (remoteRating != null && mounted) {
+          setState(() {
+            _rating = remoteRating;
+          });
+          await prefs.setInt(
+              'gastropedia_user_rating_${widget.item.id}', remoteRating);
+        }
       }
+      RatingMonitoringService.instance
+          .syncAllLocalGastropediaRatingsForCurrentUser();
     } catch (_) {}
   }
 
@@ -671,6 +688,12 @@ class _DetailRatingCardState extends State<_DetailRatingCard> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('gastropedia_user_rating_${widget.item.id}', star);
     } catch (_) {}
+
+    // Simpan secara aditif ke Firestore untuk pemantauan admin
+    RatingMonitoringService.instance.saveGastropediaRating(
+      item: widget.item,
+      rating: star,
+    );
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

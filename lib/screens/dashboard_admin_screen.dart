@@ -13,6 +13,7 @@ import '../services/berita/berita_service.dart';
 import '../widgets/admin/activity_item.dart';
 import '../widgets/admin/admin_widgets.dart';
 import '../services/profile_photo_service.dart';
+import '../services/rating_monitoring_service.dart';
 
 // ─── Warna Utama Beranda Admin (Mengacu pada AppColors) ────────────────────
 const Color _kNavy = AppColors.textPrimary;
@@ -32,6 +33,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _loadingAdmin = true;
   final _ensiklopediaService = EnsiklopediaService();
   final _beritaService = BeritaService();
+  final _ratingMonitoringService = RatingMonitoringService();
   bool _snackBarCleared = false;
 
   @override
@@ -212,6 +214,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   void _openKelolaGastropedia() {
     Navigator.pushNamed(context, AppRoutes.adminEnsiklopedia);
+  }
+
+  void _openPemantauanPenilaian() {
+    Navigator.pushNamed(context, AppRoutes.adminPenilaian);
   }
 
   Future<void> _openAdminProfile() async {
@@ -726,6 +732,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             );
           },
         ),
+        const SizedBox(height: 12),
+
+        // Kartu Pemantauan Penilaian: Mengikuti gaya kartu Berita Kesehatan
+        StreamBuilder<int>(
+          stream: _ratingMonitoringService.watchTotalCombinedRatingsCount(),
+          builder: (context, snapshot) {
+            final String subtitle;
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
+              subtitle = 'Pantau penilaian gastropedia & konsultasi';
+            } else if (snapshot.hasError) {
+              subtitle = 'Pantau penilaian gastropedia & konsultasi';
+            } else {
+              final total = snapshot.data ?? 0;
+              subtitle = '$total penilaian';
+            }
+
+            return _ManageCard(
+              iconData: Icons.star_rounded,
+              title: 'Pemantauan Penilaian',
+              subtitle: subtitle,
+              cardBackgroundColor: AppColors.surfaceCard,
+              borderColor: AppColors.softBlue,
+              iconCircleColor: AppColors.softBlue,
+              onTap: _openPemantauanPenilaian,
+            );
+          },
+        ),
       ],
     );
   }
@@ -1183,6 +1217,7 @@ class _QuickActionButton extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════════════════════════
 class _ManageCard extends StatelessWidget {
   final String iconImg;
+  final IconData? iconData;
   final String title;
   final String subtitle;
   final Color cardBackgroundColor;
@@ -1192,7 +1227,8 @@ class _ManageCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _ManageCard({
-    required this.iconImg,
+    this.iconImg = '',
+    this.iconData,
     required this.title,
     required this.subtitle,
     required this.cardBackgroundColor,
@@ -1232,17 +1268,24 @@ class _ManageCard extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: Image.asset(
-                  iconImg,
-                  width: 24,
-                  height: 24,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.folder_open_rounded,
-                    size: 22,
-                    color: AppColors.primaryText,
-                  ),
-                ),
+                child: iconData != null
+                    ? Icon(
+                        iconData,
+                        size: 24,
+                        color: AppColors.primaryText,
+                      )
+                    : Image.asset(
+                        iconImg,
+                        width: 24,
+                        height: 24,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(
+                          Icons.folder_open_rounded,
+                          size: 22,
+                          color: AppColors.primaryText,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(width: 14),
