@@ -230,7 +230,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return AdminScaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundGradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          AppColors.bgGradientTop,
+          AppColors.bgGradientMiddle,
+          AppColors.bgGradientBottom,
+        ],
+      ),
       body: Stack(
         children: [
           // ── KONTEN SCROLLABLE ─────────────────────────────────────────────
@@ -324,17 +332,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       _displayAdminName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                        color: AppColors.primaryText,
                       ),
                     ),
                   ),
             const SizedBox(width: 6),
             const Icon(
               Icons.keyboard_arrow_down_rounded,
-              color: AppColors.textPrimary,
+              color: AppColors.primaryText,
               size: 20,
             ),
           ],
@@ -343,80 +351,100 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // ── B. KARTU SAPAAN (WELCOME SECTION) ─────────────────────────────────────
+  // ── B. KARTU SAPAAN (DISAMAKAN DENGAN FORMALSAPAANCARD PENGGUNA) ──────────
   Widget _buildWelcomeBanner() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
       decoration: BoxDecoration(
-        color: AppColors.bgAccent,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.accentGold, width: 1.2),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: const Color(0xFFEBE3D0),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Teks sapaan sebelah kiri
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Halo, $_displayAdminName !',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondary,
-                    height: 1.2,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Kelola Konten, Jaga\nLambung Pengguna',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                    height: 1.25,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Pantau dan kelola berita serta gastropedia',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    fontWeight: FontWeight.normal,
-                    color: AppColors.textSecondary,
-                    height: 1.35,
-                  ),
-                ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFFFFFDF5),
+                Color(0xFFFFFBE8),
+                Color(0xFFFAF3D4),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Teks sapaan sebelah kiri
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Halo, $_displayAdminName !',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF9E652B),
+                        height: 1.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Kelola Konten, Jaga\nLambung Pengguna',
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primaryText,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      'Pantau dan kelola berita serta gastropedia',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF6B5839),
+                        height: 1.25,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
 
-          // Maskot sebelah kanan diperbesar menjadi 110x110 agar lebih hidup & seimbang
-          Image.asset(
-            'assets/images/mascot-header.png',
-            width: 110,
-            height: 110,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => const Icon(
-              Icons.shield_rounded,
-              size: 64,
-              color: AppColors.textPrimary,
-            ),
+              // Maskot sebelah kanan (110x110)
+              Image.asset(
+                'assets/images/mascot-header.png',
+                width: 110,
+                height: 110,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.shield_rounded,
+                  size: 64,
+                  color: AppColors.primaryText,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -538,9 +566,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       )
                     : Text(
                         count.toString(),
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 23,
-                          fontWeight: FontWeight.bold,
+                        style: GoogleFonts.poppins(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
                           color: accentColor,
                           height: 1.1,
                         ),
@@ -548,8 +576,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 const SizedBox(height: 3),
                 Text(
                   label,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12.5,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: Colors.white,
                     height: 1.2,
@@ -576,15 +604,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             color: AppColors.softBlue,
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, size: 18, color: AppColors.textPrimary),
+          child: Icon(icon, size: 18, color: AppColors.primaryText),
         ),
         const SizedBox(width: 10),
         Text(
           title,
-          style: GoogleFonts.plusJakartaSans(
+          style: GoogleFonts.poppins(
             fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w800,
+            color: AppColors.primaryText,
           ),
         ),
       ],
@@ -706,16 +734,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: const Icon(
                 Icons.history_rounded,
                 size: 18,
-                color: AppColors.textPrimary,
+                color: AppColors.primaryText,
               ),
             ),
             const SizedBox(width: 10),
             Text(
               'Aktivitas Terbaru',
-              style: GoogleFonts.plusJakartaSans(
+              style: GoogleFonts.poppins(
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w800,
+                color: AppColors.primaryText,
               ),
             ),
           ],
@@ -732,8 +760,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             children: [
               Text(
                 'Lihat semua',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textSecondary,
                 ),
@@ -775,7 +803,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   height: 24,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: AppColors.textPrimary,
+                    color: AppColors.primaryText,
                   ),
                 ),
               ),
@@ -788,7 +816,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: Center(
                 child: Text(
                   'Belum ada aktivitas',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.poppins(
                     color: AppColors.textSecondary,
                     fontSize: 13,
                   ),
@@ -849,19 +877,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               children: [
                 Text(
                   desc,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: AppColors.primaryText,
                     height: 1.4,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   time,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.normal,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
                     color: AppColors.textSecondary,
                   ),
                 ),
@@ -1110,10 +1138,10 @@ class _QuickActionButton extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primaryText,
                   height: 1.2,
                 ),
                 maxLines: 2,
@@ -1122,7 +1150,7 @@ class _QuickActionButton extends StatelessWidget {
             ),
             const Icon(
               Icons.chevron_right_rounded,
-              color: AppColors.textPrimary,
+              color: AppColors.primaryText,
               size: 20,
             ),
           ],
@@ -1191,7 +1219,7 @@ class _ManageCard extends StatelessWidget {
                   errorBuilder: (context, error, stackTrace) => const Icon(
                     Icons.folder_open_rounded,
                     size: 22,
-                    color: AppColors.textPrimary,
+                    color: AppColors.primaryText,
                   ),
                 ),
               ),
@@ -1204,19 +1232,19 @@ class _ManageCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primaryText,
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.normal,
-                      color: AppColors.textSecondary,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.neutralGray,
                     ),
                   ),
                 ],
