@@ -353,6 +353,7 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
           appBar: ConsultationHeader(
             title: 'Riwayat Konsultasi',
             rightAction: rightMenu,
+            isYellowPill: true,
           ),
           body: Builder(
               builder: (context) {

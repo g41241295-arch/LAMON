@@ -2,12 +2,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../constants/app_colors.dart';
 import '../../constants/consultation_theme.dart';
 import '../../models/consultation_model.dart';
 import '../../services/consultation_service.dart';
 import '../../services/payment_service.dart';
 import '../../utils/app_date_formatter.dart';
 import '../../utils/currency_formatter.dart';
+import '../../widgets/app_scaffold.dart';
 
 /// Layar Status & Pembayaran Konsultasi (Midtrans Snap Sandbox).
 class VirtualAccountScreen extends StatefulWidget {
@@ -286,66 +288,64 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
   Widget build(BuildContext context) {
     final c = _consultation;
 
-    return Scaffold(
-      backgroundColor: ConsultationTheme.scaffoldBg,
+    return AppScaffold(
+      backgroundGradient: AppColors.pageGradient,
       appBar: const ConsultationHeader(
         title: 'Status Pembayaran',
+        isYellowPill: true,
       ),
       bottomNavigationBar:
           c != null ? SafeArea(top: false, child: _buildBottomBar(context, c)) : null,
-      body: SafeArea(
-        top: false,
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: ConsultationTheme.primary),
-              )
-            : c == null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.error_outline_rounded,
-                              size: 48, color: ConsultationTheme.red),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Data konsultasi tidak ditemukan.',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: ConsultationTheme.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: ConsultationTheme.primary),
+            )
+          : c == null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // ── 1. Kartu Status Ringkas ────────────────────────────────
-                        _buildStatusCard(c),
-                        const SizedBox(height: 16),
-
-                        // ── 2. Kartu Timer Hitung Mundur ────────────────────────────
-                        if (!c.isPaid) ...[
-                          _buildTimerCard(c),
-                          const SizedBox(height: 16),
-                        ],
-
-                        // ── 3. Kartu Fokus Transaksi & Aksi Bayar ────────────────────
-                        _buildTransactionCard(c),
-                        const SizedBox(height: 16),
-
-                        // ── 4. Kartu "Detail Pembayaran" ────────────────────────────
-                        _buildDetailPembayaranCard(c),
+                        const Icon(Icons.error_outline_rounded,
+                            size: 48, color: ConsultationTheme.red),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Data konsultasi tidak ditemukan.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: ConsultationTheme.primary,
+                          ),
+                        ),
                       ],
                     ),
                   ),
-      ),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // ── 1. Kartu Status Ringkas ────────────────────────────────
+                      _buildStatusCard(c),
+                      const SizedBox(height: 16),
+
+                      // ── 2. Kartu Timer Hitung Mundur ────────────────────────────
+                      if (!c.isPaid) ...[
+                        _buildTimerCard(c),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // ── 3. Kartu Fokus Transaksi & Aksi Bayar ────────────────────
+                      _buildTransactionCard(c),
+                      const SizedBox(height: 16),
+
+                      // ── 4. Kartu "Detail Pembayaran" ────────────────────────────
+                      _buildDetailPembayaranCard(c),
+                    ],
+                  ),
+                ),
     );
   }
 
