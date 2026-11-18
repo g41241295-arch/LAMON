@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'app_colors.dart';
 
 /// Design tokens dan komponen terpusat untuk seluruh fitur Konsultasi Dokter
 /// di sisi PASIEN aplikasi LAMON.
@@ -23,6 +24,12 @@ class ConsultationTheme {
   static const Color softBg = Color(0xFFF7F3EB);
   /// Garis pemisah halus
   static const Color divider = Color(0xFFF1E8DA);
+
+  // ── Gradasi Latar & Header Kuning (Identik dengan Catat Makanan) ─────────
+  static const LinearGradient pageGradient = AppColors.pageGradient;
+  static const Color titlePillYellowBg = AppColors.titlePillYellowBg;
+  static const Color titlePillYellowBorder = AppColors.titlePillYellowBorder;
+  static const Color titlePillYellowText = AppColors.titlePillYellowText;
 
   // ── Warna Aksen & State ──────────────────────────────────────────────────
   static const Color lightBlue = Color(0xFFDCEBF3);
@@ -123,18 +130,23 @@ class ConsultationTheme {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Header halaman standar formal:
-/// Tombol kembali bulat 44 (putih, border krem), judul di pill putih bergaris krem,
+/// Tombol kembali bulat 44 (putih, border krem), judul di pill bergaris krem,
 /// dan aksi kanan bulat 44 opsional.
+///
+/// Jika [isYellowPill] bernilai true, warna dan gaya pill dibuat identik dengan
+/// header Catat Makanan (kuning krem #FFF7D6, border #E8D7A5, font 14 bold #1C4E68).
 class ConsultationHeader extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final Widget? rightAction;
   final VoidCallback? onBack;
+  final bool isYellowPill;
 
   const ConsultationHeader({
     super.key,
     required this.title,
     this.rightAction,
     this.onBack,
+    this.isYellowPill = false,
   });
 
   @override
@@ -182,17 +194,23 @@ class ConsultationHeader extends StatelessWidget implements PreferredSizeWidget 
             ),
             const SizedBox(width: 8),
 
-            // Judul di pill putih bergaris krem di tengah
+            // Judul di pill (kuning jika isYellowPill, putih jika default) di tengah
             Expanded(
               child: Center(
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 22,
+                    vertical: isYellowPill ? 8 : 10,
+                  ),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isYellowPill
+                        ? ConsultationTheme.titlePillYellowBg
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
-                      color: ConsultationTheme.cardBorder,
+                      color: isYellowPill
+                          ? ConsultationTheme.titlePillYellowBorder
+                          : ConsultationTheme.cardBorder,
                       width: 1.2,
                     ),
                     boxShadow: [
@@ -209,10 +227,13 @@ class ConsultationHeader extends StatelessWidget implements PreferredSizeWidget 
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: ConsultationTheme.primary,
-                      letterSpacing: 0.1,
+                      fontSize: isYellowPill ? 14 : 16,
+                      fontWeight:
+                          isYellowPill ? FontWeight.w700 : FontWeight.w600,
+                      color: isYellowPill
+                          ? ConsultationTheme.titlePillYellowText
+                          : ConsultationTheme.primary,
+                      letterSpacing: isYellowPill ? 0.2 : 0.1,
                     ),
                   ),
                 ),

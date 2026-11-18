@@ -2,10 +2,12 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../constants/app_colors.dart';
 import '../../constants/consultation_theme.dart';
 import '../../models/doctor_model.dart';
 import '../../services/consultation_service.dart';
 import '../../services/doctor_service.dart';
+import '../../widgets/app_scaffold.dart';
 import 'widgets/doctor_card.dart';
 
 /// Layar Konsultasi Dokter (Sisi Pasien).
@@ -149,15 +151,14 @@ class _DaftarDokterScreenState extends State<DaftarDokterScreen> {
       ],
     );
 
-    return Scaffold(
-      backgroundColor: ConsultationTheme.scaffoldBg,
+    return AppScaffold(
+      backgroundGradient: AppColors.pageGradient,
       appBar: ConsultationHeader(
         title: 'Konsultasi Dokter',
         rightAction: rightAction,
+        isYellowPill: true,
       ),
-      body: SafeArea(
-        top: false,
-        child: StreamBuilder<List<DoctorModel>>(
+      body: StreamBuilder<List<DoctorModel>>(
           stream: _doctorService.watchAll(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -282,7 +283,6 @@ class _DaftarDokterScreenState extends State<DaftarDokterScreen> {
             );
           },
         ),
-      ),
     );
   }
 
