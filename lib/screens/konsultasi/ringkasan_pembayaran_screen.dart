@@ -462,7 +462,7 @@ class _RingkasanPembayaranScreenState extends State<RingkasanPembayaranScreen> {
           SizedBox(
             width: 140,
             child: ElevatedButton(
-              onPressed: isEnabled ? () => _onLanjut(context) : null,
+              onPressed: isEnabled ? _onLanjut : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: ConsultationTheme.primary,
                 foregroundColor: Colors.white,
@@ -483,24 +483,13 @@ class _RingkasanPembayaranScreenState extends State<RingkasanPembayaranScreen> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Lanjut',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        const Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 16,
-                          color: Colors.white,
-                        ),
-                      ],
+                  : Text(
+                      'Lanjut',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
             ),
           ),
@@ -509,7 +498,7 @@ class _RingkasanPembayaranScreenState extends State<RingkasanPembayaranScreen> {
     );
   }
 
-  Future<void> _onLanjut(BuildContext context) async {
+  Future<void> _onLanjut() async {
     if (_selectedMethodId == null) return;
     setState(() => _isLoading = true);
     final nav = Navigator.of(context);
@@ -555,9 +544,21 @@ class _RingkasanPembayaranScreenState extends State<RingkasanPembayaranScreen> {
       }
     } catch (e) {
       if (mounted) {
+        String mainMsg = 'Gagal memulai pembayaran.';
+        String? subMsg;
+        if (e is PaymentException) {
+          mainMsg = e.message;
+          if (e.debugCode != null) subMsg = 'Kode: ${e.debugCode}';
+        } else {
+          mainMsg = e
+              .toString()
+              .replaceFirst('Exception: ', '')
+              .replaceFirst('HttpException: ', '');
+        }
         showConsultationSnackBar(
           context,
-          message: 'Gagal memulai pembayaran. Coba lagi: $e',
+          message: mainMsg,
+          subMessage: subMsg,
           isError: true,
         );
       }

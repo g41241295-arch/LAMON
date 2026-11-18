@@ -299,7 +299,6 @@ class _DetailDokterScreenState extends State<DetailDokterScreen> {
           // ── Tombol Utama Chat Dokter ───────────────────────────────────
           PrimaryButton(
             text: 'Chat Dokter',
-            icon: Icons.arrow_forward_rounded,
             width: double.infinity,
             onPressed: () => _handleChatTap(doctor),
           ),

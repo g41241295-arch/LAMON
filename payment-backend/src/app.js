@@ -43,6 +43,41 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
+// Endpoint Health Check Publik dengan Verifikasi Status Lingkungan
+app.get('/api/health', (req, res) => {
+  const midtransKey = Boolean(
+    process.env.MIDTRANS_SERVER_KEY &&
+    process.env.MIDTRANS_SERVER_KEY.trim() !== '' &&
+    !process.env.MIDTRANS_SERVER_KEY.includes('YOUR_SERVER_KEY')
+  );
+
+  let firebaseAdmin = false;
+  const saEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (saEnv && saEnv.trim() !== '' && !saEnv.includes('placeholder')) {
+    try {
+      const clean = saEnv.trim();
+      if (clean.startsWith('{')) {
+        JSON.parse(clean);
+        firebaseAdmin = true;
+      } else {
+        const decoded = Buffer.from(clean, 'base64').toString('utf8');
+        JSON.parse(decoded);
+        firebaseAdmin = true;
+      }
+    } catch (_) {
+      firebaseAdmin = false;
+    }
+  }
+
+  res.status(200).json({
+    ok: true,
+    env: {
+      midtransKey,
+      firebaseAdmin,
+    },
+  });
+});
+
 // Wrapper untuk menangani async route handler secara aman
 const asyncHandler = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);

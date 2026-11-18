@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../constants/app_colors.dart';
 import '../../constants/consultation_constants.dart';
 import '../../constants/consultation_theme.dart';
 import '../../models/consultation_model.dart';
@@ -9,6 +10,7 @@ import '../../services/consultation_retention_service.dart';
 import '../../services/consultation_service.dart';
 import '../../services/doctor_service.dart';
 import '../../utils/app_date_formatter.dart';
+import '../../widgets/app_scaffold.dart';
 import 'chat_dokter_screen.dart';
 import 'widgets/doctor_avatar.dart';
 
@@ -41,8 +43,7 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
     }
   }
 
-  Future<void> _handleChatUlang(
-      BuildContext context, ConsultationModel consultation) async {
+  Future<void> _handleChatUlang(ConsultationModel consultation) async {
     if (_isNavigating) return;
     setState(() => _isNavigating = true);
 
@@ -347,15 +348,13 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
           ),
         );
 
-        return Scaffold(
-          backgroundColor: ConsultationTheme.scaffoldBg,
+        return AppScaffold(
+          backgroundGradient: AppColors.pageGradient,
           appBar: ConsultationHeader(
             title: 'Riwayat Konsultasi',
             rightAction: rightMenu,
           ),
-          body: SafeArea(
-            top: false,
-            child: Builder(
+          body: Builder(
               builder: (context) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
@@ -513,7 +512,6 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
                 );
               },
             ),
-          ),
         );
       },
     );
@@ -1173,7 +1171,7 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
 
                 // Kanan: Tombol sekunder Chat Ulang
                 OutlinedButton.icon(
-                  onPressed: () => _handleChatUlang(context, item),
+                  onPressed: () => _handleChatUlang(item),
                   icon: const Icon(Icons.refresh_rounded, size: 16),
                   label: Text(
                     'Chat Ulang',

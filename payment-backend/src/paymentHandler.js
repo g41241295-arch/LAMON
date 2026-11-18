@@ -43,14 +43,19 @@ function formatMidtransTime(date) {
  * Handler POST /api/create-transaction
  */
 async function handleCreateTransaction(req, res) {
-  const { db, auth, admin } = initFirebase();
-  const user = await authenticateUser(req, auth);
-  const uid = user.uid;
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Header Authorization: Bearer <token> diperlukan.' });
+  }
 
   const { consultationId } = req.body || {};
   if (!consultationId || typeof consultationId !== 'string') {
     return res.status(400).json({ error: 'Field consultationId (string) wajib disertakan.' });
   }
+
+  const { db, auth, admin } = initFirebase();
+  const user = await authenticateUser(req, auth);
+  const uid = user.uid;
 
   // 1. Ambil dokumen konsultasi dari users/{uid}/consultations/{consultationId}
   const consultRef = db.collection('users').doc(uid).collection('consultations').doc(consultationId);
@@ -359,14 +364,19 @@ async function handleWebhook(req, res) {
  * Handler POST /api/check-payment
  */
 async function handleCheckPayment(req, res) {
-  const { db, auth, admin } = initFirebase();
-  const user = await authenticateUser(req, auth);
-  const uid = user.uid;
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Header Authorization: Bearer <token> diperlukan.' });
+  }
 
   const { consultationId } = req.body || {};
   if (!consultationId || typeof consultationId !== 'string') {
     return res.status(400).json({ error: 'Field consultationId (string) wajib disertakan.' });
   }
+
+  const { db, auth, admin } = initFirebase();
+  const user = await authenticateUser(req, auth);
+  const uid = user.uid;
 
   // 1. Ambil dokumen konsultasi
   const consultRef = db.collection('users').doc(uid).collection('consultations').doc(consultationId);

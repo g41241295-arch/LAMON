@@ -643,10 +643,11 @@ class SectionDivider extends StatelessWidget {
 
 /// Helper untuk menampilkan floating snackbar formal LAMON:
 /// margin 20, radius 14, latar biru tua #1F5C7A (atau hijau #2F7A57 untuk sukses),
-/// teks putih 13, ikon centang di kiri.
+/// teks putih 13, ikon centang di kiri, dengan dukungan subteks untuk rincian kode/debug.
 void showConsultationSnackBar(
   BuildContext context, {
   required String message,
+  String? subMessage,
   bool isError = false,
   bool isSuccess = false,
   SnackBarAction? action,
@@ -676,17 +677,37 @@ void showConsultationSnackBar(
       ),
       elevation: 4,
       content: Row(
+        crossAxisAlignment: subMessage != null
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.center,
         children: [
           Icon(icon, color: Colors.white, size: 20),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              message,
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  message,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                if (subMessage != null && subMessage.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    subMessage,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.white.withValues(alpha: 0.85),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],

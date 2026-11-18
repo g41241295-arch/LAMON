@@ -14,13 +14,14 @@ function initFirebase() {
   const saEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
   let credential;
 
-  if (saEnv) {
+  if (saEnv && saEnv.trim().length > 0 && !saEnv.includes('placeholder')) {
     try {
       let parsed;
-      if (saEnv.trim().startsWith('{')) {
-        parsed = JSON.parse(saEnv);
+      const cleanSa = saEnv.trim();
+      if (cleanSa.startsWith('{')) {
+        parsed = JSON.parse(cleanSa);
       } else {
-        const decoded = Buffer.from(saEnv, 'base64').toString('utf8');
+        const decoded = Buffer.from(cleanSa, 'base64').toString('utf8');
         parsed = JSON.parse(decoded);
       }
       credential = admin.credential.cert(parsed);
@@ -28,9 +29,10 @@ function initFirebase() {
       console.error('[Firebase] Gagal mem-parse FIREBASE_SERVICE_ACCOUNT:', err.message);
       throw new Error('Konfigurasi FIREBASE_SERVICE_ACCOUNT tidak valid (bukan JSON atau Base64 yang benar).');
     }
-  } else {
-    // Fallback: coba kredensial default lingkungan (misalnya ADC)
+  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
     credential = admin.credential.applicationDefault();
+  } else {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT belum dikonfigurasi pada environment backend.');
   }
 
   admin.initializeApp({ credential });

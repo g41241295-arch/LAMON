@@ -170,18 +170,32 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
 
     setState(() => _isCreatingSnap = true);
     try {
-      final snap = await _paymentService.createTransaction(
-        consultationId: widget.consultationId,
-      );
+      final snap = await _paymentService
+          .createTransaction(
+            consultationId: widget.consultationId,
+          )
+          .timeout(const Duration(seconds: 35));
       _redirectUrl = snap.redirectUrl;
       if (mounted && snap.redirectUrl.isNotEmpty) {
         await _paymentService.openSnapPaymentUrl(snap.redirectUrl);
       }
     } catch (e) {
       if (mounted) {
+        String mainMsg = 'Gagal membuka halaman pembayaran.';
+        String? subMsg;
+        if (e is PaymentException) {
+          mainMsg = e.message;
+          if (e.debugCode != null) subMsg = 'Kode: ${e.debugCode}';
+        } else {
+          mainMsg = e
+              .toString()
+              .replaceFirst('Exception: ', '')
+              .replaceFirst('HttpException: ', '');
+        }
         showConsultationSnackBar(
           context,
-          message: 'Gagal membuka halaman pembayaran: $e',
+          message: mainMsg,
+          subMessage: subMsg,
           isError: true,
         );
       }
@@ -196,9 +210,11 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
     setState(() => _isCheckingStatus = true);
 
     try {
-      final result = await _paymentService.checkPaymentStatus(
-        consultationId: widget.consultationId,
-      );
+      final result = await _paymentService
+          .checkPaymentStatus(
+            consultationId: widget.consultationId,
+          )
+          .timeout(const Duration(seconds: 25));
 
       if (!mounted) return;
 
@@ -227,9 +243,21 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
       }
     } catch (e) {
       if (!silent && mounted) {
+        String mainMsg = 'Gagal memeriksa status pembayaran.';
+        String? subMsg;
+        if (e is PaymentException) {
+          mainMsg = e.message;
+          if (e.debugCode != null) subMsg = 'Kode: ${e.debugCode}';
+        } else {
+          mainMsg = e
+              .toString()
+              .replaceFirst('Exception: ', '')
+              .replaceFirst('HttpException: ', '');
+        }
         showConsultationSnackBar(
           context,
-          message: 'Gagal memeriksa status: $e',
+          message: mainMsg,
+          subMessage: subMsg,
           isError: true,
         );
       }
@@ -263,6 +291,8 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
       appBar: const ConsultationHeader(
         title: 'Status Pembayaran',
       ),
+      bottomNavigationBar:
+          c != null ? SafeArea(top: false, child: _buildBottomBar(context, c)) : null,
       body: SafeArea(
         top: false,
         child: _isLoading
@@ -291,38 +321,29 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
                       ),
                     ),
                   )
-                : Column(
-                    children: [
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // ── 1. Kartu Status Ringkas ────────────────────────────────
-                              _buildStatusCard(c),
-                              const SizedBox(height: 16),
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // ── 1. Kartu Status Ringkas ────────────────────────────────
+                        _buildStatusCard(c),
+                        const SizedBox(height: 16),
 
-                              // ── 2. Kartu Timer Hitung Mundur ────────────────────────────
-                              if (!c.isPaid) ...[
-                                _buildTimerCard(c),
-                                const SizedBox(height: 16),
-                              ],
+                        // ── 2. Kartu Timer Hitung Mundur ────────────────────────────
+                        if (!c.isPaid) ...[
+                          _buildTimerCard(c),
+                          const SizedBox(height: 16),
+                        ],
 
-                              // ── 3. Kartu Fokus Transaksi & Aksi Bayar ────────────────────
-                              _buildTransactionCard(c),
-                              const SizedBox(height: 16),
+                        // ── 3. Kartu Fokus Transaksi & Aksi Bayar ────────────────────
+                        _buildTransactionCard(c),
+                        const SizedBox(height: 16),
 
-                              // ── 4. Kartu "Detail Pembayaran" ────────────────────────────
-                              _buildDetailPembayaranCard(c),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // ── Bar Bawah Melekat ───────────────────────────────────────
-                      _buildBottomBar(context, c),
-                    ],
+                        // ── 4. Kartu "Detail Pembayaran" ────────────────────────────
+                        _buildDetailPembayaranCard(c),
+                      ],
+                    ),
                   ),
       ),
     );
@@ -786,7 +807,6 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
                     Expanded(
                       child: PrimaryButton(
                         text: 'Bayar Sekarang',
-                        icon: Icons.arrow_forward_rounded,
                         onPressed: _openMidtransPayment,
                       ),
                     ),

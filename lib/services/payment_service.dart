@@ -6,6 +6,24 @@ import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants/payment_config.dart';
 
+/// Exception terstruktur untuk kegagalan layanan pembayaran LAMON.
+/// Menampilkan pesan ramah pengguna tanpa label teknis "HttpException:",
+/// serta menyertakan kode debug singkat untuk memudahkan diagnosis.
+class PaymentException implements Exception {
+  final String message;
+  final String? debugCode;
+  final dynamic originalError;
+
+  const PaymentException({
+    required this.message,
+    this.debugCode,
+    this.originalError,
+  });
+
+  @override
+  String toString() => message;
+}
+
 /// Data hasil pembuatan transaksi Snap Midtrans dari backend.
 class SnapTransactionResult {
   final bool success;
@@ -68,19 +86,52 @@ class PaymentService {
   ) async {
     final user = _auth.currentUser;
     if (user == null) {
-      throw const HttpException('User belum login. Silakan login terlebih dahulu.');
+      throw const PaymentException(
+        message: 'Sesi akun tidak ditemukan. Silakan login terlebih dahulu.',
+        debugCode: 'AUTH_REQUIRED',
+      );
     }
 
-    final idToken = await user.getIdToken();
+    String? idToken;
+    try {
+      idToken = await user.getIdToken();
+    } catch (e) {
+      debugPrint('[PaymentService] Gagal mengambil idToken: $e');
+      throw PaymentException(
+        message: 'Gagal memverifikasi sesi otentikasi. Silakan login kembali.',
+        debugCode: 'TOKEN_FETCH_ERROR',
+        originalError: e,
+      );
+    }
+
     if (idToken == null || idToken.isEmpty) {
-      throw const HttpException('Gagal mengambil token otentikasi Firebase.');
+      throw const PaymentException(
+        message: 'Sesi otentikasi kosong. Silakan login kembali.',
+        debugCode: 'TOKEN_EMPTY',
+      );
     }
 
     final baseUrl = PaymentConfig.cleanBaseUrl;
-    final uri = Uri.parse('$baseUrl$path');
+    final fullUrlString = '$baseUrl$path';
+    final uri = Uri.tryParse(fullUrlString);
+
+    if (uri == null) {
+      throw const PaymentException(
+        message: 'Format alamat server pembayaran tidak valid.',
+        debugCode: 'INVALID_BASE_URL',
+      );
+    }
+
+    debugPrint('[PaymentService] Calling endpoint: ${uri.scheme}://${uri.host}:${uri.port}${uri.path}');
+
+    // Peringatan jika di release build masih menggunakan URL default emulator
+    if (kReleaseMode && PaymentConfig.isDefaultEmulatorUrl) {
+      debugPrint('[PaymentService] WARNING: Build release berjalan dengan default emulator URL ($baseUrl)');
+    }
 
     final client = HttpClient();
-    client.connectionTimeout = const Duration(seconds: 15);
+    // Beri batas waktu koneksi 25 detik untuk mengakomodasi cold start serverless (Vercel/Render)
+    client.connectionTimeout = const Duration(seconds: 25);
 
     try {
       final request = await client.postUrl(uri);
@@ -88,7 +139,8 @@ class PaymentService {
       request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $idToken');
       request.write(jsonEncode(body));
 
-      final response = await request.close().timeout(const Duration(seconds: 20));
+      // Beri batas waktu penerimaan response 35 detik
+      final response = await request.close().timeout(const Duration(seconds: 35));
       final responseBody = await response.transform(utf8.decoder).join();
 
       Map<String, dynamic> data = {};
@@ -102,16 +154,85 @@ class PaymentService {
         return data;
       }
 
-      final errorMsg = data['error'] as String? ??
-          'Terjadi kesalahan server pembayaran (kode: ${response.statusCode}).';
-      throw HttpException(errorMsg);
+      final errorMsg = data['error'] as String?;
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        throw PaymentException(
+          message: errorMsg ?? 'Sesi autentikasi telah berakhir. Silakan login kembali.',
+          debugCode: 'HTTP_${response.statusCode}',
+        );
+      } else if (response.statusCode == 404) {
+        throw PaymentException(
+          message: errorMsg ?? 'Layanan endpoint pembayaran tidak ditemukan.',
+          debugCode: 'HTTP_404',
+        );
+      } else if (response.statusCode >= 500) {
+        throw PaymentException(
+          message: errorMsg ?? 'Server pembayaran sedang mengalami gangguan teknis.',
+          debugCode: 'HTTP_${response.statusCode}',
+        );
+      } else {
+        throw PaymentException(
+          message: errorMsg ?? 'Permintaan pembayaran gagal (kode: ${response.statusCode}).',
+          debugCode: 'HTTP_${response.statusCode}',
+        );
+      }
     } on SocketException catch (e) {
-      debugPrint('[PaymentService] SocketException: $e');
-      throw const HttpException(
-        'Gagal terhubung ke server pembayaran. Pastikan backend aktif atau periksa koneksi internet.',
+      debugPrint('[PaymentService] SocketException ($fullUrlString): $e');
+      if (kReleaseMode && PaymentConfig.isDefaultEmulatorUrl) {
+        throw PaymentException(
+          message: 'Alamat server pembayaran belum dikonfigurasi. Hubungi pengembang atau periksa konfigurasi aplikasi.',
+          debugCode: 'ERR_URL_NOT_CONFIGURED',
+          originalError: e,
+        );
+      }
+      final osMsg = e.osError?.message.toLowerCase() ?? '';
+      if (osMsg.contains('refused')) {
+        throw PaymentException(
+          message: 'Server pembayaran tidak aktif atau tidak dapat dijangkau.',
+          debugCode: 'ERR_CONN_REFUSED',
+          originalError: e,
+        );
+      } else if (osMsg.contains('permission denied')) {
+        throw PaymentException(
+          message: 'Akses koneksi internet diblokir pada perangkat Anda.',
+          debugCode: 'ERR_PERMISSION_DENIED',
+          originalError: e,
+        );
+      } else if (osMsg.contains('unreachable') || osMsg.contains('failed host lookup')) {
+        throw PaymentException(
+          message: 'Tidak ada koneksi internet atau alamat server tidak dapat dihubungi.',
+          debugCode: 'ERR_NO_INTERNET',
+          originalError: e,
+        );
+      }
+      throw PaymentException(
+        message: 'Gagal terhubung ke server pembayaran. Pastikan backend aktif atau periksa koneksi internet.',
+        debugCode: 'ERR_SOCKET_${e.osError?.errorCode ?? 'UNKNOWN'}',
+        originalError: e,
       );
-    } on TimeoutException {
-      throw const HttpException('Waktu koneksi ke server pembayaran habis. Coba lagi.');
+    } on HandshakeException catch (e) {
+      debugPrint('[PaymentService] HandshakeException: $e');
+      throw PaymentException(
+        message: 'Koneksi aman ke server pembayaran gagal diverifikasi (SSL/TLS).',
+        debugCode: 'ERR_SSL_HANDSHAKE',
+        originalError: e,
+      );
+    } on TimeoutException catch (e) {
+      debugPrint('[PaymentService] TimeoutException: $e');
+      throw PaymentException(
+        message: 'Waktu koneksi ke server pembayaran habis. Silakan coba lagi.',
+        debugCode: 'ERR_TIMEOUT',
+        originalError: e,
+      );
+    } on PaymentException {
+      rethrow;
+    } catch (e) {
+      debugPrint('[PaymentService] Unexpected error: $e');
+      throw PaymentException(
+        message: 'Terjadi kendala saat memproses koneksi pembayaran.',
+        debugCode: 'ERR_UNEXPECTED',
+        originalError: e,
+      );
     } finally {
       client.close();
     }
