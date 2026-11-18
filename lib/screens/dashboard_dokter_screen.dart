@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../constants/doctor_theme.dart';
 import '../models/consultation_model.dart';
 import '../models/doctor_model.dart';
@@ -248,24 +249,95 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => DoctorBackground(
+        builder: (_) => Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFFCFBF7),
+                Color(0xFFF7F4EB),
+                Color(0xFFF2EEDB),
+              ],
+            ),
+          ),
           child: Scaffold(
             backgroundColor: Colors.transparent,
-            body: SafeArea(
-              child: Column(
-                children: [
-                  AppHeaderPill(
-                    title: 'Profil Dokter',
-                    onBack: () => Navigator.pop(context),
+            appBar: PreferredSize(
+              preferredSize: const Size.fromHeight(68),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF7D6),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: const Color(0xFFE8D7A5),
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          'Profil Dokter',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1C4E68),
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 0,
+                        child: InkWell(
+                          onTap: () => Navigator.pop(context),
+                          borderRadius: BorderRadius.circular(24),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFFD6E2E8),
+                                width: 1.2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.04),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: Color(0xFF1C4E68),
+                              size: 22,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: DoctorProfileTab(
-                      doctor: _doctor!,
-                      onProfileUpdated: () => _loadDoctorData(),
-                    ),
-                  ),
-                ],
+                ),
               ),
+            ),
+            body: DoctorProfileTab(
+              doctor: _doctor!,
+              onProfileUpdated: () => _loadDoctorData(),
             ),
           ),
         ),

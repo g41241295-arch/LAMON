@@ -481,27 +481,131 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
+  String? get _calculatedAgeString {
+    if (_rawBirthDate == null) return null;
+    DateTime? dt;
+    if (_rawBirthDate is Timestamp) {
+      dt = (_rawBirthDate as Timestamp).toDate();
+    } else if (_rawBirthDate is DateTime) {
+      dt = _rawBirthDate as DateTime;
+    } else if (_rawBirthDate is String) {
+      dt = DateTime.tryParse(_rawBirthDate as String);
+    }
+    if (dt != null) {
+      final now = DateTime.now();
+      int age = now.year - dt.year;
+      if (now.month < dt.month || (now.month == dt.month && now.day < dt.day)) {
+        age--;
+      }
+      if (age > 0 && age < 120) {
+        return '$age thn';
+      }
+    }
+    return null;
+  }
+
+  Widget _buildSectionHeader(IconData icon, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(0xFF276F8F).withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFF276F8F).withValues(alpha: 0.22),
+                width: 1.0,
+              ),
+            ),
+            child: Icon(icon, size: 16, color: const Color(0xFF276F8F)),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1C4E68),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoTile({
+    required IconData icon,
+    required String label,
+    required String value,
+    Widget? trailing,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: const Color(0xFF276F8F).withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: const Color(0xFF276F8F)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF7A8B99),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: GoogleFonts.poppins(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1C4E68),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (trailing != null) trailing,
+      ],
+    );
+  }
+
   Widget _buildGenderChip({
     required String label,
     required IconData icon,
     required bool isSelected,
     required bool isFemale,
   }) {
-    final selectedColor = isFemale ? const Color(0xFFD63384) : AppColors.primary;
+    final selectedColor = isFemale ? const Color(0xFFD63384) : const Color(0xFF276F8F);
     final selectedBgColor = isFemale
         ? const Color(0xFFFCE4EF)
-        : AppColors.primary.withValues(alpha: 0.12);
+        : const Color(0xFF276F8F).withValues(alpha: 0.10);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: isSelected ? selectedBgColor : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
+        color: isSelected ? selectedBgColor : Colors.white,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isSelected ? selectedColor : AppColors.inputBorder,
-          width: isSelected ? 1.8 : 1,
+          color: isSelected ? selectedColor : const Color(0xFFEBE3D0),
+          width: isSelected ? 1.6 : 1.2,
         ),
       ),
       child: Row(
@@ -511,15 +615,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           Icon(
             icon,
             size: 18,
-            color: isSelected ? selectedColor : AppColors.neutralGray,
+            color: isSelected ? selectedColor : const Color(0xFF7A8B99),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           Text(
             label,
             style: GoogleFonts.poppins(
               fontSize: 13,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected ? selectedColor : const Color(0xFF1C4E68),
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: isSelected ? selectedColor : const Color(0xFF5A7184),
             ),
           ),
         ],
@@ -528,57 +632,70 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildHistoryWidget() {
-    String historyText;
-    IconData historyIcon;
-    Color iconColor;
+    String historyText = 'Tidak ada riwayat penyakit lambung';
+    String historySubtext = 'Kondisi lambung prima berdasarkan catatan skrining awal';
+    IconData historyIcon = Icons.check_circle_rounded;
+    Color iconColor = const Color(0xFF53A66B);
+    Color bgColor = const Color(0xFFF1F8F3);
+    Color borderColor = const Color(0xFFC8E6C9);
+
+    bool hasHistory = false;
+    bool isKnown = true;
 
     if (_rawHistory == null) {
+      isKnown = false;
       historyText = 'Belum diisi';
+      historySubtext = 'Lakukan skrining untuk melengkapi riwayat klinis';
       historyIcon = Icons.help_outline_rounded;
-      iconColor = AppColors.neutralGray;
+      iconColor = const Color(0xFF7A8B99);
+      bgColor = const Color(0xFFF8F9FA);
+      borderColor = const Color(0xFFEBE3D0);
     } else if (_rawHistory is bool) {
-      if (_rawHistory == true) {
-        historyText = 'Ada riwayat penyakit lambung';
-        historyIcon = Icons.health_and_safety_outlined;
-        iconColor = const Color(0xFFE65100);
-      } else {
-        historyText = 'Tidak ada riwayat penyakit';
-        historyIcon = Icons.check_circle_outline_rounded;
-        iconColor = AppColors.successGreen;
-      }
+      hasHistory = _rawHistory == true;
     } else if (_rawHistory is List) {
       final list = (_rawHistory as List)
           .map((e) => e.toString().trim())
           .where((e) => e.isNotEmpty)
           .toList();
-      if (list.isEmpty || list.contains('tidak ada') || list.contains('tidak')) {
-        historyText = 'Tidak ada riwayat penyakit';
-        historyIcon = Icons.check_circle_outline_rounded;
-        iconColor = AppColors.successGreen;
-      } else {
+      hasHistory = list.isNotEmpty && !list.contains('tidak ada') && !list.contains('tidak');
+      if (hasHistory) {
         historyText = list.join(', ');
-        historyIcon = Icons.health_and_safety_outlined;
-        iconColor = const Color(0xFFE65100);
       }
     } else {
       final str = _rawHistory.toString().trim();
       final lower = str.toLowerCase();
       if (str.isEmpty || lower == '-' || lower == 'belum diisi') {
+        isKnown = false;
         historyText = 'Belum diisi';
+        historySubtext = 'Lakukan skrining untuk melengkapi riwayat klinis';
         historyIcon = Icons.help_outline_rounded;
-        iconColor = AppColors.neutralGray;
-      } else if (lower.contains('tidak ada') || lower == 'tidak' || lower == 'false') {
-        historyText = 'Tidak ada riwayat penyakit';
-        historyIcon = Icons.check_circle_outline_rounded;
-        iconColor = AppColors.successGreen;
-      } else if (lower == 'iya' || lower == 'ya' || lower == 'true') {
-        historyText = 'Ada riwayat penyakit lambung';
-        historyIcon = Icons.health_and_safety_outlined;
-        iconColor = const Color(0xFFE65100);
+        iconColor = const Color(0xFF7A8B99);
+        bgColor = const Color(0xFFF8F9FA);
+        borderColor = const Color(0xFFEBE3D0);
       } else {
-        historyText = str;
-        historyIcon = Icons.health_and_safety_outlined;
-        iconColor = const Color(0xFFE65100);
+        hasHistory = lower.contains('iya') || lower.contains('ya') || lower.contains('true') ||
+            (!lower.contains('tidak') && !lower.contains('false'));
+        if (hasHistory && !lower.contains('ada riwayat') && lower != 'ya' && lower != 'iya') {
+          historyText = str;
+        }
+      }
+    }
+
+    if (isKnown) {
+      if (hasHistory) {
+        historyText = 'Ada riwayat penyakit lambung';
+        historySubtext = 'Perhatikan jadwal makan dan kurangi pemicu iritasi lambung';
+        historyIcon = Icons.warning_amber_rounded;
+        iconColor = const Color(0xFFD95030);
+        bgColor = const Color(0xFFFFF9EE);
+        borderColor = const Color(0xFFFFE0B2);
+      } else {
+        historyText = 'Tidak ada riwayat penyakit lambung';
+        historySubtext = 'Kondisi lambung prima berdasarkan catatan skrining awal';
+        historyIcon = Icons.check_circle_rounded;
+        iconColor = const Color(0xFF53A66B);
+        bgColor = const Color(0xFFF1F8F3);
+        borderColor = const Color(0xFFC8E6C9);
       }
     }
 
@@ -586,22 +703,45 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.inputBorder),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor, width: 1.2),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(historyIcon, size: 20, color: iconColor),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(historyIcon, size: 18, color: iconColor),
+          ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              historyText,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF1C4E68),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  historyText,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1C4E68),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  historySubtext,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF5A7184),
+                    height: 1.35,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -659,17 +799,97 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      appBar: const AppHeaderPill(title: 'Profil Pengguna'),
+      backgroundGradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xFFFCFBF7),
+          Color(0xFFF7F4EB),
+          Color(0xFFF2EEDB),
+        ],
+      ),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(68),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7D6),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: const Color(0xFFE8D7A5),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    'Profil Pengguna',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1C4E68),
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  child: InkWell(
+                    onTap: () => Navigator.pop(context),
+                    borderRadius: BorderRadius.circular(24),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFD6E2E8),
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Color(0xFF1C4E68),
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.primary),
             )
           : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 36),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Avatar Bulat Pengguna dengan tombol kamera di pojok kanan bawah
+                  // ── Hero Profile Section (Avatar, Name, Email, Identity Chips) ──
                   Center(
                     child: GestureDetector(
                       onTap: _isUploadingPhoto ? null : _showPhotoSourceSheet,
@@ -680,14 +900,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: AppColors.primary,
+                                color: const Color(0xFF276F8F),
                                 width: 2.5,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.08),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
+                                  color: const Color(0xFF1C4E68).withValues(alpha: 0.12),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 5),
                                 ),
                               ],
                             ),
@@ -696,10 +916,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                   ? Container(
                                       width: 96,
                                       height: 96,
-                                      color: AppColors.primary.withValues(alpha: 0.1),
+                                      color: const Color(0xFF276F8F).withValues(alpha: 0.1),
                                       child: const Center(
                                         child: CircularProgressIndicator(
-                                          color: AppColors.primary,
+                                          color: Color(0xFF276F8F),
                                           strokeWidth: 2.5,
                                         ),
                                       ),
@@ -718,7 +938,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               child: Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary,
+                                  color: const Color(0xFF1C4E68),
                                   shape: BoxShape.circle,
                                   border: Border.all(color: Colors.white, width: 2),
                                   boxShadow: [
@@ -742,132 +962,158 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Nama Pengguna di Bawah Foto
+                  // Nama Pengguna
                   Text(
                     _displayName,
                     style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
                       color: const Color(0xFF1C4E68),
+                      letterSpacing: -0.2,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 8),
 
-                  // Kartu Putih Berisi Form "PROFIL"
+                  // Badge Pengguna (Centered, Clean & Aesthetic)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F8F3),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFFC8E6C9),
+                        width: 1.0,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.verified_user_rounded,
+                          size: 14,
+                          color: Color(0xFF53A66B),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Pengguna',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF53A66B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+
+                  // ── SECTION 1: INFORMASI PRIBADI ──
+                  _buildSectionHeader(Icons.person_outline_rounded, 'Informasi Pribadi'),
+                  const SizedBox(height: 8),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(22),
                       border: Border.all(
-                        color: const Color(0xFFE8EFF5),
+                        color: const Color(0xFFEBE3D0),
                         width: 1.2,
                       ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Judul Form "PROFIL"
-                        Center(
-                          child: Text(
-                            'PROFIL',
-                            style: GoogleFonts.poppins(
-                              fontSize: 19,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.0,
-                              color: const Color(0xFF1C4E68),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
 
-                        // Field Nama Lengkap (Read-Only)
-                        Text(
-                          'Nama Lengkap',
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1C4E68),
-                          ),
+                        // Nama Lengkap Tile
+                        _buildInfoTile(
+                          icon: Icons.badge_outlined,
+                          label: 'Nama Lengkap',
+                          value: _displayName,
                         ),
-                        const SizedBox(height: 6),
-                        TextFormField(
-                          initialValue: _displayName,
-                          readOnly: true,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: const Color(0xFF1C4E68),
-                          ),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: const Color(0xFFF8FAFC),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppColors.inputBorder),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppColors.inputBorder),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          child: Divider(height: 1, color: Color(0xFFF0EBE1), thickness: 1),
                         ),
-                        const SizedBox(height: 16),
 
-                        // Field Email (Akun) (Read-Only)
-                        Text(
-                          'Email (Akun)',
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1C4E68),
+                        // Email Akun Tile
+                        _buildInfoTile(
+                          icon: Icons.mail_outline_rounded,
+                          label: 'Email Akun Terdaftar',
+                          value: _userEmail,
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEBF5F9),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFD0E4EE)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.lock_outline_rounded,
+                                  size: 13,
+                                  color: Color(0xFF276F8F),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Terkunci',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF276F8F),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        TextFormField(
-                          initialValue: _userEmail,
-                          readOnly: true,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: const Color(0xFF1C4E68),
-                          ),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: const Color(0xFFEEF2F6),
-                            suffixIcon: const Icon(
-                              Icons.lock_outline_rounded,
-                              size: 18,
-                              color: AppColors.neutralGray,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
 
-                        // Field Jenis Kelamin (Read-Only dari Skrining)
+                  // ── SECTION 2: DATA KESEHATAN & SKRINING ──
+                  _buildSectionHeader(Icons.health_and_safety_outlined, 'Data Kesehatan & Skrining'),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: const Color(0xFFEBE3D0),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+
+                        // Jenis Kelamin
                         Text(
                           'Jenis Kelamin',
                           style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1C4E68),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF5A7184),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -881,7 +1127,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                 isFemale: false,
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: _buildGenderChip(
                                 label: 'Perempuan',
@@ -892,49 +1138,47 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-
-                        // Field Tanggal Lahir (Read-Only dari Skrining)
-                        Text(
-                          'Tanggal Lahir',
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1C4E68),
-                          ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          child: Divider(height: 1, color: Color(0xFFF0EBE1), thickness: 1),
                         ),
-                        const SizedBox(height: 6),
-                        TextFormField(
-                          key: ValueKey(_formatIndonesianDate(_rawBirthDate)),
-                          initialValue: _formatIndonesianDate(_rawBirthDate),
-                          readOnly: true,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: const Color(0xFF1C4E68),
-                          ),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: const Color(0xFFF8FAFC),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppColors.inputBorder),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppColors.inputBorder),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
 
-                        // Field Riwayat Penyakit (Read-Only dari Skrining)
+                        // Tanggal Lahir Tile
+                        _buildInfoTile(
+                          icon: Icons.cake_outlined,
+                          label: 'Tanggal Lahir',
+                          value: _formatIndonesianDate(_rawBirthDate),
+                          trailing: _calculatedAgeString != null
+                              ? Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFF7D6),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFE8D7A5)),
+                                  ),
+                                  child: Text(
+                                    _calculatedAgeString!,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF1C4E68),
+                                    ),
+                                  ),
+                                )
+                              : null,
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          child: Divider(height: 1, color: Color(0xFFF0EBE1), thickness: 1),
+                        ),
+
+                        // Riwayat Penyakit
                         Text(
-                          'Riwayat Penyakit',
+                          'Riwayat Penyakit Lambung',
                           style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1C4E68),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF5A7184),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -942,29 +1186,29 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
-                  // Tombol Keluar dari Akun Pengguna
+                  // ── Tombol Keluar dari Akun ──
                   SizedBox(
                     width: double.infinity,
-                    height: 48,
+                    height: 50,
                     child: OutlinedButton.icon(
                       onPressed: _confirmLogout,
                       icon: const Icon(
                         Icons.logout_rounded,
                         color: Color(0xFFD32F2F),
-                        size: 20,
+                        size: 18,
                       ),
                       label: Text(
-                        'Keluar dari Akun Pengguna',
+                        'Keluar dari Akun',
                         style: GoogleFonts.poppins(
                           color: const Color(0xFFD32F2F),
                           fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFF8F8),
+                        backgroundColor: Colors.white,
                         side: const BorderSide(
                           color: Color(0xFFFFCDD2),
                           width: 1.2,
@@ -974,6 +1218,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         ),
                         elevation: 0,
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // App Version Footer
+                  Text(
+                    'LAMON • Aplikasi Monitoring Lambung',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF90A4AE),
                     ),
                   ),
                 ],

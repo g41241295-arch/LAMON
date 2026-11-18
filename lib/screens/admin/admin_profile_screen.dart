@@ -373,27 +373,60 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     }
   }
 
+  Widget _buildSectionHeader(IconData icon, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(0xFF276F8F).withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFF276F8F).withValues(alpha: 0.22),
+                width: 1.0,
+              ),
+            ),
+            child: Icon(icon, size: 16, color: const Color(0xFF276F8F)),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1C4E68),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildGenderChip(String gender) {
     final isSelected = _selectedGender == gender;
     final isFemale = gender == 'Perempuan';
-    // Perempuan terpilih = pink, Laki-laki terpilih = biru (nilai persis dari Profil Dokter)
-    final selectedColor = isFemale ? const Color(0xFFD63384) : AppColors.primary;
+    final selectedColor = isFemale ? const Color(0xFFD63384) : const Color(0xFF276F8F);
     final selectedBgColor = isFemale
         ? const Color(0xFFFCE4EF)
-        : AppColors.primary.withValues(alpha: 0.12);
+        : const Color(0xFF276F8F).withValues(alpha: 0.10);
 
     return GestureDetector(
       onTap: () => setState(() => _selectedGender = gender),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected ? selectedBgColor : const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(12),
+          color: isSelected ? selectedBgColor : Colors.white,
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? selectedColor : AppColors.inputBorder,
-            width: isSelected ? 1.8 : 1,
+            color: isSelected ? selectedColor : const Color(0xFFEBE3D0),
+            width: isSelected ? 1.6 : 1.2,
           ),
         ),
         child: Row(
@@ -405,17 +438,17 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                   ? Icons.male_rounded
                   : Icons.female_rounded,
               size: 18,
-              color: isSelected ? selectedColor : AppColors.neutralGray,
+              color: isSelected ? selectedColor : const Color(0xFF7A8B99),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             Text(
               gender,
               style: GoogleFonts.poppins(
                 fontSize: 13,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected
                     ? selectedColor
-                    : const Color(0xFF1C4E68),
+                    : const Color(0xFF5A7184),
               ),
             ),
           ],
@@ -522,342 +555,606 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         statusBarIconBrightness: Brightness.dark,
         statusBarBrightness: Brightness.light,
       ),
-      child: Scaffold(
-        backgroundColor: _pageBgColor,
-        body: SafeArea(
-          child: Column(
-            children: [
-              const SizedBox(height: 6),
-              GastropediaHeader(
-                title: 'Profil Admin',
-                onBack: () => Navigator.pop(context),
-              ),
-              Expanded(
-                child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: Color(0xFF276F8F),
-                        ),
-                      )
-                    : SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(20, 10, 20, 32),
-                        child: Column(
-                          children: [
-                  // Avatar Besar Bulat Admin dengan tombol kamera
-                  Center(
-                    child: GestureDetector(
-                      onTap: _isUploadingPhoto ? null : _showPhotoSourceSheet,
-                      child: Stack(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFF276F8F),
-                                width: 2.5,
-                              ),
-                            ),
-                            child: ClipOval(
-                              child: _isUploadingPhoto
-                                  ? Container(
-                                      width: 96,
-                                      height: 96,
-                                      color: const Color(0xFF276F8F)
-                                          .withValues(alpha: 0.1),
-                                      child: const Center(
-                                        child: CircularProgressIndicator(
-                                          color: Color(0xFF276F8F),
-                                          strokeWidth: 2.5,
-                                        ),
-                                      ),
-                                    )
-                                  : _buildAvatarImage(),
-                            ),
-                          ),
-                          if (!_isUploadingPhoto)
-                            Positioned(
-                              bottom: 2,
-                              right: 2,
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF276F8F),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                      color: Colors.white, width: 2),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black
-                                          .withValues(alpha: 0.15),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.camera_alt_rounded,
-                                  color: Colors.white,
-                                  size: 14,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Nama Admin di Bawah Foto (tanpa teks spesialisasi dokter)
-                  Text(
-                    _displayName,
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1C4E68),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Kartu Putih Berisi Form "PROFIL"
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color(0xFFE8EFF5),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Text(
-                              'PROFIL',
-                              style: GoogleFonts.poppins(
-                                fontSize: 19,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.0,
-                                color: const Color(0xFF1C4E68),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Field Nama Lengkap (Editable)
-                          Text(
-                            'Nama Lengkap',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1C4E68),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          TextFormField(
-                            controller: _nameController,
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: const Color(0xFF1C4E68),
-                            ),
-                            decoration: InputDecoration(
-                              hintText: 'Nama admin...',
-                              hintStyle: GoogleFonts.poppins(
-                                color: AppColors.inputPlaceholder,
-                              ),
-                              filled: true,
-                              fillColor: const Color(0xFFF8FAFC),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: AppColors.inputBorder,
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: AppColors.inputBorder,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF276F8F),
-                                  width: 1.5,
-                                ),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
-                              ),
-                            ),
-                            validator: (val) {
-                              if (val == null || val.trim().isEmpty) {
-                                return 'Nama tidak boleh kosong';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Field Email (Read-Only)
-                          Text(
-                            'Email (Akun)',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1C4E68),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          TextFormField(
-                            controller: _emailController,
-                            readOnly: true,
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: const Color(0xFF1C4E68),
-                            ),
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: const Color(0xFFEEF2F6),
-                              suffixIcon: const Icon(
-                                Icons.lock_outline_rounded,
-                                size: 18,
-                                color: AppColors.neutralGray,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE2E8F0),
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE2E8F0),
-                                ),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Field Jenis Kelamin (Laki-laki / Perempuan)
-                          Text(
-                            'Jenis Kelamin',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1C4E68),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(child: _buildGenderChip('Laki-laki')),
-                              const SizedBox(width: 12),
-                              Expanded(child: _buildGenderChip('Perempuan')),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Tombol Simpan Perubahan
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: _isSaving ? null : _handleSave,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF276F8F),
-                                foregroundColor: Colors.white,
-                                elevation: 1,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
-                              ),
-                              child: _isSaving
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                          Colors.white,
-                                        ),
-                                      ),
-                                    )
-                                  : Text(
-                                      'Simpan Perubahan',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Tombol Keluar dari Akun Admin
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: OutlinedButton.icon(
-                      onPressed: _confirmLogout,
-                      icon: const Icon(
-                        Icons.logout_rounded,
-                        color: Color(0xFFD32F2F),
-                        size: 20,
-                      ),
-                      label: Text(
-                        'Keluar dari Akun Admin',
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFFD32F2F),
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFF8F8),
-                        side: const BorderSide(
-                          color: Color(0xFFFFCDD2),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFFCFBF7),
+              Color(0xFFF7F4EB),
+              Color(0xFFF2EEDB),
+            ],
+          ),
+        ),
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(68),
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF7D6),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: const Color(0xFFE8D7A5),
                           width: 1.2,
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        'Profil Admin',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1C4E68),
+                          letterSpacing: 0.2,
                         ),
-                        elevation: 0,
                       ),
                     ),
-                  ),
-                ],
+                    Positioned(
+                      left: 0,
+                      child: InkWell(
+                        onTap: () => Navigator.pop(context),
+                        borderRadius: BorderRadius.circular(24),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFFD6E2E8),
+                              width: 1.2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.04),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_rounded,
+                            color: Color(0xFF1C4E68),
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ],
+          body: _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF276F8F),
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 36),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Avatar Besar Bulat Admin dengan tombol kamera
+                      Center(
+                        child: GestureDetector(
+                          onTap: _isUploadingPhoto ? null : _showPhotoSourceSheet,
+                          child: Stack(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: const Color(0xFF276F8F),
+                                    width: 2.5,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF1C4E68).withValues(alpha: 0.12),
+                                      blurRadius: 14,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipOval(
+                                  child: _isUploadingPhoto
+                                      ? Container(
+                                          width: 96,
+                                          height: 96,
+                                          color: const Color(0xFF276F8F).withValues(alpha: 0.1),
+                                          child: const Center(
+                                            child: CircularProgressIndicator(
+                                              color: Color(0xFF276F8F),
+                                              strokeWidth: 2.5,
+                                            ),
+                                          ),
+                                        )
+                                      : SizedBox(
+                                          width: 96,
+                                          height: 96,
+                                          child: _buildAvatarImage(),
+                                        ),
+                                ),
+                              ),
+                              if (!_isUploadingPhoto)
+                                Positioned(
+                                  bottom: 2,
+                                  right: 2,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF1C4E68),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 2),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.15),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt_rounded,
+                                      color: Colors.white,
+                                      size: 14,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Nama Admin di Bawah Foto
+                      Text(
+                        _displayName,
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF1C4E68),
+                          letterSpacing: -0.2,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Badge Administrator
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F8F3),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFFC8E6C9),
+                            width: 1.0,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.admin_panel_settings_rounded,
+                              size: 14,
+                              color: Color(0xFF53A66B),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              'Administrator',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF53A66B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+
+                      // ── SECTION 1: INFORMASI PRIBADI ──
+                      _buildSectionHeader(Icons.person_outline_rounded, 'Informasi Pribadi'),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(
+                            color: const Color(0xFFEBE3D0),
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Nama Lengkap
+                              Text(
+                                'Nama Lengkap',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF5A7184),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              TextFormField(
+                                controller: _nameController,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1C4E68),
+                                ),
+                                decoration: InputDecoration(
+                                  prefixIcon: const Icon(Icons.badge_outlined, size: 18, color: Color(0xFF276F8F)),
+                                  hintText: 'Nama admin...',
+                                  hintStyle: GoogleFonts.poppins(color: const Color(0xFF94A3B8), fontSize: 13),
+                                  filled: true,
+                                  fillColor: const Color(0xFFFBFBFD),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(color: Color(0xFF276F8F), width: 1.4),
+                                  ),
+                                ),
+                                validator: (val) {
+                                  if (val == null || val.trim().isEmpty) {
+                                    return 'Nama tidak boleh kosong';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 14),
+                                child: Divider(height: 1, color: Color(0xFFF0EBE1), thickness: 1),
+                              ),
+
+                              // Email Akun (Read-only)
+                              Text(
+                                'Email Akun Terdaftar',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF5A7184),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.mail_outline_rounded,
+                                      size: 18,
+                                      color: Color(0xFF276F8F),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        _emailController.text.isNotEmpty
+                                            ? _emailController.text
+                                            : _adminEmail,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF5A7184),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEBF5F9),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: const Color(0xFFD0E4EE)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.lock_outline_rounded,
+                                            size: 12,
+                                            color: Color(0xFF276F8F),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Terkunci',
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFF276F8F),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 14),
+                                child: Divider(height: 1, color: Color(0xFFF0EBE1), thickness: 1),
+                              ),
+
+                              // Jenis Kelamin
+                              Text(
+                                'Jenis Kelamin',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF5A7184),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(child: _buildGenderChip('Laki-laki')),
+                                  const SizedBox(width: 10),
+                                  Expanded(child: _buildGenderChip('Perempuan')),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // ── SECTION 2: HAK AKSES & OTORITAS SISTEM ──
+                      _buildSectionHeader(Icons.security_rounded, 'Hak Akses & Otoritas Sistem'),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(
+                            color: const Color(0xFFEBE3D0),
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Tingkat Izin Sistem',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF5A7184),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F8F3),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFC8E6C9), width: 1.2),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF53A66B).withValues(alpha: 0.12),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.shield_rounded, size: 18, color: Color(0xFF53A66B)),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Akses Penuh Administrator',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF1C4E68),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Memiliki hak penuh pengelolaan konten Gastropedia, publikasi berita kesehatan, dan supervisi aplikasi LAMON',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                            color: const Color(0xFF5A7184),
+                                            height: 1.35,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 14),
+                              child: Divider(height: 1, color: Color(0xFFF0EBE1), thickness: 1),
+                            ),
+
+                            // Lingkup Pengelolaan Tile
+                            Row(
+                              children: [
+                                Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF276F8F).withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.layers_outlined, size: 18, color: Color(0xFF276F8F)),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Lingkup Pengelolaan',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFF7A8B99),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Gastropedia & Berita Kesehatan',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF1C4E68),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+
+                      // ── Tombol Simpan Perubahan ──
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _isSaving ? null : _handleSave,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF276F8F),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: _isSaving
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Text(
+                                  'Simpan Perubahan',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // ── Tombol Keluar dari Akun Admin ──
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: OutlinedButton.icon(
+                          onPressed: _confirmLogout,
+                          icon: const Icon(
+                            Icons.logout_rounded,
+                            color: Color(0xFFD32F2F),
+                            size: 18,
+                          ),
+                          label: Text(
+                            'Keluar dari Akun Admin',
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFFD32F2F),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            side: const BorderSide(
+                              color: Color(0xFFFFCDD2),
+                              width: 1.2,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // App Version Footer
+                      Text(
+                        'LAMON • Aplikasi Monitoring Lambung',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF90A4AE),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
       ),
-    ),
-  ),
-);
+    );
   }
 }
