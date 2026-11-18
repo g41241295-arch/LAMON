@@ -12,6 +12,7 @@ class AdminMarkdownEditorField extends StatelessWidget {
   final int maxLines;
   final String? errorText;
   final ValueChanged<String>? onChanged;
+  final bool showMarkdownHint;
 
   const AdminMarkdownEditorField({
     super.key,
@@ -22,6 +23,7 @@ class AdminMarkdownEditorField extends StatelessWidget {
     this.maxLines = 8,
     this.errorText,
     this.onChanged,
+    this.showMarkdownHint = true,
   });
 
   void _insertMarkdown(String syntax) {
@@ -86,15 +88,15 @@ class AdminMarkdownEditorField extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: InkWell(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: const Color(0xFFE8F4FB),
-            borderRadius: BorderRadius.circular(8),
+            color: AppColors.surfaceCard.withOpacity(0.75),
+            borderRadius: BorderRadius.circular(6),
           ),
-          child: Icon(icon, size: 18, color: const Color(0xFF134563)),
+          child: Icon(icon, size: 18, color: AppColors.textPrimary),
         ),
       ),
     );
@@ -112,28 +114,31 @@ class AdminMarkdownEditorField extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: AppColors.primaryText,
+            color: AppColors.textPrimary,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            color: AppColors.surfaceCard,
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: hasError ? AppColors.adminRed : AppColors.inputBorder,
-              width: hasError ? 1.6 : 1.4,
+              color: hasError ? AppColors.adminRed : AppColors.softBlue,
+              width: hasError ? 1.5 : 1.2,
             ),
           ),
           child: Column(
             children: [
-              // Toolbar format teks
+              // Toolbar format teks (menyatu dengan latar softBlue)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                  border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: const BoxDecoration(
+                  color: AppColors.softBlue,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(11),
+                    topRight: Radius.circular(11),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -142,35 +147,42 @@ class AdminMarkdownEditorField extends StatelessWidget {
                       tooltip: 'Tebal (**teks**)',
                       onTap: () => _insertMarkdown('**'),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 6),
                     _buildToolbarButton(
                       icon: Icons.format_italic_rounded,
                       tooltip: 'Miring (_teks_)',
                       onTap: () => _insertMarkdown('_'),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 6),
                     _buildToolbarButton(
                       icon: Icons.format_list_bulleted_rounded,
                       tooltip: 'Daftar butir (- butir)',
                       onTap: () => _insertMarkdown('- '),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 6),
                     _buildToolbarButton(
                       icon: Icons.format_list_numbered_rounded,
                       tooltip: 'Daftar bernomor (1. butir)',
                       onTap: () => _insertMarkdown('1. '),
                     ),
-                    const Spacer(),
-                    Text(
-                      'Markdown didukung',
-                      style: GoogleFonts.poppins(fontSize: 11, color: AppColors.neutralGray),
-                    ),
+                    if (showMarkdownHint) ...[
+                      const Spacer(),
+                      Text(
+                        'Markdown didukung',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
               // Area input teks
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 child: TextField(
                   controller: controller,
                   maxLines: maxLines,
@@ -178,14 +190,15 @@ class AdminMarkdownEditorField extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     height: 1.6,
-                    color: AppColors.primaryText,
+                    color: AppColors.textPrimary,
                   ),
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: hint,
                     hintStyle: GoogleFonts.poppins(
-                      fontSize: 13,
-                      color: AppColors.inputPlaceholder,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.normal,
+                      color: AppColors.textSecondary,
                       height: 1.6,
                     ),
                     isDense: true,
@@ -203,7 +216,11 @@ class AdminMarkdownEditorField extends StatelessWidget {
             padding: const EdgeInsets.only(left: 4),
             child: Text(
               errorText!,
-              style: GoogleFonts.poppins(fontSize: 12, color: AppColors.adminRed),
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.adminRed,
+              ),
             ),
           ),
         ],

@@ -75,19 +75,25 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.check_circle_outline_rounded, color: Colors.white),
+              const Icon(Icons.check_circle_outline_rounded,
+                  color: Colors.white),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Data gastropedia "${entry.istilah}" berhasil dihapus.',
-                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],
           ),
-          backgroundColor: AppColors.successGreen,
+          backgroundColor: AppColors.textPrimary,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
           duration: const Duration(seconds: 3),
         ),
@@ -100,8 +106,11 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
   void _showError(BuildContext ctx, String msg) {
     ScaffoldMessenger.of(ctx).showSnackBar(
       SnackBar(
-        content: Text(msg, style: GoogleFonts.poppins(fontSize: 13)),
-        backgroundColor: AppColors.adminRed,
+        content: Text(
+          msg,
+          style: GoogleFonts.poppins(fontSize: 13, color: Colors.white),
+        ),
+        backgroundColor: AppColors.textPrimary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
@@ -109,76 +118,191 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return AdminScaffold(
-      header: const AdminAppBar(title: 'Detail Gastropedia'),
-      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection('encyclopedia')
-              .doc(widget.entryId)
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: AppColors.adminBlue));
-            }
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Tombol Kembali (bulat putih)
+          InkWell(
+            onTap: () => Navigator.of(context).pop(),
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceCard,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.softBlue, width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.arrow_back_rounded,
+                  color: AppColors.textPrimary,
+                  size: 22,
+                ),
+              ),
+            ),
+          ),
 
-            if (!snapshot.hasData || !snapshot.data!.exists) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.search_off_rounded, size: 56, color: AppColors.adminBlue.withValues(alpha: 0.35)),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Data gastropedia tidak ditemukan.',
-                      style: GoogleFonts.poppins(fontSize: 15, color: AppColors.neutralGray),
+          // Pill Judul: disamakan persis dengan pill "Catat Makanan" Pengguna
+          Expanded(
+            child: Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7D6),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: const Color(0xFFE8D7A5),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-              );
-            }
-
-            final entry = EnsiklopediaEntry.fromFirestore(snapshot.data!);
-
-            return Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildMainCard(entry),
-                        const SizedBox(height: 14),
-                        _buildMetadataCard(entry),
-                      ],
-                    ),
+                child: Text(
+                  'Detail Gastropedia',
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1C4E68),
                   ),
                 ),
+              ),
+            ),
+          ),
 
-                // Tombol bawah
-                _buildBottomActions(entry),
-              ],
+          // Penyeimbang lebar kanan
+          const SizedBox(width: 40, height: 40),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AdminScaffold(
+      backgroundGradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          AppColors.bgGradientTop,
+          AppColors.bgGradientMiddle,
+          AppColors.bgGradientBottom,
+        ],
+      ),
+      header: _buildHeader(),
+      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        stream: FirebaseFirestore.instance
+            .collection('encyclopedia')
+            .doc(widget.entryId)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.textPrimary),
             );
-          },
-        ),
+          }
+
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceCard,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.softBlue, width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.search_off_rounded,
+                        size: 48,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Data gastropedia tidak ditemukan.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+
+          final entry = EnsiklopediaEntry.fromFirestore(snapshot.data!);
+
+          return Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildMainCard(entry),
+                      const SizedBox(height: 20),
+                      _buildMetadataCard(entry),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Tombol bawah
+              _buildBottomActions(entry),
+            ],
+          );
+        },
+      ),
     );
   }
 
   Widget _buildMainCard(EnsiklopediaEntry entry) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.07), width: 1),
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.softBlue, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -190,8 +314,8 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
             entry.istilah,
             style: GoogleFonts.poppins(
               fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: AppColors.adminBlue,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
             ),
           ),
 
@@ -201,9 +325,9 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
             Text(
               'Juga dikenal sebagai : ${entry.namaLain}',
               style: GoogleFonts.poppins(
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: AppColors.adminOrangeText,
+                color: AppColors.textSecondary,
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -250,59 +374,65 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
 
           const SizedBox(height: 12),
 
-          // Chip kategori & status
-          Row(
+          // Chip kategori & status (radius 10, warna dari palet)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
-                  color: AppColors.adminBlueLight,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.adminBlue.withValues(alpha: 0.3), width: 1),
+                  color: AppColors.softBlue,
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   entry.kategori,
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.adminBlue,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: entry.status == 'terbit' ? AppColors.successGreen.withValues(alpha: 0.15) : Colors.orange.shade100,
-                  borderRadius: BorderRadius.circular(20),
+                  color: entry.status == 'terbit'
+                      ? AppColors.textPrimary
+                      : AppColors.bgAccent,
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   entry.status == 'terbit' ? 'Terbit' : 'Draft',
                   style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: entry.status == 'terbit' ? AppColors.successGreen : Colors.orange.shade900,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: entry.status == 'terbit'
+                        ? Colors.white
+                        : AppColors.textPrimary,
                   ),
                 ),
               ),
-              if (entry.isRecommended) ...[
-                const SizedBox(width: 8),
+              if (entry.isRecommended)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade100,
-                    borderRadius: BorderRadius.circular(20),
+                    color: AppColors.bgAccent,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.accentGold, width: 1),
                   ),
                   child: Text(
                     '★ Rekomendasi',
                     style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.green.shade900,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ),
-              ],
             ],
           ),
 
@@ -313,38 +443,47 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
             entry.definisiSingkat,
             style: GoogleFonts.poppins(
               fontSize: 13,
-              color: AppColors.primaryText,
+              color: AppColors.textSecondary,
               height: 1.6,
             ),
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           _sectionLabel('Penjelasan Lengkap'),
           const SizedBox(height: 4),
           Text(
             entry.penjelasanLengkap,
             style: GoogleFonts.poppins(
               fontSize: 13,
-              color: AppColors.primaryText,
+              color: AppColors.textSecondary,
               height: 1.65,
             ),
           ),
 
           if (entry.manfaat.isNotEmpty) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             _sectionLabel('Manfaat'),
             const SizedBox(height: 4),
             ...entry.manfaat.map(
               (m) => Padding(
-                padding: const EdgeInsets.only(bottom: 3),
+                padding: const EdgeInsets.only(bottom: 4),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text(
+                      '• ',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
                     Expanded(
                       child: Text(
                         m,
-                        style: GoogleFonts.poppins(fontSize: 13, color: AppColors.primaryText),
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ),
                   ],
@@ -354,20 +493,29 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
           ],
 
           if (entry.kandungan.isNotEmpty) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             _sectionLabel('Kandungan Gizi / Senyawa'),
             const SizedBox(height: 4),
             ...entry.kandungan.map(
               (k) => Padding(
-                padding: const EdgeInsets.only(bottom: 3),
+                padding: const EdgeInsets.only(bottom: 4),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text(
+                      '• ',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
                     Expanded(
                       child: Text(
                         k,
-                        style: GoogleFonts.poppins(fontSize: 13, color: AppColors.primaryText),
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ),
                   ],
@@ -377,12 +525,12 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
           ],
 
           // Informasi Nutrisi
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           _sectionLabel('Informasi Nutrisi (${entry.servingUnit})'),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Wrap(
             spacing: 8,
-            runSpacing: 6,
+            runSpacing: 8,
             children: [
               _nutrientChip('Kalori', '${entry.calories} kkal'),
               _nutrientChip('Protein', '${entry.protein}g'),
@@ -397,14 +545,18 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
 
   Widget _nutrientChip(String label, String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.adminBlueLight,
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.softBlue,
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         '$label: $value',
-        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.adminBlue),
+        style: GoogleFonts.poppins(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textPrimary,
+        ),
       ),
     );
   }
@@ -413,9 +565,9 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
     return Text(
       text,
       style: GoogleFonts.poppins(
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-        color: AppColors.adminBlue,
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textPrimary,
       ),
     );
   }
@@ -425,14 +577,14 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBF0),
+        color: AppColors.surfaceCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.inputBorder, width: 1),
+        border: Border.all(color: AppColors.softBlue, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -442,12 +594,12 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
           Text(
             'Metadata',
             style: GoogleFonts.poppins(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.adminOrangeText,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           ..._buildMetadataRows(entry),
         ],
       ),
@@ -459,12 +611,10 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
     final type = entry.createdByType;
 
     if (type == 'admin') {
-      // "Dibuat : {tanggal} oleh {nama admin}"
       rows.add(_metaRow(
         'Dibuat : ${_formatTanggal(entry.createdAt)} oleh ${entry.createdBy}',
         isLink: false,
       ));
-      // "Terakhir diubah : {tanggal} oleh {nama}" jika updatedAt ada
       if (entry.updatedAt != null) {
         rows.add(const SizedBox(height: 4));
         rows.add(_metaRow(
@@ -474,21 +624,23 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
         ));
       }
     } else if (type == 'dokter') {
-      // Nama dokter bergaya link/underline, tanpa baris diubah jika belum pernah diedit
       rows.add(Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Dibuat : ${_formatTanggal(entry.createdAt)} oleh ',
-            style: GoogleFonts.poppins(fontSize: 12, color: AppColors.brownSubtext),
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+            ),
           ),
           Text(
             entry.createdBy,
             style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: AppColors.adminOrangeText,
+              fontSize: 13,
+              color: AppColors.textPrimary,
               decoration: TextDecoration.underline,
-              decorationColor: AppColors.adminOrangeText,
+              decorationColor: AppColors.textPrimary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -503,7 +655,6 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
         ));
       }
     } else {
-      // redaksi
       rows.add(_metaRow(
         'Dibuat : ${_formatTanggal(entry.createdAt)} oleh Redaksi Holodoc',
         isLink: false,
@@ -525,46 +676,57 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
     return Text(
       text,
       style: GoogleFonts.poppins(
-        fontSize: 12,
-        color: isDim
-            ? AppColors.neutralGray
-            : AppColors.brownSubtext,
+        fontSize: 13,
+        color: AppColors.textSecondary,
         decoration: isLink ? TextDecoration.underline : null,
-        fontWeight: isDim ? FontWeight.w400 : FontWeight.w500,
+        fontWeight: isDim ? FontWeight.normal : FontWeight.w500,
       ),
     );
   }
 
   Widget _buildBottomActions(EnsiklopediaEntry entry) {
     return Container(
-      padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + MediaQuery.of(context).padding.bottom),
+      padding: EdgeInsets.fromLTRB(
+          16, 12, 16, 16 + MediaQuery.of(context).padding.bottom),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAF4C8),
-        border: Border(
-          top: BorderSide(color: Colors.black.withValues(alpha: 0.07)),
+        color: AppColors.surfaceCard,
+        border: const Border(
+          top: BorderSide(color: AppColors.softBlue, width: 1),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          // Hapus
+          // Hapus (Tombol Sekunder Outline Navy)
           Expanded(
             child: OutlinedButton.icon(
               onPressed: () => _handleDelete(entry),
               icon: const Icon(Icons.delete_outline_rounded, size: 18),
               label: Text(
                 'Hapus',
-                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.adminRed,
-                side: const BorderSide(color: AppColors.adminRed, width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                foregroundColor: AppColors.textPrimary,
+                side:
+                    const BorderSide(color: AppColors.textPrimary, width: 1.5),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
             ),
           ),
           const SizedBox(width: 12),
-          // Edit
+          // Edit (Tombol Utama Navy Solid)
           Expanded(
             child: ElevatedButton.icon(
               onPressed: () => Navigator.push(
@@ -580,12 +742,16 @@ class _EnsiklopediaDetailScreenState extends State<EnsiklopediaDetailScreen> {
               icon: const Icon(Icons.edit_outlined, size: 18),
               label: Text(
                 'Edit',
-                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700),
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.adminBlue,
+                backgroundColor: AppColors.textPrimary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 elevation: 0,
               ),

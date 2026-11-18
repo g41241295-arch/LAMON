@@ -145,7 +145,7 @@ class AdminAppBar extends StatelessWidget {
 }
 
 // ============================================================
-// Chip filter A-D / E-M / N-Z
+// Chip filter kategori
 // ============================================================
 class AdminFilterChip extends StatelessWidget {
   final String label;
@@ -164,25 +164,22 @@ class AdminFilterChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.adminChipActive : AppColors.adminChipInactive,
-          borderRadius: BorderRadius.circular(20),
+          color: isActive ? AppColors.textPrimary : AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isActive ? AppColors.adminChipActive : AppColors.adminBlue.withValues(alpha: 0.5),
-            width: 1.4,
+            color: isActive ? AppColors.textPrimary : AppColors.softBlue,
+            width: 1.2,
           ),
-          boxShadow: isActive
-              ? [BoxShadow(color: AppColors.adminBlue.withValues(alpha: 0.25), blurRadius: 6, offset: const Offset(0, 2))]
-              : null,
         ),
         child: Text(
           label,
           style: GoogleFonts.poppins(
             fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isActive ? Colors.white : AppColors.adminBlue,
+            fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+            color: isActive ? Colors.white : AppColors.textPrimary,
           ),
         ),
       ),
@@ -209,31 +206,40 @@ class AdminSearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.inputBorder, width: 1.2),
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.softBlue, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: TextField(
         controller: controller,
         onChanged: onChanged,
-        style: GoogleFonts.poppins(fontSize: 14, color: AppColors.primaryText),
+        style: GoogleFonts.poppins(
+          fontSize: 14,
+          color: AppColors.textPrimary,
+        ),
         decoration: InputDecoration(
           isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           border: InputBorder.none,
           hintText: hint,
           hintStyle: GoogleFonts.poppins(
-            fontSize: 14,
-            color: AppColors.inputPlaceholder,
+            fontSize: 13.5,
+            fontWeight: FontWeight.normal,
+            color: AppColors.textSecondary,
           ),
-          prefixIcon: const Icon(Icons.search_rounded, color: AppColors.inputIcon, size: 22),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: AppColors.textSecondary,
+            size: 20,
+          ),
         ),
       ),
     );
@@ -278,42 +284,64 @@ class AdminInputField extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: AppColors.primaryText,
+            color: AppColors.textPrimary,
           ),
         ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: hasError ? AppColors.adminRed : AppColors.inputBorder,
-              width: hasError ? 1.6 : 1.2,
-            ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          maxLines: maxLines,
+          minLines: 1,
+          keyboardType: keyboardType,
+          readOnly: readOnly,
+          onChanged: onChanged,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.normal,
+            color: AppColors.textPrimary,
           ),
-          child: TextField(
-            controller: controller,
-            maxLines: maxLines,
-            minLines: 1,
-            keyboardType: keyboardType,
-            readOnly: readOnly,
-            onChanged: onChanged,
-            style: GoogleFonts.poppins(fontSize: 14, color: AppColors.primaryText),
-            decoration: InputDecoration(
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-              border: InputBorder.none,
-              hintText: hint,
-              hintStyle: GoogleFonts.poppins(
-                fontSize: 13,
-                color: AppColors.inputPlaceholder,
+          decoration: InputDecoration(
+            isDense: true,
+            filled: true,
+            fillColor: AppColors.surfaceCard,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: hasError
+                    ? AppColors.adminRed
+                    : AppColors.softBlue.withOpacity(0.5),
+                width: hasError ? 1.5 : 1.0,
               ),
-              suffixText: suffixText,
-              suffixStyle: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.neutralGray,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: hasError
+                    ? AppColors.adminRed
+                    : AppColors.softBlue.withOpacity(0.5),
+                width: hasError ? 1.5 : 1.0,
               ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: hasError ? AppColors.adminRed : AppColors.softBlue,
+                width: 1.5,
+              ),
+            ),
+            hintText: hint,
+            hintStyle: GoogleFonts.poppins(
+              fontSize: 13.5,
+              fontWeight: FontWeight.normal,
+              color: AppColors.textSecondary,
+            ),
+            suffixText: suffixText,
+            suffixStyle: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
             ),
           ),
         ),
@@ -354,44 +382,44 @@ class DeleteConfirmDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: AppColors.surfaceCard,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Ikon tempat sampah dalam lingkaran merah
+            // Ikon tempat sampah dalam lingkaran softBlue
             Container(
-              width: 64,
-              height: 64,
+              width: 60,
+              height: 60,
               decoration: BoxDecoration(
-                color: AppColors.adminRedLight,
+                color: AppColors.softBlue,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.adminRed.withValues(alpha: 0.3), width: 1.5),
+                border: Border.all(color: AppColors.softBlue, width: 1.5),
               ),
               child: const Icon(
                 Icons.delete_outline_rounded,
-                color: AppColors.adminRed,
-                size: 32,
+                color: AppColors.textPrimary,
+                size: 28,
               ),
             ),
             const SizedBox(height: 16),
             Text(
               'Hapus entri ini ?',
               style: GoogleFonts.poppins(
-                fontSize: 17,
+                fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: AppColors.primaryText,
+                color: AppColors.textPrimary,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               '"$entryName"',
               style: GoogleFonts.poppins(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: AppColors.adminBlue,
+                color: AppColors.textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -399,8 +427,8 @@ class DeleteConfirmDialog extends StatelessWidget {
             Text(
               'Entri yang sudah dihapus tidak dapat dikembalikan dan akan langsung hilang dari aplikasi user.',
               style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: AppColors.neutralGray,
+                fontSize: 12.5,
+                color: AppColors.textSecondary,
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
@@ -410,18 +438,22 @@ class DeleteConfirmDialog extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: isLoading ? null : () => Navigator.of(context).pop(false),
+                    onPressed: isLoading
+                        ? null
+                        : () => Navigator.of(context).pop(false),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.neutralGray),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      side: const BorderSide(
+                          color: AppColors.textPrimary, width: 1.4),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     child: Text(
                       'Batal',
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.neutralGray,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ),
@@ -431,23 +463,26 @@ class DeleteConfirmDialog extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: isLoading ? null : onDelete,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.adminRed,
+                      backgroundColor: AppColors.textPrimary,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       elevation: 0,
                     ),
                     child: isLoading
                         ? const SizedBox(
                             height: 18,
                             width: 18,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2),
                           )
                         : Text(
                             'Ya, Hapus',
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
+                              color: Colors.white,
                             ),
                           ),
                   ),
@@ -458,5 +493,88 @@ class DeleteConfirmDialog extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// ============================================================
+// Container dengan border dashed (putus-putus) untuk area upload gambar
+// ============================================================
+class AdminDashedBorderBox extends StatelessWidget {
+  final Widget child;
+  final Color borderColor;
+  final Color backgroundColor;
+  final double borderRadius;
+  final double strokeWidth;
+
+  const AdminDashedBorderBox({
+    super.key,
+    required this.child,
+    this.borderColor = AppColors.softBlue,
+    this.backgroundColor = AppColors.surfaceCard,
+    this.borderRadius = 16.0,
+    this.strokeWidth = 1.5,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      foregroundPainter: _DashedRRectPainter(
+        color: borderColor,
+        radius: borderRadius,
+        strokeWidth: strokeWidth,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _DashedRRectPainter extends CustomPainter {
+  final Color color;
+  final double radius;
+  final double strokeWidth;
+
+  const _DashedRRectPainter({
+    required this.color,
+    required this.radius,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final rrect = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(radius),
+    ).deflate(strokeWidth / 2);
+
+    final path = Path()..addRRect(rrect);
+    const dashWidth = 6.0;
+    const dashSpace = 4.0;
+
+    for (final metric in path.computeMetrics()) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        final next = (distance + dashWidth).clamp(0.0, metric.length);
+        canvas.drawPath(metric.extractPath(distance, next), paint);
+        distance += dashWidth + dashSpace;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedRRectPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.radius != radius ||
+        oldDelegate.strokeWidth != strokeWidth;
   }
 }

@@ -449,7 +449,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // ── C. SATU KARTU HIGHLIGHT STATISTIK BERWARNA NAVY KONTRAS ───────────────
+  // ── C. SATU KARTU HIGHLIGHT STATISTIK BERWARNA NAVY KONTRAS (INFORMASI SAJA) ─
   Widget _buildStatCards() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -467,7 +467,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: IntrinsicHeight(
         child: Row(
           children: [
-            // Kiri: Artikel Berita
+            // Kiri: Artikel Berita (hanya tampilan informasi, tanpa tap)
             Expanded(
               child: StreamBuilder<List<BeritaArticle>>(
                 stream: _beritaService.streamAll(),
@@ -479,7 +479,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     count: count,
                     label: 'Artikel Berita',
                     accentColor: AppColors.softBlue,
-                    onTap: _openKelolaBerita,
                   );
                 },
               ),
@@ -492,7 +491,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               color: Colors.white.withOpacity(0.18),
             ),
 
-            // Kanan: Gastropedia
+            // Kanan: Gastropedia (hanya tampilan informasi, tanpa tap)
             Expanded(
               child: StreamBuilder<List<GastropediaItem>>(
                 stream: _ensiklopediaService.streamPublishedGastropedia(),
@@ -504,7 +503,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     count: count,
                     label: 'Gastropedia',
                     accentColor: AppColors.accentGold,
-                    onTap: _openKelolaGastropedia,
                   );
                 },
               ),
@@ -521,75 +519,70 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required int? count,
     required String label,
     required Color accentColor,
-    required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: iconBgColor,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Image.asset(
-                iconImg,
-                width: 24,
-                height: 24,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => const Icon(
-                  Icons.analytics_rounded,
-                  size: 22,
-                  color: AppColors.textPrimary,
-                ),
+    return Row(
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: iconBgColor,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Image.asset(
+              iconImg,
+              width: 24,
+              height: 24,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.analytics_rounded,
+                size: 22,
+                color: AppColors.textPrimary,
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                count == null
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        count.toString(),
-                        style: GoogleFonts.poppins(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: accentColor,
-                          height: 1.1,
-                        ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              count == null
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
                       ),
-                const SizedBox(height: 3),
-                Text(
-                  label,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                    height: 1.2,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                    )
+                  : Text(
+                      count.toString(),
+                      style: GoogleFonts.poppins(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: accentColor,
+                        height: 1.1,
+                      ),
+                    ),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                  height: 1.2,
                 ),
-              ],
-            ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -623,13 +616,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildQuickActions() {
     return Row(
       children: [
-        // Tambah Berita: Card Putih, lingkaran ikon & badge aksen biru (softBlue)
+        // Tambah Berita: Tetap Putih + border softBlue
         Expanded(
           child: _QuickActionButton(
             iconImg: 'assets/images/admin-berita-kesehatan.png',
             label: 'Tambah\nBerita',
             backgroundColor: AppColors.surfaceCard,
             borderColor: AppColors.softBlue,
+            borderWidth: 1.5,
             iconBgColor: AppColors.softBlue,
             badgeColor: AppColors.softBlue,
             onTap: _openAddBerita,
@@ -637,14 +631,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
         const SizedBox(width: 12),
 
-        // Tambah Gastropedia: Card Warm Cream (bgAccent), badge kuning/emas (accentGold)
+        // Tambah Gastropedia: Disamakan persis dengan Card Sapaan Admin
         Expanded(
           child: _QuickActionButton(
             iconImg: 'assets/images/admin-data-gastropedia.png',
             label: 'Tambah\nGastropedia',
-            backgroundColor: AppColors.bgAccent,
-            borderColor: AppColors.accentGold,
-            iconBgColor: AppColors.surfaceCard,
+            backgroundColor: Colors.white,
+            backgroundGradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFFFFFDF5),
+                Color(0xFFFFFBE8),
+                Color(0xFFFAF3D4),
+              ],
+            ),
+            borderColor: const Color(0xFFEBE3D0),
+            borderWidth: 1.2,
+            iconBgColor: AppColors.bgAccent,
             badgeColor: AppColors.accentGold,
             onTap: _openAddEnsiklopedia,
           ),
@@ -657,7 +661,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildManageContent() {
     return Column(
       children: [
-        // Kartu Berita Kesehatan: Background putih (surfaceCard), lingkaran ikon softBlue
+        // Kartu Berita Kesehatan: Tetap putih (surfaceCard) + border softBlue
         StreamBuilder<List<BeritaArticle>>(
           stream: _beritaService.streamAll(),
           builder: (context, snapshot) {
@@ -687,7 +691,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
         const SizedBox(height: 12),
 
-        // Kartu Gastropedia: Background warm cream (bgAccent), lingkaran ikon kuning/emas (accentGold)
+        // Kartu Gastropedia: Disamakan persis dengan Card Sapaan Admin
         StreamBuilder<List<GastropediaItem>>(
           stream: _ensiklopediaService.streamPublishedGastropedia(),
           builder: (context, snapshot) {
@@ -706,9 +710,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               iconImg: 'assets/images/admin-data-gastropedia.png',
               title: 'Gastropedia',
               subtitle: subtitle,
-              cardBackgroundColor: AppColors.bgAccent,
-              borderColor: AppColors.accentGold,
-              iconCircleColor: AppColors.accentGold.withOpacity(0.55),
+              cardBackgroundColor: Colors.white,
+              cardBackgroundGradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFFFFDF5),
+                  Color(0xFFFFFBE8),
+                  Color(0xFFFAF3D4),
+                ],
+              ),
+              borderColor: const Color(0xFFEBE3D0),
+              iconCircleColor: AppColors.bgAccent,
               onTap: _openKelolaGastropedia,
             );
           },
@@ -1049,7 +1062,9 @@ class _QuickActionButton extends StatelessWidget {
   final String iconImg;
   final String label;
   final Color backgroundColor;
+  final Gradient? backgroundGradient;
   final Color borderColor;
+  final double borderWidth;
   final Color iconBgColor;
   final Color badgeColor;
   final VoidCallback onTap;
@@ -1058,7 +1073,9 @@ class _QuickActionButton extends StatelessWidget {
     required this.iconImg,
     required this.label,
     required this.backgroundColor,
+    this.backgroundGradient,
     required this.borderColor,
+    this.borderWidth = 1.2,
     required this.iconBgColor,
     required this.badgeColor,
     required this.onTap,
@@ -1071,12 +1088,13 @@ class _QuickActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: backgroundColor,
+          color: backgroundGradient == null ? backgroundColor : null,
+          gradient: backgroundGradient,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: borderColor, width: 1.5),
+          border: Border.all(color: borderColor, width: borderWidth),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -1168,6 +1186,7 @@ class _ManageCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final Color cardBackgroundColor;
+  final Gradient? cardBackgroundGradient;
   final Color borderColor;
   final Color iconCircleColor;
   final VoidCallback onTap;
@@ -1177,6 +1196,7 @@ class _ManageCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.cardBackgroundColor,
+    this.cardBackgroundGradient,
     required this.borderColor,
     required this.iconCircleColor,
     required this.onTap,
@@ -1189,12 +1209,13 @@ class _ManageCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: cardBackgroundColor,
+          color: cardBackgroundGradient == null ? cardBackgroundColor : null,
+          gradient: cardBackgroundGradient,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: borderColor, width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),

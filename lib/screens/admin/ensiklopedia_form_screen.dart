@@ -10,7 +10,6 @@ import '../../services/ensiklopedia_service.dart';
 import '../../utils/app_exception.dart';
 import '../../widgets/admin/admin_markdown_editor.dart';
 import '../../widgets/admin/admin_widgets.dart';
-import '../../widgets/gastropedia/gastropedia_header.dart';
 
 class EnsiklopediaFormScreen extends StatefulWidget {
   final EnsiklopediaEntry? initialEntry; // null = mode tambah
@@ -423,6 +422,85 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
         duration: const Duration(seconds: 3),
       );
 
+  Widget _buildFormHeader() {
+    final title = _isEditMode ? 'Edit Gastropedia' : 'Tambah Gastropedia';
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Tombol Kembali (bulat putih tetap dipertahankan)
+          InkWell(
+            onTap: () => Navigator.of(context).pop(),
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceCard,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.softBlue, width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.arrow_back_rounded,
+                  color: AppColors.textPrimary,
+                  size: 22,
+                ),
+              ),
+            ),
+          ),
+
+          // Pill Judul: disamakan persis dengan pill "Catat Makanan" Pengguna
+          Expanded(
+            child: Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7D6),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: const Color(0xFFE8D7A5),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1C4E68),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Penyeimbang lebar kanan
+          const SizedBox(width: 40, height: 40),
+        ],
+      ),
+    );
+  }
+
   Widget _buildImagePicker() {
     final hasImage = _imageFile != null ||
         (_existingImageBase64 != null && _existingImageBase64!.isNotEmpty) ||
@@ -430,113 +508,128 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
 
     return GestureDetector(
       onTap: (_isSaving || _isUploadingImage) ? null : _pickImage,
-      child: Container(
-        height: 140,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: _imageError != null ? AppColors.adminRed : AppColors.inputBorder,
-            width: _imageError != null ? 1.6 : 1.4,
-          ),
-        ),
-        child: _isUploadingImage
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(
-                      width: 28,
-                      height: 28,
-                      child: CircularProgressIndicator(color: AppColors.adminBlue, strokeWidth: 2.5),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Memproses gambar...',
-                      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.adminBlue),
-                    ),
-                  ],
-                ),
-              )
-            : hasImage
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(15),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (_imageFile != null)
-                          Image.file(_imageFile!, fit: BoxFit.cover, gaplessPlayback: true)
-                        else if (_existingImageBase64 != null && _existingImageBase64!.isNotEmpty)
-                          _buildBase64Image(_existingImageBase64!, BoxFit.cover)
-                        else if (_existingImageUrl != null && _existingImageUrl!.startsWith('http'))
-                          Image.network(
-                            _existingImageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => _buildUploadPlaceholder(),
-                          )
-                        else if (_existingImageUrl != null && _existingImageUrl!.isNotEmpty)
-                          Image.asset(
-                            _existingImageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => _buildUploadPlaceholder(),
-                          )
-                        else
-                          _buildUploadPlaceholder(),
-                        // Tombol hapus di pojok kanan atas
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: GestureDetector(
-                            onTap: (_isSaving || _isUploadingImage)
-                                ? null
-                                : () {
-                                    setState(() {
-                                      _imageFile = null;
-                                      _imageBase64Pending = null;
-                                      _existingImageUrl = null;
-                                      _existingImageBase64 = null;
-                                    });
-                                  },
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(
-                                color: Colors.black54,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
-                            ),
-                          ),
+      child: AdminDashedBorderBox(
+        borderColor:
+            _imageError != null ? AppColors.adminRed : AppColors.softBlue,
+        backgroundColor: AppColors.surfaceCard,
+        borderRadius: 16,
+        strokeWidth: 1.5,
+        child: SizedBox(
+          height: 140,
+          width: double.infinity,
+          child: _isUploadingImage
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                          color: AppColors.textPrimary,
+                          strokeWidth: 2.5,
                         ),
-                        // Tombol ganti gambar di bar bawah
-                        Positioned(
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            color: Colors.black54,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.edit_rounded, color: Colors.white, size: 14),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Ganti Gambar',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Memproses gambar...',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : hasImage
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (_imageFile != null)
+                            Image.file(_imageFile!,
+                                fit: BoxFit.cover, gaplessPlayback: true)
+                          else if (_existingImageBase64 != null &&
+                              _existingImageBase64!.isNotEmpty)
+                            _buildBase64Image(
+                                _existingImageBase64!, BoxFit.cover)
+                          else if (_existingImageUrl != null &&
+                              _existingImageUrl!.startsWith('http'))
+                            Image.network(
+                              _existingImageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  _buildUploadPlaceholder(),
+                            )
+                          else if (_existingImageUrl != null &&
+                              _existingImageUrl!.isNotEmpty)
+                            Image.asset(
+                              _existingImageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  _buildUploadPlaceholder(),
+                            )
+                          else
+                            _buildUploadPlaceholder(),
+                          // Tombol hapus di pojok kanan atas
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: GestureDetector(
+                              onTap: (_isSaving || _isUploadingImage)
+                                  ? null
+                                  : () {
+                                      setState(() {
+                                        _imageFile = null;
+                                        _imageBase64Pending = null;
+                                        _existingImageUrl = null;
+                                        _existingImageBase64 = null;
+                                      });
+                                    },
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
                                 ),
-                              ],
+                                child: const Icon(Icons.close_rounded,
+                                    color: Colors.white, size: 18),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  )
-                : _buildUploadPlaceholder(),
+                          // Tombol ganti gambar di bar bawah
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              color: Colors.black54,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.edit_rounded,
+                                      color: Colors.white, size: 14),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Ganti Gambar',
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : _buildUploadPlaceholder(),
+        ),
       ),
     );
   }
@@ -555,26 +648,26 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
+          const Icon(
             Icons.add_photo_alternate_outlined,
             size: 36,
-            color: AppColors.adminBlue.withValues(alpha: 0.6),
+            color: AppColors.textPrimary,
           ),
           const SizedBox(height: 8),
           Text(
             'Unggah Gambar',
             style: GoogleFonts.poppins(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.adminBlue,
+              color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
           Text(
             'Format JPG/PNG, maks. ukuran 800×800 px',
             style: GoogleFonts.poppins(
-              fontSize: 11,
-              color: AppColors.neutralGray,
+              fontSize: 12,
+              color: AppColors.textSecondary,
             ),
           ),
         ],
@@ -585,18 +678,24 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
   @override
   Widget build(BuildContext context) {
     return AdminScaffold(
-      header: GastropediaHeader(
-        title: _isEditMode ? 'Edit Gastropedia' : 'Tambah Gastropedia',
-        onBack: () => Navigator.of(context).pop(),
+      backgroundGradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          AppColors.bgGradientTop,
+          AppColors.bgGradientMiddle,
+          AppColors.bgGradientBottom,
+        ],
       ),
+      header: _buildFormHeader(),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
-            20,
             16,
-            20,
-            40 + MediaQuery.of(context).padding.bottom,
+            16,
+            16,
+            32 + MediaQuery.of(context).padding.bottom,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -609,15 +708,15 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                 errorText: _namaMakananError,
                 onChanged: (_) => setState(() => _namaMakananError = null),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // 2. Kategori (Wrap chips)
+              // 2. Kategori (Wrap chips dengan borderRadius 10)
               Text(
                 'Kategori',
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.primaryText,
+                  color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -626,13 +725,37 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                 runSpacing: 8,
                 children: _kategoriOptions.map((k) {
                   final active = _kategori == k;
-                  return AdminFilterChip(
-                    label: k,
-                    isActive: active,
+                  return GestureDetector(
                     onTap: () => setState(() {
                       _kategori = k;
                       _kategoriError = null;
                     }),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: active
+                            ? AppColors.textPrimary
+                            : AppColors.surfaceCard,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: active
+                              ? AppColors.textPrimary
+                              : AppColors.softBlue,
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Text(
+                        k,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight:
+                              active ? FontWeight.w600 : FontWeight.w500,
+                          color: active ? Colors.white : AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
                   );
                 }).toList(),
               ),
@@ -642,11 +765,12 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                   padding: const EdgeInsets.only(left: 4),
                   child: Text(
                     _kategoriError!,
-                    style: GoogleFonts.poppins(fontSize: 12, color: AppColors.adminRed),
+                    style: GoogleFonts.poppins(
+                        fontSize: 12, color: AppColors.adminRed),
                   ),
                 ),
               ],
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // 3. Gambar
               Text(
@@ -654,10 +778,10 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.primaryText,
+                  color: AppColors.textPrimary,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               _buildImagePicker(),
               if (_imageError != null) ...[
                 const SizedBox(height: 4),
@@ -665,19 +789,28 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                   padding: const EdgeInsets.only(left: 4),
                   child: Text(
                     _imageError!,
-                    style: GoogleFonts.poppins(fontSize: 12, color: AppColors.adminRed),
+                    style: GoogleFonts.poppins(
+                        fontSize: 12, color: AppColors.adminRed),
                   ),
                 ),
               ],
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // 4. Rekomendasi Makanan (Switch)
+              // 4. Rekomendasi Makanan (Switch dalam Card Putih)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surfaceCard,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.inputBorder, width: 1.2),
+                  border: Border.all(
+                      color: AppColors.softBlue.withOpacity(0.5), width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -690,23 +823,28 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                             'Rekomendasi Makanan',
                             style: GoogleFonts.poppins(
                               fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primaryText,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
                             ),
                           ),
+                          const SizedBox(height: 3),
                           Text(
                             'Tampilkan di bagian rekomendasi pada halaman Gastropedia pengguna',
                             style: GoogleFonts.poppins(
                               fontSize: 12,
-                              color: AppColors.neutralGray,
+                              color: AppColors.textSecondary,
                             ),
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Switch(
                       value: _isRecommended,
-                      activeThumbColor: AppColors.adminBlue,
+                      activeThumbColor: Colors.white,
+                      activeTrackColor: AppColors.textPrimary,
+                      inactiveThumbColor: AppColors.textSecondary,
+                      inactiveTrackColor: AppColors.softBlue.withOpacity(0.5),
                       onChanged: (_isSaving || _isUploadingImage)
                           ? null
                           : (val) => setState(() => _isRecommended = val),
@@ -714,7 +852,7 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // 5. Informasi Nutrisi (2 Kolom)
               Text(
@@ -722,10 +860,10 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.primaryText,
+                  color: AppColors.textPrimary,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -739,21 +877,22 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                       onChanged: (_) => setState(() => _caloriesError = null),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: AdminInputField(
                       label: 'Protein',
                       hint: '5.0',
                       suffixText: 'g',
                       controller: _proteinCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                       errorText: _proteinError,
                       onChanged: (_) => setState(() => _proteinError = null),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
@@ -762,26 +901,28 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                       hint: '27.0',
                       suffixText: 'g',
                       controller: _carbsCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                       errorText: _carbsError,
                       onChanged: (_) => setState(() => _carbsError = null),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: AdminInputField(
                       label: 'Lemak',
                       hint: '2.5',
                       suffixText: 'g',
                       controller: _fatCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                       errorText: _fatError,
                       onChanged: (_) => setState(() => _fatError = null),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // 6. Deskripsi (Toolbar B / I / list)
               AdminMarkdownEditorField(
@@ -791,9 +932,10 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                 errorText: _deskripsiError,
                 minLines: 4,
                 maxLines: 6,
+                showMarkdownHint: false,
                 onChanged: (_) => setState(() => _deskripsiError = null),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // 7. Manfaat (Toolbar B / I / list)
               AdminMarkdownEditorField(
@@ -802,8 +944,9 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                 controller: _manfaatCtrl,
                 minLines: 4,
                 maxLines: 6,
+                showMarkdownHint: false,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // 8. Kandungan (Toolbar B / I / list)
               AdminMarkdownEditorField(
@@ -812,33 +955,38 @@ class _EnsiklopediaFormScreenState extends State<EnsiklopediaFormScreen> {
                 controller: _kandunganCtrl,
                 minLines: 4,
                 maxLines: 6,
+                showMarkdownHint: false,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
               // 9. Tombol Simpan
               SizedBox(
                 width: double.infinity,
+                height: 52,
                 child: ElevatedButton(
                   onPressed: (_isSaving || _isUploadingImage) ? null : _save,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.adminBlue,
+                    backgroundColor: AppColors.textPrimary,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppColors.adminBlue.withValues(alpha: 0.5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    disabledBackgroundColor:
+                        AppColors.textPrimary.withOpacity(0.5),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
                   child: (_isSaving || _isUploadingImage)
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2.5),
                         )
                       : Text(
                           _isEditMode ? 'Simpan Perubahan' : 'Simpan',
                           style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
                 ),
