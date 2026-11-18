@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../constants/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Card pilihan jenis diet pola makan (Omnivora, Vegetarian, Vegan)
 class DietSelectionCard extends StatelessWidget {
@@ -18,18 +18,21 @@ class DietSelectionCard extends StatelessWidget {
       'title': 'Omnivora',
       'subtitle': 'Semua jenis',
       'icon': 'assets/images/omnivora.png',
+      'fallbackIcon': Icons.restaurant_rounded,
     },
     {
       'id': 'Vegetarian',
       'title': 'Vegetarian',
       'subtitle': 'Tanpa daging',
       'icon': 'assets/images/vegetarian.png',
+      'fallbackIcon': Icons.eco_rounded,
     },
     {
       'id': 'Vegan',
       'title': 'Vegan',
-      'subtitle': 'Tanpa hewani',
+      'subtitle': 'Bahan nabati',
       'icon': 'assets/images/vegan.png',
+      'fallbackIcon': Icons.spa_rounded,
     },
   ];
 
@@ -37,55 +40,81 @@ class DietSelectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.glassCardBackground,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFFE2E8F0),
+          color: const Color(0xFFEBE3D0),
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: const Color(0xFF1C4E68).withValues(alpha: 0.04),
             blurRadius: 10,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ─── Header ───
           Row(
-            children: const [
-              Icon(Icons.restaurant_menu_rounded, size: 18, color: AppColors.primary),
-              SizedBox(width: 8),
-              Text(
-                'Jenis Pola Makan',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryDark,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7F5EE),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFFEBE3D0),
+                    width: 1.0,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.restaurant_menu_rounded,
+                  size: 18,
+                  color: Color(0xFF1C4E68),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pola Konsumsi Utama',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1C4E68),
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Pilih kategori diet yang sesuai dengan kebiasaanmu',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF6B8797),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 3),
-          const Text(
-            'Pilih jenis diet yang paling sesuai dengan keseharianmu',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: AppColors.brownSubtext,
-            ),
-          ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
-          // 3 Kartu Sejajar Horizontal
+          // ─── 3 Pilihan Horizontal ───
           Row(
             children: diets.map((diet) {
               final id = diet['id'] as String;
               final isSelected = selectedDiet.toLowerCase() == id.toLowerCase();
+              final iconPath = diet['icon'] as String;
+              final fallbackIcon = diet['fallbackIcon'] as IconData;
 
               return Expanded(
                 child: Padding(
@@ -101,19 +130,19 @@ class DietSelectionCard extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? const Color(0xFFDCEDF7)
-                            : AppColors.glassCardBackground,
+                            ? const Color(0xFFF0F6F9)
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isSelected
-                              ? AppColors.primary
-                              : const Color(0xFFE2E8F0),
-                          width: isSelected ? 2.0 : 1.2,
+                              ? const Color(0xFF276F8F)
+                              : const Color(0xFFEBE3D0),
+                          width: isSelected ? 1.8 : 1.2,
                         ),
                         boxShadow: [
                           if (isSelected)
                             BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.16),
+                              color: const Color(0xFF276F8F).withValues(alpha: 0.12),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             )
@@ -130,19 +159,33 @@ class DietSelectionCard extends StatelessWidget {
                         children: [
                           // Icon bulat
                           Container(
-                            width: 38,
-                            height: 38,
-                            padding: const EdgeInsets.all(6),
+                            width: 40,
+                            height: 40,
+                            padding: const EdgeInsets.all(7),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: isSelected
-                                  ? AppColors.primary
-                                  : const Color(0xFFF0F5F8),
+                                  ? const Color(0xFF276F8F)
+                                  : const Color(0xFFF7F5EE),
+                              border: Border.all(
+                                color: isSelected
+                                    ? const Color(0xFF276F8F)
+                                    : const Color(0xFFEBE3D0),
+                                width: 1.0,
+                              ),
                             ),
                             child: Image.asset(
-                              diet['icon'] as String,
-                              width: 20,
-                              height: 20,
+                              iconPath,
+                              width: 22,
+                              height: 22,
+                              color: isSelected ? Colors.white : null,
+                              errorBuilder: (_, __, ___) => Icon(
+                                fallbackIcon,
+                                size: 20,
+                                color: isSelected
+                                    ? Colors.white
+                                    : const Color(0xFF1C4E68),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -151,13 +194,13 @@ class DietSelectionCard extends StatelessWidget {
                           Text(
                             diet['title'] as String,
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 13,
                               fontWeight: isSelected
                                   ? FontWeight.w800
                                   : FontWeight.w700,
                               color: isSelected
-                                  ? AppColors.primaryDark
+                                  ? const Color(0xFF1C4E68)
                                   : const Color(0xFF334155),
                             ),
                           ),
@@ -167,12 +210,12 @@ class DietSelectionCard extends StatelessWidget {
                           Text(
                             diet['subtitle'] as String,
                             textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 10,
+                            style: GoogleFonts.poppins(
+                              fontSize: 10.5,
                               fontWeight: FontWeight.w500,
                               color: isSelected
-                                  ? const Color(0xFF3A6E88)
-                                  : const Color(0xFF7A8F9B),
+                                  ? const Color(0xFF276F8F)
+                                  : const Color(0xFF6B8797),
                               height: 1.15,
                             ),
                           ),

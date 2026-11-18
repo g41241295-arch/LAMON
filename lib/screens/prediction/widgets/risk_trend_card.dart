@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../constants/app_colors.dart';
 import '../../../models/reflux_prediction_model.dart';
 import 'risk_trend_painter.dart';
@@ -28,15 +29,15 @@ class RiskTrendCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.glassCardBackground,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: const Color(0xFFE2E8F0),
+            color: const Color(0xFFEBE3D0),
             width: 1.2,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
+              color: const Color(0xFF1C4E68).withValues(alpha: 0.03),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -58,13 +59,13 @@ class RiskTrendCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 14),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Grafik Tren Risiko',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
                       color: AppColors.primaryDark,
@@ -73,7 +74,7 @@ class RiskTrendCard extends StatelessWidget {
                   SizedBox(height: 3),
                   Text(
                     'Selesaikan minimal 2 kali pemeriksaan untuk memantau grafik tren naik/turun risikomu.',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: AppColors.brownSubtext,
@@ -132,15 +133,15 @@ class RiskTrendCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.glassCardBackground,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: const Color(0xFFE2E8F0),
+          color: const Color(0xFFEBE3D0),
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: const Color(0xFF1C4E68).withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -170,10 +171,10 @@ class RiskTrendCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    const Flexible(
+                    Flexible(
                       child: Text(
                         'Tren risikomu',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
                           color: AppColors.primaryDark,
@@ -197,7 +198,7 @@ class RiskTrendCard extends StatelessWidget {
                 ),
                 child: Text(
                   '$count pemeriksaan',
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF64748B),
@@ -285,7 +286,7 @@ class RiskTrendCard extends StatelessWidget {
           Text(
             label,
             maxLines: 1,
-            style: const TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 10.5,
               fontWeight: FontWeight.w600,
               color: Color(0xFF64748B),
@@ -299,7 +300,7 @@ class RiskTrendCard extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 child: Text(
                   value,
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
                     color: valueColor,
@@ -336,7 +337,7 @@ class RiskTrendCard extends StatelessWidget {
           Text(
             label,
             maxLines: 1,
-            style: const TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 10.5,
               fontWeight: FontWeight.w600,
               color: Color(0xFF64748B),
@@ -356,7 +357,7 @@ class RiskTrendCard extends StatelessWidget {
                     const SizedBox(width: 3),
                     Text(
                       value,
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 13,
                         fontWeight: FontWeight.w900,
                         color: valueColor,

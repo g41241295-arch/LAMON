@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import '../../constants/app_colors.dart';
 import '../../models/food_entry_model.dart';
@@ -20,6 +21,16 @@ class RingkasanMakananScreen extends StatefulWidget {
 }
 
 class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
+  static const LinearGradient _bgGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [
+      Color(0xFFFCFBF7),
+      Color(0xFFF7F4EB),
+      Color(0xFFF2EEDB),
+    ],
+  );
+
   final FoodEntryService _service = FoodEntryService();
 
   bool _isLoading = true;
@@ -590,6 +601,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const AppScaffold(
+        backgroundGradient: _bgGradient,
         body: Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
@@ -598,12 +610,14 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
 
     if (_isError) {
       return AppScaffold(
+        backgroundGradient: _bgGradient,
         body: _buildErrorView(),
       );
     }
 
     if (_isPreviewMode && _mockCalculator != null) {
       return AppScaffold(
+        backgroundGradient: _bgGradient,
         body: _buildReportView(
           _mockCalculator!,
           isPreview: true,
@@ -616,6 +630,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
 
     if (_calculator != null) {
       return AppScaffold(
+        backgroundGradient: _bgGradient,
         body: _buildReportView(
           _calculator!,
           isPreview: false,
@@ -627,11 +642,12 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
     }
 
     return AppScaffold(
+      backgroundGradient: _bgGradient,
       body: _buildEmptyView(),
     );
   }
 
-  // ─── Header Universal (Sesuai Gaya Halaman Lain) ──────────────────────────
+  // ─── Header Universal (Sesuai Gaya Halaman Catat Makanan) ─────────────────
   Widget _buildScreenHeader({
     FoodSummaryCalculator? calc,
     VoidCallback? onBack,
@@ -662,7 +678,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
         ),
         child: const Icon(
           Icons.arrow_back_rounded,
-          color: AppColors.primary,
+          color: Color(0xFF1C4E68),
           size: 22,
         ),
       ),
@@ -671,10 +687,10 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
     final titlePill = Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFFFF7D6),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: const Color(0xFFEBE3D0),
+          color: const Color(0xFFE8D7A5),
           width: 1.2,
         ),
         boxShadow: [
@@ -685,21 +701,23 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
           ),
         ],
       ),
-      child: const Text(
+      child: Text(
         'Ringkasan Nutrisi Harian',
-        style: TextStyle(
+        style: GoogleFonts.poppins(
           fontSize: 14,
-          fontWeight: FontWeight.w800,
-          color: AppColors.primaryText,
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF1C4E68),
           letterSpacing: 0.2,
         ),
       ),
     );
 
     final hasMultipleDates = availableDates.length > 1 && selectedDate != null;
-    final currentIndex = selectedDate != null ? availableDates.indexOf(selectedDate) : -1;
+    final currentIndex =
+        selectedDate != null ? availableDates.indexOf(selectedDate) : -1;
     final bool canGoNext = hasMultipleDates && currentIndex > 0;
-    final bool canGoPrev = hasMultipleDates && currentIndex < availableDates.length - 1;
+    final bool canGoPrev =
+        hasMultipleDates && currentIndex < availableDates.length - 1;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -717,68 +735,104 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
             ),
           ),
           if (calc != null) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: hasMultipleDates
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        InkWell(
-                          onTap: canGoPrev
-                              ? () => onDateChanged?.call(availableDates[currentIndex + 1])
-                              : null,
-                          borderRadius: BorderRadius.circular(20),
-                          child: Padding(
-                            padding: const EdgeInsets.all(4),
-                            child: Icon(
-                              Icons.chevron_left_rounded,
-                              size: 24,
-                              color: canGoPrev
-                                  ? AppColors.primary
-                                  : AppColors.neutralGray.withValues(alpha: 0.25),
-                            ),
-                          ),
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: const Color(0xFFEBE3D0),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    InkWell(
+                      onTap: canGoPrev
+                          ? () => onDateChanged
+                              ?.call(availableDates[currentIndex + 1])
+                          : null,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.chevron_left_rounded,
+                          size: 22,
+                          color: canGoPrev
+                              ? const Color(0xFF1C4E68)
+                              : const Color(0xFF90A4AE).withValues(alpha: 0.35),
                         ),
-                        Expanded(
-                          child: Text(
-                            '${calc.dateRangeString} · ${calc.totalEntries} kali makan tercatat',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.brownSubtext,
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
-                        InkWell(
-                          onTap: canGoNext
-                              ? () => onDateChanged?.call(availableDates[currentIndex - 1])
-                              : null,
-                          borderRadius: BorderRadius.circular(20),
-                          child: Padding(
-                            padding: const EdgeInsets.all(4),
-                            child: Icon(
-                              Icons.chevron_right_rounded,
-                              size: 24,
-                              color: canGoNext
-                                  ? AppColors.primary
-                                  : AppColors.neutralGray.withValues(alpha: 0.25),
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : Text(
-                      '${calc.dateRangeString} · ${calc.totalEntries} kali makan tercatat',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.brownSubtext,
-                        height: 1.4,
                       ),
                     ),
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.calendar_today_rounded,
+                              size: 13, color: Color(0xFF276F8F)),
+                          const SizedBox(width: 6),
+                          Text(
+                            calc.dateRangeString,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1C4E68),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF7D6),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: const Color(0xFFE8D7A5),
+                                width: 1.0,
+                              ),
+                            ),
+                            child: Text(
+                              '${calc.totalEntries} kali makan',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF1C4E68),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    InkWell(
+                      onTap: canGoNext
+                          ? () => onDateChanged
+                              ?.call(availableDates[currentIndex - 1])
+                          : null,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.chevron_right_rounded,
+                          size: 22,
+                          color: canGoNext
+                              ? const Color(0xFF1C4E68)
+                              : const Color(0xFF90A4AE).withValues(alpha: 0.35),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ],
@@ -819,24 +873,24 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
+                  Text(
                     'Belum Ada Catatan Makanan Hari Ini',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primaryText,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1C4E68),
                       height: 1.35,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'Catat makananmu hari ini (Sarapan, Makan Siang, atau Makan Malam) untuk melihat analisis status gizi dan kesehatan lambung.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 13,
-                      color: AppColors.brownSubtext,
-                      height: 1.4,
+                      color: const Color(0xFF5A7184),
+                      height: 1.5,
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -855,74 +909,25 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                       child: OutlinedButton.icon(
                         onPressed: _activatePreviewMode,
                         icon: const Icon(Icons.remove_red_eye_outlined,
-                            size: 20, color: AppColors.primary),
-                        label: const Text(
+                            size: 20, color: Color(0xFF1C4E68)),
+                        label: Text(
                           'Lihat Contoh Tampilan',
-                          style: TextStyle(
+                          style: GoogleFonts.poppins(
                             fontSize: 15,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF1C4E68),
                             letterSpacing: -0.2,
                           ),
                         ),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
+                          foregroundColor: const Color(0xFF1C4E68),
                           side: const BorderSide(
-                              color: AppColors.primary, width: 1.8),
+                              color: Color(0xFF1C4E68), width: 1.8),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                  if (kDebugMode) ...[
-                    const SizedBox(height: 16),
-                    const Divider(),
-                    const SizedBox(height: 8),
-                    const Text('Development Testing:',
-                        style: TextStyle(
-                            color: Colors.red,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12)),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              setState(() => _isLoading = true);
-                              await _service.generateDummyData();
-                              await _loadData();
-                            },
-                            icon: const Icon(Icons.add_box, size: 16),
-                            label: const Text('Isi 7 Dummy',
-                                style: TextStyle(fontSize: 12)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              setState(() => _isLoading = true);
-                              await _service.deleteDummyData();
-                              await _loadData();
-                            },
-                            icon: const Icon(Icons.delete, size: 16),
-                            label: const Text('Hapus Dummy',
-                                style: TextStyle(fontSize: 12)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red.shade400,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
                   ],
                 ],
@@ -949,19 +954,20 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                   const Icon(Icons.error_outline_rounded,
                       size: 64, color: AppColors.adminRed),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Gagal memuat ringkasan',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryText,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1C4E68),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Terjadi kendala saat mengambil catatan makananmu. Silakan periksa koneksi dan coba lagi.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.neutralGray, fontSize: 13),
+                    style: GoogleFonts.poppins(
+                        color: const Color(0xFF5A7184), fontSize: 13),
                   ),
                   if (kDebugMode && _errorMessage != null) ...[
                     const SizedBox(height: 16),
@@ -992,16 +998,16 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                         onPressed: _activatePreviewMode,
                         icon: const Icon(Icons.remove_red_eye_outlined,
                             size: 20, color: Colors.white),
-                        label: const Text(
+                        label: Text(
                           'Lihat Contoh Tampilan',
-                          style: TextStyle(
+                          style: GoogleFonts.poppins(
                             fontSize: 15,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                             letterSpacing: -0.2,
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: const Color(0xFF1C4E68),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
@@ -1017,12 +1023,13 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _loadData,
                       icon: const Icon(Icons.refresh_rounded, size: 20),
-                      label: const Text('Coba Lagi',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: Text('Coba Lagi',
+                          style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600)),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
+                        foregroundColor: const Color(0xFF1C4E68),
                         side: const BorderSide(
-                            color: AppColors.primary, width: 1.5),
+                            color: Color(0xFF1C4E68), width: 1.5),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -1081,10 +1088,10 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                       const Icon(Icons.info_outline_rounded,
                           size: 18, color: AppColors.brownDark),
                       const SizedBox(width: 10),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Contoh tampilan dengan data simulasi, bukan catatan Anda.',
-                          style: TextStyle(
+                          style: GoogleFonts.poppins(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: AppColors.brownDark,
@@ -1094,15 +1101,15 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                       InkWell(
                         onTap: _exitPreviewMode,
                         borderRadius: BorderRadius.circular(12),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 4),
                           child: Text(
                             'Tutup',
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1C4E68),
                             ),
                           ),
                         ),
@@ -1114,7 +1121,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
             ],
 
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 250),
                 switchInCurve: Curves.easeOutCubic,
@@ -1131,46 +1138,47 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 12),
-                      _buildSectionTitle(
-                          'Status Gizi & Kesehatan Lambung Hari Ini'),
-                      _buildStatusLambungCard(calc),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 8),
 
-                      _buildSectionTitle('Asupan Gizi Hari Ini'),
-                      _buildAsupanGiziCard(calc),
-                      const SizedBox(height: 24),
-
-                      _buildSectionTitle('Jenis Makanan'),
-                      _buildJenisMakanan(calc),
-                      const SizedBox(height: 24),
-
-                      _buildSectionTitle('Sumber Makanan'),
-                      _buildSumberMakanan(calc),
-                      const SizedBox(height: 24),
-
-                      _buildSectionTitle('Rasa Dominan'),
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 12),
-                        child: Text(
-                          'Rasa dengan skor tertinggi per makan',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.brownSubtext,
-                          ),
-                        ),
+                      // 1. Status Kesehatan Lambung (Hero Health Card)
+                      _buildSectionHeader(
+                        Icons.health_and_safety_rounded,
+                        'Status Kesehatan Lambung',
                       ),
-                      _buildRasaDominan(calc),
-                      const SizedBox(height: 24),
+                      _buildStatusLambungCard(calc),
+                      const SizedBox(height: 20),
 
-                      _buildSectionTitle('Minuman'),
-                      _buildMinuman(calc),
-                      const SizedBox(height: 24),
+                      // 2. Asupan Nutrisi Harian (Circular Indicators)
+                      _buildSectionHeader(
+                        Icons.pie_chart_rounded,
+                        'Asupan Nutrisi Harian',
+                      ),
+                      _buildAsupanGiziCard(calc),
+                      const SizedBox(height: 20),
 
-                      _buildSectionTitle('Beban Harian'),
+                      // 3. Komposisi & Sumber Pangan (Integrated Card)
+                      _buildSectionHeader(
+                        Icons.restaurant_menu_rounded,
+                        'Komposisi & Sumber Pangan',
+                      ),
+                      _buildKomposisiPanganCard(calc),
+                      const SizedBox(height: 20),
+
+                      // 4. Kebiasaan Minum & Pola Rasa (Integrated Card)
+                      _buildSectionHeader(
+                        Icons.local_cafe_rounded,
+                        'Kebiasaan Minum & Pola Rasa',
+                      ),
+                      _buildKebiasaanRasaCard(calc),
+                      const SizedBox(height: 20),
+
+                      // 5. Beban Harian & Gaya Hidup (Side-by-side Tiles)
+                      _buildSectionHeader(
+                        Icons.self_improvement_rounded,
+                        'Beban Harian & Gaya Hidup',
+                      ),
                       _buildBebanHarian(calc),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 28),
 
                       // Tombol Aksi: Prediksi Sekarang & Konsul Dokter
                       SizedBox(
@@ -1182,19 +1190,20 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                                 context, AppRoutes.diseasePrediction);
                           },
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.primary,
+                            foregroundColor: const Color(0xFF1C4E68),
                             side: const BorderSide(
-                                color: AppColors.primary, width: 2),
+                                color: Color(0xFF1C4E68), width: 1.8),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
+                            backgroundColor: Colors.white,
                           ),
-                          child: const Text(
+                          child: Text(
                             'Prediksi Sekarang',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: -0.2,
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1C4E68),
                             ),
                           ),
                         ),
@@ -1207,59 +1216,6 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                         },
                       ),
                       const SizedBox(height: 20),
-
-                      // Debug Buttons jika di debug mode & bukan preview
-                      if (kDebugMode && !isPreview) ...[
-                        const Divider(),
-                        const SizedBox(height: 12),
-                        const Text('Development Testing:',
-                            style: TextStyle(
-                                color: Colors.red,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12)),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () async {
-                                  setState(() => _isLoading = true);
-                                  await _service.generateDummyData();
-                                  await _loadData();
-                                },
-                                icon: const Icon(Icons.add_box, size: 16),
-                                label: const Text('Isi 7 Dummy',
-                                    style: TextStyle(fontSize: 12)),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: Colors.white,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 8),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () async {
-                                  setState(() => _isLoading = true);
-                                  await _service.deleteDummyData();
-                                  await _loadData();
-                                },
-                                icon: const Icon(Icons.delete, size: 16),
-                                label: const Text('Hapus Dummy',
-                                    style: TextStyle(fontSize: 12)),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red.shade400,
-                                  foregroundColor: Colors.white,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 8),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -1271,24 +1227,47 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  // ─── Modern Section Header With Soft Blue Icon Pill ───────────────────────
+  Widget _buildSectionHeader(IconData icon, String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 17,
-          fontWeight: FontWeight.bold,
-          color: AppColors.primaryText,
-        ),
+      padding: const EdgeInsets.only(bottom: 12, top: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: const Color(0xFF276F8F).withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFF276F8F).withValues(alpha: 0.22),
+                width: 1.0,
+              ),
+            ),
+            child: Icon(
+              icon,
+              size: 16,
+              color: const Color(0xFF276F8F),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1C4E68),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // ─── Section 1: Status Gizi & Kesehatan Lambung Hari Ini ───────────────────
+  // ─── 1. Status Kesehatan Lambung (Hero Health Card) ───────────────────────
   Widget _buildStatusLambungCard(FoodSummaryCalculator calc) {
     final risk = calc.calculateLambungRiskScore();
-    final nut = calc.calculateDailyNutrition();
     final entryCount = calc.totalEntries;
 
     final Color primaryTone;
@@ -1298,19 +1277,19 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
 
     switch (risk.level) {
       case LambungRiskLevel.aman:
-        primaryTone = const Color(0xFF53A66B); // Hijau soft
+        primaryTone = const Color(0xFF53A66B);
         bgTone = const Color(0xFFF1F8F3);
         borderTone = const Color(0xFFC8E6C9);
         statusIcon = Icons.check_circle_rounded;
         break;
       case LambungRiskLevel.perluDiperhatikan:
-        primaryTone = const Color(0xFFD67C65); // Oranye pudar / koral
+        primaryTone = const Color(0xFFD67C65);
         bgTone = const Color(0xFFFFF9EE);
         borderTone = const Color(0xFFFFE0B2);
         statusIcon = Icons.warning_amber_rounded;
         break;
       case LambungRiskLevel.berisiko:
-        primaryTone = const Color(0xFFD95030); // Oranye-merah soft
+        primaryTone = const Color(0xFFD95030);
         bgTone = const Color(0xFFFDF3F3);
         borderTone = const Color(0xFFFFCDD2);
         statusIcon = Icons.error_outline_rounded;
@@ -1319,15 +1298,15 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: bgTone,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: borderTone, width: 1.2),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: borderTone.withValues(alpha: 0.9), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
+            color: primaryTone.withValues(alpha: 0.08),
+            blurRadius: 14,
             offset: const Offset(0, 4),
           ),
         ],
@@ -1335,152 +1314,105 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // ── Ikon Besar di Tengah ──
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: bgTone,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: borderTone),
+                ),
+                child: Text(
+                  'SKOR KLINIS',
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: primaryTone,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F9FA),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFEBE3D0)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.schedule_rounded,
+                        size: 12, color: primaryTone.withValues(alpha: 0.85)),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$entryCount/3 makan',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF5A7184),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Icon Status
           Container(
-            width: 72,
-            height: 72,
+            width: 62,
+            height: 62,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: bgTone,
               shape: BoxShape.circle,
               border: Border.all(color: borderTone, width: 2),
               boxShadow: [
                 BoxShadow(
-                  color: primaryTone.withValues(alpha: 0.18),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4),
+                  color: primaryTone.withValues(alpha: 0.16),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
-            child: Icon(statusIcon, color: primaryTone, size: 38),
+            child: Icon(statusIcon, color: primaryTone, size: 32),
           ),
           const SizedBox(height: 10),
 
-          // ── Label Kecil "STATUS KESEHATAN LAMBUNG" ──
-          Text(
-            'STATUS KESEHATAN LAMBUNG',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.0,
-              color: primaryTone.withValues(alpha: 0.75),
-            ),
-          ),
-          const SizedBox(height: 4),
-
-          // ── Teks Status Utama ──
           Text(
             risk.label,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 22,
+            style: GoogleFonts.poppins(
+              fontSize: 20,
               fontWeight: FontWeight.w800,
               color: primaryTone,
               letterSpacing: -0.3,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
 
-          // ── Badge Waktu Makan ──
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: borderTone.withValues(alpha: 0.8)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.schedule_rounded,
-                    size: 13, color: primaryTone.withValues(alpha: 0.7)),
-                const SizedBox(width: 5),
-                Text(
-                  'Berdasarkan $entryCount dari 3 waktu makan yang tercatat',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: primaryTone.withValues(alpha: 0.8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          // ── Kotak Penjelasan Semi-transparan ──
+          // Penjelasan
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.65),
+              color: bgTone.withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: borderTone.withValues(alpha: 0.5)),
+              border: Border.all(color: borderTone.withValues(alpha: 0.6)),
             ),
             child: Text(
               risk.explanation,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
+              style: GoogleFonts.poppins(
+                fontSize: 12.5,
                 fontWeight: FontWeight.w500,
-                color: AppColors.primaryText,
-                height: 1.5,
+                color: const Color(0xFF2C3E50),
+                height: 1.45,
               ),
             ),
-          ),
-
-          const SizedBox(height: 18),
-
-          // ── 4 Kotak Kecil Kecukupan Gizi ──
-          const Text(
-            'Kecukupan Gizi Harian Terpenuhi',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primaryLight,
-              letterSpacing: 0.2,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _buildGiziMiniItem(
-                  'Kalori',
-                  '${nut.caloriesPercentage}%',
-                  const Color(0xFFE5983A),
-                  Icons.local_fire_department_rounded,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildGiziMiniItem(
-                  'Protein',
-                  '${nut.proteinPercentage}%',
-                  const Color(0xFF4B87A6),
-                  Icons.fitness_center_rounded,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildGiziMiniItem(
-                  'Karbo',
-                  '${nut.carbsPercentage}%',
-                  const Color(0xFFE5A83B),
-                  Icons.grain_rounded,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildGiziMiniItem(
-                  'Lemak',
-                  '${nut.fatPercentage}%',
-                  const Color(0xFF8B5A2B),
-                  Icons.water_drop_rounded,
-                ),
-              ),
-            ],
           ),
 
           if (entryCount < 3) ...[
@@ -1489,15 +1421,15 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const Icon(Icons.info_outline_rounded,
-                    size: 14, color: AppColors.brownSubtext),
+                    size: 14, color: Color(0xFF7A8B99)),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'Catatan belum lengkap ($entryCount/3). Lengkapi catatan makanmu hari ini untuk hasil analisis nutrisi yang lebih akurat.',
-                    style: const TextStyle(
+                    'Catatan belum lengkap ($entryCount/3). Lengkapi catatan makanmu untuk hasil lebih akurat.',
+                    style: GoogleFonts.poppins(
                       fontSize: 11,
                       fontStyle: FontStyle.italic,
-                      color: AppColors.brownSubtext,
+                      color: const Color(0xFF7A8B99),
                       height: 1.35,
                     ),
                   ),
@@ -1510,51 +1442,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
     );
   }
 
-  Widget _buildGiziMiniItem(String label, String value, Color color, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.12),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: AppColors.brownSubtext,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Section 2: Asupan Gizi Hari Ini ───────────────────────────────────────
+  // ─── 2. Asupan Nutrisi Harian (Circular Indicators Seperti Sebelumnya) ──────
   Widget _buildAsupanGiziCard(FoodSummaryCalculator calc) {
     final nut = calc.calculateDailyNutrition();
 
@@ -1572,20 +1460,20 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           CircularPercentIndicator(
-            radius: 52.0,
-            lineWidth: 10.0,
+            radius: 50.0,
+            lineWidth: 9.0,
             percent: pct,
             animation: true,
             animationDuration: 1000,
             circularStrokeCap: CircularStrokeCap.round,
             progressColor: color,
-            backgroundColor: const Color(0xFFF0F0F0),
+            backgroundColor: const Color(0xFFF3F4F6),
             center: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   '$percentage%',
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: color,
@@ -1593,10 +1481,10 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
                 ),
                 Text(
                   '${current.toStringAsFixed(0)}$unit',
-                  style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.brownSubtext,
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF7A8B99),
                   ),
                 ),
               ],
@@ -1610,7 +1498,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
               const SizedBox(width: 4),
               Text(
                 label,
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: color,
@@ -1618,11 +1506,13 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 2),
           Text(
-            '/ ${target.toInt()}$unit',
-            style: const TextStyle(
+            '/ ${target.toInt()} $unit',
+            style: GoogleFonts.poppins(
               fontSize: 10,
-              color: AppColors.brownSubtext,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF7A8B99),
             ),
           ),
         ],
@@ -1630,15 +1520,16 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFEBE3D0), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -1667,7 +1558,7 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -1695,107 +1586,13 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
       ),
     );
   }
-  Widget _buildJenisMakanan(FoodSummaryCalculator calc) {
-    final stats = calc.jenisMakananStats;
-    final junkFood = stats['Junk Food'] ?? 0;
-    final homemade = stats['Homemade'] ?? 0;
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Bar proporsional — lebih tinggi + pill shape
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: junkFood > 0 ? junkFood : 1,
-                  child: Container(
-                    height: 22,
-                    color: junkFood > 0
-                        ? const Color(0xFFD95030)
-                        : Colors.grey.shade200,
-                  ),
-                ),
-                Expanded(
-                  flex: homemade > 0 ? homemade : 1,
-                  child: Container(
-                    height: 22,
-                    color: homemade > 0
-                        ? const Color(0xFF53A66B)
-                        : Colors.grey.shade200,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 14,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD95030),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '🍔 Junk food $junkFood%',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.primaryLight,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-              Row(
-                children: [
-                  Container(
-                    width: 14,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF53A66B),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '🍲 Homemade $homemade%',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.primaryLight,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSumberMakanan(FoodSummaryCalculator calc) {
-    final stats = calc.proteinStats;
+  // ─── 3. Komposisi & Sumber Pangan (Integrated Card) ───────────────────────
+  Widget _buildKomposisiPanganCard(FoodSummaryCalculator calc) {
+    final jenisStats = calc.jenisMakananStats;
+    final junkFood = jenisStats['Junk Food'] ?? 0;
+    final homemade = jenisStats['Homemade'] ?? 0;
+    final proteinStats = calc.proteinStats;
 
     Color getSumberColor(String name) {
       final n = name.toLowerCase();
@@ -1819,147 +1616,272 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
       return '🍽️';
     }
 
-    if (stats.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: const Text(
-          'Belum ada data protein',
-          style: TextStyle(fontSize: 12, color: AppColors.neutralGray),
-        ),
-      );
-    }
-
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFEBE3D0), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
-        children: stats.asMap().entries.map((entry) {
-          final index = entry.key;
-          final e = entry.value;
-          final isLast = index == stats.length - 1;
-          final barColor = getSumberColor(e.key);
-          final emoji = getSumberEmoji(e.key);
-
-          return Padding(
-            padding: EdgeInsets.only(bottom: isLast ? 0.0 : 16.0),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Sub-header 1: Jenis Olahan
+          Text(
+            'KUALITAS OLAHAN MAKANAN',
+            style: GoogleFonts.poppins(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: const Color(0xFF5A7184),
+            ),
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
             child: Row(
               children: [
-                SizedBox(
-                  width: 110,
-                  child: Text(
-                    '$emoji ${e.key}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: barColor,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 6),
                 Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Stack(
-                      children: [
-                        Container(height: 16, color: const Color(0xFFF0F0F0)),
-                        FractionallySizedBox(
-                          widthFactor: (e.value / 100).clamp(0.0, 1.0),
-                          child: Container(
-                            height: 16,
-                            decoration: BoxDecoration(
-                              color: barColor,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  flex: junkFood > 0 ? junkFood : 1,
+                  child: Container(
+                    height: 18,
+                    color: junkFood > 0
+                        ? const Color(0xFFD95030)
+                        : const Color(0xFFF3F4F6),
                   ),
                 ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 44,
-                  child: Text(
-                    '${e.value}%',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: barColor,
-                    ),
+                Expanded(
+                  flex: homemade > 0 ? homemade : 1,
+                  child: Container(
+                    height: 18,
+                    color: homemade > 0
+                        ? const Color(0xFF53A66B)
+                        : const Color(0xFFF3F4F6),
                   ),
                 ),
               ],
             ),
-          );
-        }).toList(),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD95030),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '🍔 Junk food $junkFood%',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: const Color(0xFF1C4E68),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF53A66B),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '🍲 Homemade $homemade%',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: const Color(0xFF1C4E68),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Divider(height: 1, color: Color(0xFFF0EBE1), thickness: 1),
+          ),
+
+          // Sub-header 2: Sumber Protein
+          Text(
+            'DISTRIBUSI SUMBER PROTEIN',
+            style: GoogleFonts.poppins(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: const Color(0xFF5A7184),
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (proteinStats.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Belum ada data protein tercatat',
+                style: GoogleFonts.poppins(
+                    fontSize: 12, color: const Color(0xFF7A8B99)),
+              ),
+            )
+          else
+            ...proteinStats.asMap().entries.map((entry) {
+              final index = entry.key;
+              final e = entry.value;
+              final isLast = index == proteinStats.length - 1;
+              final barColor = getSumberColor(e.key);
+              final emoji = getSumberEmoji(e.key);
+
+              return Padding(
+                padding: EdgeInsets.only(bottom: isLast ? 0.0 : 12.0),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 105,
+                      child: Text(
+                        '$emoji ${e.key}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: barColor,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Stack(
+                          children: [
+                            Container(height: 12, color: const Color(0xFFF3F4F6)),
+                            FractionallySizedBox(
+                              widthFactor: (e.value / 100).clamp(0.0, 1.0),
+                              child: Container(
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: barColor,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 40,
+                      child: Text(
+                        '${e.value}%',
+                        textAlign: TextAlign.right,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: barColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
       ),
     );
   }
 
-  Widget _buildRasaDominan(FoodSummaryCalculator calc) {
-    final stats = calc.rasaDominanStats;
+  // ─── 4. Kebiasaan Minum & Pola Rasa (Integrated Card) ──────────────────────
+  Widget _buildKebiasaanRasaCard(FoodSummaryCalculator calc) {
+    final statsMinuman = calc.minumanStats;
+    final statsRasa = calc.rasaDominanStats;
 
-    if (stats.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+    Widget buildDrinkBar(String emoji, String title, int percentage, Color color,
+        {bool isLast = false}) {
+      return Padding(
+        padding: EdgeInsets.only(bottom: isLast ? 0.0 : 12.0),
+        child: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 6),
+            SizedBox(
+              width: 58,
+              child: Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Stack(
+                  children: [
+                    Container(height: 12, color: const Color(0xFFF3F4F6)),
+                    FractionallySizedBox(
+                      widthFactor: (percentage / 100).clamp(0.0, 1.0),
+                      child: Container(
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 40,
+              child: Text(
+                '$percentage%',
+                textAlign: TextAlign.right,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
             ),
           ],
-        ),
-        child: const Text(
-          'Belum ada data rasa',
-          style: TextStyle(fontSize: 12, color: AppColors.neutralGray),
         ),
       );
     }
 
     Color getTasteColor(String taste) {
       switch (taste) {
-        case 'Asam':
-          return const Color(0xFFFFD600); // Lemon kuning
-        case 'Manis':
-          return const Color(0xFFE91E63); // Magenta pink
-        case 'Pedas':
-          return const Color(0xFFE53935); // Merah terang
-        case 'Asin':
-          return const Color(0xFF00BCD4); // Teal/cyan
-        case 'Berlemak':
-          return const Color(0xFFFF6F00); // Oranye burnt
-        default:
-          return Colors.grey;
+        case 'Asam': return const Color(0xFFD4A017);
+        case 'Manis': return const Color(0xFFE91E63);
+        case 'Pedas': return const Color(0xFFE53935);
+        case 'Asin': return const Color(0xFF00ACC1);
+        case 'Berlemak': return const Color(0xFFFF6F00);
+        default: return Colors.grey;
       }
     }
 
@@ -1977,156 +1899,111 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFEBE3D0), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: stats.map((e) {
-          final color = getTasteColor(e.key);
-          final emoji = getTasteEmoji(e.key);
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.45),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(emoji, style: const TextStyle(fontSize: 24)),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                e.key,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '${e.value}%',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primaryLight,
-                ),
-              ),
-            ],
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildMinuman(FoodSummaryCalculator calc) {
-    final stats = calc.minumanStats;
-
-    Widget buildBar(String emoji, String title, int percentage, Color color,
-        {bool isLast = false}) {
-      return Padding(
-        padding: EdgeInsets.only(bottom: isLast ? 0.0 : 16.0),
-        child: Row(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 18)),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 60,
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Stack(
-                  children: [
-                    Container(height: 16, color: const Color(0xFFF0F0F0)),
-                    FractionallySizedBox(
-                      widthFactor: (percentage / 100).clamp(0.0, 1.0),
-                      child: Container(
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            SizedBox(
-              width: 44,
-              child: Text(
-                '$percentage%',
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: color,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          buildBar('☕', 'Kopi', stats['Kopi'] ?? 0, const Color(0xFF6D4C41)),
-          buildBar('🥤', 'Soda', stats['Soda'] ?? 0, const Color(0xFF42A5F5)),
-          buildBar('💧', 'Lainnya', stats['Lainnya'] ?? 0,
-              const Color(0xFF26C6DA),
-              isLast: true),
+          // Sub-header 1: Minuman
+          Text(
+            'KONSUMSI MINUMAN',
+            style: GoogleFonts.poppins(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: const Color(0xFF5A7184),
+            ),
+          ),
+          const SizedBox(height: 10),
+          buildDrinkBar('☕', 'Kopi', statsMinuman['Kopi'] ?? 0, const Color(0xFF6D4C41)),
+          buildDrinkBar('🥤', 'Soda', statsMinuman['Soda'] ?? 0, const Color(0xFF42A5F5)),
+          buildDrinkBar('💧', 'Lainnya', statsMinuman['Lainnya'] ?? 0, const Color(0xFF26C6DA), isLast: true),
+
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Divider(height: 1, color: Color(0xFFF0EBE1), thickness: 1),
+          ),
+
+          // Sub-header 2: Rasa Dominan
+          Text(
+            'RASA DOMINAN TERCATAT',
+            style: GoogleFonts.poppins(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: const Color(0xFF5A7184),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (statsRasa.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Belum ada data rasa',
+                style: GoogleFonts.poppins(
+                    fontSize: 12, color: const Color(0xFF7A8B99)),
+              ),
+            )
+          else
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: statsRasa.map((e) {
+                final color = getTasteColor(e.key);
+                final emoji = getTasteEmoji(e.key);
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: color.withValues(alpha: 0.3)),
+                      ),
+                      child: Center(
+                        child: Text(emoji, style: const TextStyle(fontSize: 20)),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      e.key,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${e.value}%',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF1C4E68),
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
         ],
       ),
     );
   }
 
+  // ─── 5. Beban Harian (Gaya Hidup & Stres) ──────────────────────────────────
   Widget _buildBebanHarian(FoodSummaryCalculator calc) {
     final stats = calc.bebanHarianStats;
     final pikiran = stats['Beban Pikiran']!;
@@ -2144,38 +2021,49 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
 
       return Expanded(
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFEBE3D0), width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(emoji, style: const TextStyle(fontSize: 24)),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: progressColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(emoji, style: const TextStyle(fontSize: 18)),
+                ),
+              ),
               const SizedBox(height: 10),
               CircularPercentIndicator(
-                radius: 50.0,
-                lineWidth: 11.0,
+                radius: 46.0,
+                lineWidth: 8.0,
                 percent: pct,
                 animation: true,
                 animationDuration: 1200,
                 circularStrokeCap: CircularStrokeCap.round,
                 progressColor: progressColor,
-                backgroundColor: const Color(0xFFF0F0F0),
+                backgroundColor: const Color(0xFFF3F4F6),
                 center: Text(
                   hasData ? '$percentage%' : '—',
-                  style: TextStyle(
-                    fontSize: 16,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
                     fontWeight: FontWeight.w800,
-                    color: hasData ? progressColor : AppColors.neutralGray,
+                    color: hasData ? progressColor : const Color(0xFF7A8B99),
                   ),
                 ),
               ),
@@ -2183,21 +2071,21 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 12,
-                  color: AppColors.brownSubtext,
+                  color: const Color(0xFF1C4E68),
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 2),
               Text(
                 hasData
-                    ? 'rata-rata ${data['average']}/5'
+                    ? 'Rata-rata ${data['average']}/5'
                     : 'Belum ada data',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.brownSubtext,
+                style: GoogleFonts.poppins(
+                  fontSize: 10.5,
+                  color: const Color(0xFF7A8B99),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -2211,14 +2099,14 @@ class _RingkasanMakananScreenState extends State<RingkasanMakananScreen> {
       children: [
         buildGauge(
           emoji: '🧠',
-          title: 'Beban pikiran',
+          title: 'Beban Pikiran',
           data: pikiran,
           progressColor: const Color(0xFF7C4DFF),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 12),
         buildGauge(
           emoji: '🏃',
-          title: 'Beban aktivitas',
+          title: 'Beban Aktivitas',
           data: aktivitas,
           progressColor: const Color(0xFFFF6D00),
         ),

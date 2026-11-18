@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../constants/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../models/reflux_prediction_model.dart';
 
 /// Item faktor yang paling berpengaruh dengan horizontal progress bar
@@ -19,17 +19,17 @@ class FactorContributionBar extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.glassCardBackground,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: const Color(0xFFE2E8F0),
+          color: const Color(0xFFEBE3D0),
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: const Color(0xFF1C4E68).withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -40,25 +40,35 @@ class FactorContributionBar extends StatelessWidget {
         children: [
           Row(
             children: [
-              // Icon bulat
+              // Icon container
               Container(
-                width: 36,
-                height: 36,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDCEDF7),
+                  color: const Color(0xFFF7F5EE),
                   borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFFEBE3D0),
+                    width: 1.0,
+                  ),
                 ),
                 child: factor.imagePath != null && factor.imagePath!.isNotEmpty
                     ? Padding(
-                        padding: const EdgeInsets.all(6.0),
+                        padding: const EdgeInsets.all(7.0),
                         child: Image.asset(
                           factor.imagePath!,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.insights_rounded,
+                            size: 18,
+                            color: Color(0xFF1C4E68),
+                          ),
                         ),
                       )
                     : Icon(
                         factor.icon,
                         size: 20,
-                        color: AppColors.primary,
+                        color: const Color(0xFF1C4E68),
                       ),
               ),
               const SizedBox(width: 12),
@@ -70,38 +80,42 @@ class FactorContributionBar extends StatelessWidget {
                   children: [
                     Text(
                       factor.title,
-                      style: const TextStyle(
-                        fontSize: 14,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.primaryDark,
+                        color: Color(0xFF1C4E68),
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Pilihanmu: ${factor.userValueDescription}',
-                      style: const TextStyle(
-                        fontSize: 12,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.brownSubtext,
+                        color: Color(0xFF6B8797),
                       ),
                     ),
                   ],
                 ),
               ),
 
-              // Skor Persen
+              // Skor Persen Badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F6F9),
-                  borderRadius: BorderRadius.circular(8),
+                  color: const Color(0xFFF0F6F9),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFFD4E5EE),
+                    width: 1.0,
+                  ),
                 ),
                 child: Text(
                   percentText,
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
+                    color: Color(0xFF276F8F),
                   ),
                 ),
               ),
@@ -111,29 +125,29 @@ class FactorContributionBar extends StatelessWidget {
 
           // Horizontal Progress Bar
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
             child: Stack(
               children: [
                 // Track Latar
                 Container(
-                  height: 8,
+                  height: 6,
                   width: double.infinity,
-                  color: const Color(0xFFEBF1F5),
+                  color: const Color(0xFFF2EEDB),
                 ),
 
-                // Fill Bar Animasi
+                // Fill Bar
                 FractionallySizedBox(
                   widthFactor: factor.contributionScore.clamp(0.05, 1.0),
                   child: Container(
-                    height: 8,
+                    height: 6,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [
-                          AppColors.primaryLight,
-                          AppColors.primary,
+                          Color(0xFF276F8F),
+                          Color(0xFF1C4E68),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                   ),
                 ),

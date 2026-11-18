@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../models/reflux_prediction_model.dart';
 
 class RiskTrendPainter extends CustomPainter {
@@ -167,7 +168,7 @@ class RiskTrendPainter extends CustomPainter {
     // Label skor di atas titik
     final textSpan = TextSpan(
       text: '${score.toInt()}%',
-      style: TextStyle(
+      style: GoogleFonts.poppins(
         color: color,
         fontSize: isLast ? 11.5 : 10.0,
         fontWeight: isLast ? FontWeight.w900 : FontWeight.w700,

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/reflux_prediction_model.dart';
 import '../../providers/app_state.dart';
 import '../../services/prediction_history_repository.dart';
-import '../../widgets/app_background.dart';
+import '../../widgets/app_scaffold.dart';
 import 'widgets/factor_contribution_bar.dart';
 
 class DiseasePredictionResultScreen extends StatefulWidget {
@@ -34,23 +34,23 @@ class _DiseasePredictionResultScreenState
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
+          content: Row(
             children: [
               Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Silakan login terlebih dahulu untuk menyimpan riwayat.',
-                  style: TextStyle(fontSize: 13),
+                  'Silakan masuk akun terlebih dahulu untuk menyimpan riwayat.',
+                  style: GoogleFonts.poppins(fontSize: 13),
                 ),
               ),
             ],
           ),
-          backgroundColor: const Color(0xFFD32F2F),
+          backgroundColor: const Color(0xFFC62828),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 4),
           action: SnackBarAction(
-            label: 'Login',
+            label: 'Masuk',
             textColor: Colors.white,
             onPressed: () {
               Navigator.pushNamed(context, '/login');
@@ -81,24 +81,28 @@ class _DiseasePredictionResultScreenState
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
+          content: Row(
             children: [
               Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
               SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Hasil analisis berhasil disimpan ke riwayat akun!',
-                  style: TextStyle(fontSize: 13),
+                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
           ),
-          backgroundColor: AppColors.primary,
+          backgroundColor: const Color(0xFF1C4E68),
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          duration: const Duration(seconds: 4),
           action: SnackBarAction(
             label: 'Lihat',
-            textColor: Colors.white,
+            textColor: const Color(0xFFFFF7D6),
             onPressed: _goToHistory,
           ),
         ),
@@ -118,28 +122,24 @@ class _DiseasePredictionResultScreenState
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Gagal menyimpan ke riwayat: ${e.toString().replaceAll("Exception: ", "")}',
-                  style: const TextStyle(fontSize: 13),
+                  'Gagal menyimpan: ${e.toString().replaceAll("Exception: ", "")}',
+                  style: GoogleFonts.poppins(fontSize: 13),
                 ),
               ),
             ],
           ),
-          backgroundColor: const Color(0xFFD32F2F),
+          backgroundColor: const Color(0xFFC62828),
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 5),
-          action: SnackBarAction(
-            label: 'Coba Lagi',
-            textColor: Colors.white,
-            onPressed: _saveToHistory,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          duration: const Duration(seconds: 4),
         ),
       );
     }
   }
 
-  /// Navigasi ke riwayat dan hapus halaman hasil dari back-stack.
-  /// Tujuan: tombol back di riwayat kembali ke intro (/prediksi-penyakit),
-  /// bukan kembali ke halaman hasil yang sudah selesai.
   void _goToHistory() {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     Navigator.pushNamedAndRemoveUntil(
@@ -151,7 +151,6 @@ class _DiseasePredictionResultScreenState
   }
 
   void _resetAndRetake() {
-    // Kembali ke awal kuesioner (Langkah 1) dengan state baru ter-reset
     Navigator.pushNamedAndRemoveUntil(
       context,
       '/prediksi-penyakit/form',
@@ -159,7 +158,6 @@ class _DiseasePredictionResultScreenState
     );
   }
 
-  /// Memetakan konten rekomendasi ke gambar yang relevan
   static String _imageForRecommendation(String rec) {
     final lower = rec.toLowerCase();
     if (lower.contains('camilan') || lower.contains('gorengan') || lower.contains('asin') || lower.contains('tinggi lemak')) {
@@ -169,7 +167,6 @@ class _DiseasePredictionResultScreenState
     } else if (lower.contains('tidur') || lower.contains('berbaring') || lower.contains('jam') || lower.contains('makan besar')) {
       return 'assets/images/hindari makan mendekati jam tidur.png';
     }
-    // Fallback if no matching keyword
     if (lower.contains('sayur') || lower.contains('buah') || lower.contains('serat')) {
       return 'assets/images/sayur.png';
     } else if (lower.contains('minum') || lower.contains('air')) {
@@ -179,66 +176,28 @@ class _DiseasePredictionResultScreenState
     } else if (lower.contains('masak') || lower.contains('rumah')) {
       return 'assets/images/masak.png';
     }
-    return 'assets/images/omnivora.png'; // A generic fallback icon
+    return 'assets/images/omnivora.png';
   }
 
   @override
   Widget build(BuildContext context) {
-    return AppBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            final isLargeScreen = constraints.maxWidth > 520;
-            final contentWidget = _buildScreenBody(context);
-
-            if (isLargeScreen) {
-              final maxH = constraints.maxHeight.isFinite
-                  ? constraints.maxHeight.clamp(0.0, 920.0)
-                  : 880.0;
-              return Center(
-                child: Container(
-                  width: 420,
-                  height: maxH,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(36),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 30,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                    border: Border.all(
-                      color: Colors.black.withValues(alpha: 0.12),
-                      width: 3,
-                    ),
-                  ),
-                  child: contentWidget,
-                ),
-              );
-            }
-
-            return contentWidget;
-          },
-        ),
+    return AppScaffold(
+      backgroundGradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xFFFCFBF7),
+          Color(0xFFF7F4EB),
+          Color(0xFFF2EEDB),
+        ],
       ),
-    );
-  }
-
-  Widget _buildScreenBody(BuildContext context) {
-    return SafeArea(
+      body: SafeArea(
         child: Column(
           children: [
-            // =========================================================
-            // 1. HEADER (BACK + JUDUL "PREDIKSI LAMBUNG")
-            // =========================================================
+            // ─── 1. Header (Back, Yellow Pill, Spacer) ───
             _buildHeader(),
 
-            // =========================================================
-            // 2. KONTEN HASIL ANALISIS (SCROLLABLE)
-            // =========================================================
+            // ─── 2. Scrollable Result Content ───
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -248,17 +207,17 @@ class _DiseasePredictionResultScreenState
                   children: [
                     const SizedBox(height: 8),
 
-                    // Card Skor Risiko
+                    // Card Skor Risiko Klinis
                     _buildScoreCard(),
                     const SizedBox(height: 20),
 
-                    // Section "Faktor yang paling berpengaruh"
+                    // Section Faktor yang Paling Berpengaruh
                     _buildTopFactorsSection(),
                     const SizedBox(height: 20),
 
-                    // Section "Rekomendasi untukmu"
+                    // Section Rekomendasi
                     _buildRecommendationsSection(),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
 
                     // Tombol Aksi
                     _buildActionButtons(),
@@ -269,57 +228,77 @@ class _DiseasePredictionResultScreenState
             ),
           ],
         ),
-      );
+      ),
+    );
   }
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      child: Stack(
+        alignment: Alignment.center,
         children: [
           // Tombol Back Lingkaran
-          InkWell(
-            onTap: () => Navigator.of(context).pop(),
-            borderRadius: BorderRadius.circular(24),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0xFFD6E2E8),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: InkWell(
+              onTap: () => Navigator.of(context).pop(),
+              borderRadius: BorderRadius.circular(24),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFEBE3D0),
+                    width: 1.2,
                   ),
-                ],
-              ),
-              child: const Icon(
-                Icons.arrow_back_rounded,
-                color: AppColors.primary,
-                size: 22,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Color(0xFF1C4E68),
+                  size: 20,
+                ),
               ),
             ),
           ),
 
-          // Judul Layar: "Prediksi Lambung"
-          const Text(
-            'Prediksi Lambung',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: AppColors.primaryDark,
-              letterSpacing: -0.2,
+          // Pill Judul Kuning (Gaya Catat Makanan)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7D6),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: const Color(0xFFE8D7A5),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Text(
+              'Hasil Analisis',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1C4E68),
+                letterSpacing: 0.2,
+              ),
             ),
           ),
 
-          // Spacer pengimbang
           const SizedBox(width: 40),
         ],
       ),
@@ -343,32 +322,32 @@ class _DiseasePredictionResultScreenState
       badgeBg = const Color(0xFFE8F5E9);
       badgeText = const Color(0xFF2E7D32);
       badgeBorder = const Color(0xFFA5D6A7);
-      categoryIcon = Icons.sentiment_very_satisfied_rounded;
+      categoryIcon = Icons.check_circle_rounded;
     } else if (isMedium) {
-      badgeBg = const Color(0xFFFFF3E0);
-      badgeText = const Color(0xFFE65100);
-      badgeBorder = const Color(0xFFFFCC80);
-      categoryIcon = Icons.sentiment_neutral_rounded;
+      badgeBg = const Color(0xFFFFF8E1);
+      badgeText = const Color(0xFFD97706);
+      badgeBorder = const Color(0xFFFDE68A);
+      categoryIcon = Icons.warning_amber_rounded;
     } else {
-      badgeBg = const Color(0xFFFFEBEE);
-      badgeText = const Color(0xFFC62828);
-      badgeBorder = const Color(0xFFEF9A9A);
-      categoryIcon = Icons.sentiment_very_dissatisfied_rounded;
+      badgeBg = const Color(0xFFFEF2F2);
+      badgeText = const Color(0xFFDC2626);
+      badgeBorder = const Color(0xFFFECACA);
+      categoryIcon = Icons.error_outline_rounded;
     }
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: AppColors.glassCardBackground,
-        borderRadius: BorderRadius.circular(24),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: const Color(0xFFE2E8F0),
+          color: const Color(0xFFEBE3D0),
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: const Color(0xFF1C4E68).withValues(alpha: 0.04),
             blurRadius: 14,
             offset: const Offset(0, 4),
           ),
@@ -376,16 +355,16 @@ class _DiseasePredictionResultScreenState
       ),
       child: Column(
         children: [
-          const Text(
-            'Estimasi Risiko Refluks Asam Lambung',
+          Text(
+            'Estimasi Tingkat Risiko Refluks',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: AppColors.neutralGray,
+              color: Color(0xFF6B8797),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
 
           // Angka Besar Persentase
           Row(
@@ -394,28 +373,28 @@ class _DiseasePredictionResultScreenState
             children: [
               Text(
                 '${result.riskPercentage.toInt()}',
-                style: const TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 54,
                   fontWeight: FontWeight.w900,
-                  color: AppColors.primary,
+                  color: Color(0xFF1C4E68),
                   height: 1.0,
                   letterSpacing: -1.0,
                 ),
               ),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 6),
                 child: Text(
                   '%',
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.primaryLight,
+                    color: Color(0xFF276F8F),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
           // Badge Kategori Risiko
           Container(
@@ -432,7 +411,7 @@ class _DiseasePredictionResultScreenState
                 const SizedBox(width: 6),
                 Text(
                   result.riskCategory,
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: badgeText,
@@ -447,14 +426,18 @@ class _DiseasePredictionResultScreenState
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: const Color(0xFFF9FBFC),
+              color: const Color(0xFFF7F5EE),
               borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFFEBE3D0),
+                width: 1.0,
+              ),
             ),
             child: Text(
               result.categoryDescription,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12.5,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: Color(0xFF475569),
                 height: 1.35,
@@ -476,32 +459,36 @@ class _DiseasePredictionResultScreenState
         Row(
           children: [
             Container(
-              width: 28,
-              height: 28,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
+                color: const Color(0xFFF0F6F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFFD4E5EE),
+                  width: 1.0,
+                ),
               ),
               child: const Icon(
                 Icons.analytics_rounded,
                 size: 17,
-                color: AppColors.primary,
+                color: Color(0xFF276F8F),
               ),
             ),
             const SizedBox(width: 10),
-            const Text(
-              'Faktor yang paling berpengaruh',
-              style: TextStyle(
-                fontSize: 15,
+            Text(
+              'Faktor Paling Berpengaruh',
+              style: GoogleFonts.poppins(
+                fontSize: 15.5,
                 fontWeight: FontWeight.w800,
-                color: AppColors.primaryDark,
+                color: Color(0xFF1C4E68),
+                letterSpacing: -0.2,
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
 
-        // 3 Faktor Teratas
         ...widget.result.topFactors.asMap().entries.map((entry) {
           final index = entry.key;
           final factor = entry.value;
@@ -524,25 +511,30 @@ class _DiseasePredictionResultScreenState
         Row(
           children: [
             Container(
-              width: 28,
-              height: 28,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
-                color: AppColors.orangeAccent.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
+                color: const Color(0xFFFFF7D6),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFFE8D7A5),
+                  width: 1.0,
+                ),
               ),
               child: const Icon(
                 Icons.lightbulb_rounded,
                 size: 17,
-                color: AppColors.orangeAccent,
+                color: Color(0xFFD97706),
               ),
             ),
             const SizedBox(width: 10),
-            const Text(
-              'Rekomendasi untukmu',
-              style: TextStyle(
-                fontSize: 15,
+            Text(
+              'Rekomendasi Pola Makan',
+              style: GoogleFonts.poppins(
+                fontSize: 15.5,
                 fontWeight: FontWeight.w800,
-                color: AppColors.primaryDark,
+                color: Color(0xFF1C4E68),
+                letterSpacing: -0.2,
               ),
             ),
           ],
@@ -552,17 +544,17 @@ class _DiseasePredictionResultScreenState
         ...widget.result.recommendations.map((rec) {
           return Container(
             margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.glassCardBackground,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: const Color(0xFFE2E8F0),
+                color: const Color(0xFFEBE3D0),
                 width: 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
+                  color: const Color(0xFF1C4E68).withValues(alpha: 0.03),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -571,20 +563,34 @@ class _DiseasePredictionResultScreenState
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
+                Container(
+                  width: 34,
+                  height: 34,
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7F5EE),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFFEBE3D0),
+                      width: 1.0,
+                    ),
+                  ),
                   child: Image.asset(
                     _imageForRecommendation(rec),
-                    width: 20,
-                    height: 20,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.check_circle_outline_rounded,
+                      size: 16,
+                      color: Color(0xFF276F8F),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     rec,
-                    style: const TextStyle(
-                      fontSize: 13,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12.5,
                       fontWeight: FontWeight.w500,
                       color: Color(0xFF334155),
                       height: 1.35,
@@ -600,113 +606,142 @@ class _DiseasePredictionResultScreenState
   }
 
   // =========================================================
-  // TOMBOL SIMPAN KE RIWAYAT & ISI ULANG
+  // TOMBOL AKSI SIMPAN KE RIWAYAT & ISI ULANG
   // =========================================================
   Widget _buildActionButtons() {
     return Column(
       children: [
-        // Tombol "Simpan ke Riwayat" (Solid) / "Tersimpan ke Riwayat ✓" (disabled)
+        // Tombol Simpan ke Riwayat (Teal/Navy Gradient)
         SizedBox(
           width: double.infinity,
           height: 52,
-          child: ElevatedButton(
-            onPressed: (_isSaved || _isSaving) ? null : _saveToHistory,
-            style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  _isSaved ? AppColors.successGreen : AppColors.primary,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor:
-                  _isSaved ? AppColors.successGreen : AppColors.primary.withValues(alpha: 0.6),
-              disabledForegroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              gradient: _isSaved
+                  ? null
+                  : const LinearGradient(
+                      colors: [
+                        Color(0xFF276F8F),
+                        Color(0xFF1C4E68),
+                      ],
+                    ),
+              color: _isSaved ? const Color(0xFF2E7D32) : null,
+              boxShadow: [
+                BoxShadow(
+                  color: (_isSaved
+                          ? const Color(0xFF2E7D32)
+                          : const Color(0xFF1C4E68))
+                      .withValues(alpha: 0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: _isSaving
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            child: ElevatedButton(
+              onPressed: (_isSaved || _isSaving) ? null : _saveToHistory,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                foregroundColor: Colors.white,
+                shadowColor: Colors.transparent,
+                disabledBackgroundColor: Colors.transparent,
+                disabledForegroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _isSaved
+                              ? Icons.check_circle_rounded
+                              : Icons.bookmark_add_outlined,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _isSaved
+                              ? 'Tersimpan ke Riwayat Akun'
+                              : 'Simpan ke Riwayat Akun',
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
                     ),
-                  )
-                : Text(
-                    _isSaved ? 'Tersimpan ke Riwayat ✓' : 'Simpan ke Riwayat',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
+            ),
           ),
         ),
         const SizedBox(height: 12),
 
-        // Tombol "Lihat Riwayat" — muncul setelah data tersimpan
-        AnimatedCrossFade(
-          duration: const Duration(milliseconds: 300),
-          crossFadeState: _isSaved
-              ? CrossFadeState.showFirst
-              : CrossFadeState.showSecond,
-          firstChild: Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: SizedBox(
-              width: double.infinity,
-              height: 46,
-              child: OutlinedButton.icon(
-                onPressed: _goToHistory,
-                icon: const Icon(Icons.history_rounded, size: 18),
-                label: const Text(
-                  'Lihat Riwayat',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.1,
-                  ),
+        // Tombol "Lihat Riwayat" (jika sudah disimpan)
+        if (_isSaved) ...[
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: _goToHistory,
+              icon: const Icon(Icons.history_rounded, size: 18),
+              label: Text(
+                'Lihat Riwayat Pemeriksaan',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.1,
                 ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: const BorderSide(color: AppColors.primary, width: 1.8),
-                  backgroundColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF1C4E68),
+                side: const BorderSide(color: Color(0xFF1C4E68), width: 1.5),
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
             ),
           ),
-          // Placeholder kosong saat belum tersimpan (agar layout tidak bergeser)
-          secondChild: const SizedBox.shrink(),
-        ),
+          const SizedBox(height: 12),
+        ],
 
-        // Tombol "Isi Ulang Jawaban" — Outlined button dengan border biru teal
+        // Tombol "Ulangi Pemeriksaan"
         SizedBox(
           width: double.infinity,
-          height: 46,
-          child: OutlinedButton(
+          height: 48,
+          child: OutlinedButton.icon(
             onPressed: _resetAndRetake,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: Text(
+              'Ulangi Pemeriksaan',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1C4E68),
+                letterSpacing: 0.1,
+              ),
+            ),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              side: const BorderSide(color: AppColors.primary, width: 1.8),
-              backgroundColor: Colors.transparent,
+              foregroundColor: const Color(0xFF1C4E68),
+              side: const BorderSide(color: Color(0xFFEBE3D0), width: 1.5),
+              backgroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            child: const Text(
-              'Isi Ulang Jawaban',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-                letterSpacing: 0.1,
-              ),
-            ),
           ),
         ),
-        // Spacer ekstra agar tombol tidak tertutup snackbar floating
         const SizedBox(height: 20),
       ],
     );

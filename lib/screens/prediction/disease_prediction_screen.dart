@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/reflux_prediction_model.dart';
 import '../../services/reflux_prediction_service.dart';
-import '../../widgets/app_background.dart';
+import '../../widgets/app_scaffold.dart';
 import 'widgets/step_progress_bar.dart';
 import 'widgets/discrete_level_slider.dart';
 import 'widgets/diet_selection_card.dart';
@@ -59,39 +59,39 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
         content: Row(
           children: [
             Container(
-              width: 30,
-              height: 30,
+              width: 32,
+              height: 32,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white,
               ),
               child: const Icon(
                 Icons.check_circle_rounded,
-                color: AppColors.successGreen,
+                color: Color(0xFF276F8F),
                 size: 24,
               ),
             ),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Semua pertanyaan sudah terisi',
-                    style: TextStyle(
-                      fontSize: 14,
+                    'Semua indikator telah terisi',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
                     ),
                   ),
                   SizedBox(height: 2),
                   Text(
-                    'Tekan "Analisis Sekarang" untuk melihat hasil.',
-                    style: TextStyle(
-                      fontSize: 12,
+                    'Tekan "Analisis Sekarang" untuk memproses data.',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.5,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFFE8F5E9),
+                      color: Color(0xFFE8F3F7),
                     ),
                   ),
                 ],
@@ -99,7 +99,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF2E7D32),
+        backgroundColor: const Color(0xFF1C4E68),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -174,147 +174,121 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
         if (didPop) return;
         _onBack();
       },
-      child: AppBackground(
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          body: LayoutBuilder(
-            builder: (context, constraints) {
-              final isLargeScreen = constraints.maxWidth > 520;
-              final contentWidget = _buildScreenBody(context);
+      child: AppScaffold(
+        backgroundGradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFFCFBF7),
+            Color(0xFFF7F4EB),
+            Color(0xFFF2EEDB),
+          ],
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // ─── 1. Header Kuesioner (Back, Pill Kuning, Spacer) ───
+              _buildHeader(),
 
-              if (isLargeScreen) {
-                final maxH = constraints.maxHeight.isFinite
-                    ? constraints.maxHeight.clamp(0.0, 920.0)
-                    : 880.0;
-                return Center(
-                  child: Container(
-                    width: 420,
-                    height: maxH,
-                    clipBehavior: Clip.antiAlias,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(36),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
-                          blurRadius: 30,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                      border: Border.all(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        width: 3,
-                      ),
+              // ─── Stepper 3 Langkah ───
+              StepProgressBar(currentStep: _currentStep),
+
+              // ─── Label Langkah Aktif ───
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F6F9),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: const Color(0xFFD4E5EE),
+                      width: 1.0,
                     ),
-                    child: contentWidget,
                   ),
-                );
-              }
+                  child: Text(
+                    _getStepLabel(),
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF276F8F),
+                    ),
+                  ),
+                ),
+              ),
 
-              return contentWidget;
-            },
+              // ─── 2. Konten Langkah (Scrollable) ───
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    children: [
+                      if (_currentStep == 1) _buildStep1(),
+                      if (_currentStep == 2) _buildStep2(),
+                      if (_currentStep == 3) _buildStep3(),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+              ),
+
+              // ─── 3. Floating Bottom Action Button ───
+              _buildBottomActionBar(),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildScreenBody(BuildContext context) {
-    return SafeArea(
-        child: Column(
-          children: [
-            // =========================================================
-            // 1. HEADER KUESIONER
-            // =========================================================
-            _buildHeader(),
-
-            // Stepper 3 langkah
-            StepProgressBar(currentStep: _currentStep),
-
-            // Label Langkah Aktif
-            Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 12),
-              child: Text(
-                _getStepLabel(),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryText,
-                ),
-              ),
-            ),
-
-            // =========================================================
-            // 2. KONTEN LANGKAH KUESIONER (SCROLLABLE)
-            // =========================================================
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  children: [
-                    if (_currentStep == 1) _buildStep1(),
-                    if (_currentStep == 2) _buildStep2(),
-                    if (_currentStep == 3) _buildStep3(),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            ),
-
-            // =========================================================
-            // 3. FLOATING BOTTOM ACTION BUTTON (TANPA BACKGROUND PUTIH)
-            // =========================================================
-            _buildBottomActionBar(),
-          ],
-        ),
-      );
-  }
-
-  /// Header dengan tombol back dan badge pill "Prediksi Penyakit"
+  /// Header dengan tombol back bulat dan badge pill kuning Catat Makanan
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
           // Tombol Back Lingkaran
-          InkWell(
-            onTap: _onBack,
-            borderRadius: BorderRadius.circular(24),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0xFFD6E2E8),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: InkWell(
+              onTap: _onBack,
+              borderRadius: BorderRadius.circular(24),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFEBE3D0),
+                    width: 1.2,
                   ),
-                ],
-              ),
-              child: const Icon(
-                Icons.arrow_back_rounded,
-                color: AppColors.primary,
-                size: 22,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Color(0xFF1C4E68),
+                  size: 20,
+                ),
               ),
             ),
           ),
 
-          // Badge Pill Judul "Prediksi Penyakit"
+          // Badge Pill Judul "Prediksi Penyakit" (Kuning Catat Makanan)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: const Color(0xFFFFF7D6),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: const Color(0xFFEBE3D0),
+                color: const Color(0xFFE8D7A5),
                 width: 1.2,
               ),
               boxShadow: [
@@ -325,18 +299,18 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
                 ),
               ],
             ),
-            child: const Text(
+            child: Text(
               'Prediksi Penyakit',
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primaryText,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1C4E68),
                 letterSpacing: 0.2,
               ),
             ),
           ),
 
-          // Spacer agar title tetap di tengah
+          // Spacer kanan
           const SizedBox(width: 40),
         ],
       ),
@@ -346,11 +320,11 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
   String _getStepLabel() {
     switch (_currentStep) {
       case 1:
-        return 'Langkah 1 — Pola makan sehari-hari';
+        return 'Langkah 1/3: Pola Makan Sehari-hari';
       case 2:
-        return 'Langkah 2 — Makanan Berisiko';
+        return 'Langkah 2/3: Identifikasi Makanan Berisiko';
       case 3:
-        return 'Langkah 3 — Hampir selesai';
+        return 'Langkah 3/3: Gaya Hidup & Minuman';
       default:
         return '';
     }
@@ -377,8 +351,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
         // 2. Slider Makan Buah
         DiscreteLevelSlider(
           imagePath: 'assets/images/buah.png',
-          title: 'Seberapa sering makan buah?',
-          subtitle: 'Dalam seminggu terakhir',
+          title: 'Seberapa sering makan buah segar?',
+          subtitle: 'Frekuensi asupan buah dalam seminggu',
           value: _dietInput.fruitFrequency,
           onChanged: (val) {
             setState(() {
@@ -392,8 +366,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
         // 3. Slider Makan Sayur
         DiscreteLevelSlider(
           imagePath: 'assets/images/sayur.png',
-          title: 'Seberapa sering makan sayur?',
-          subtitle: 'Dalam seminggu terakhir',
+          title: 'Seberapa sering makan sayur-mayur?',
+          subtitle: 'Frekuensi asupan sayuran dalam seminggu',
           value: _dietInput.vegetableFrequency,
           onChanged: (val) {
             setState(() {
@@ -407,8 +381,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
         // 4. Slider Masak dan Makan di Rumah
         DiscreteLevelSlider(
           imagePath: 'assets/images/masak.png',
-          title: 'Seberapa sering masak dan makan di rumah?',
-          subtitle: 'Dibanding makan di luar/pesan makanan',
+          title: 'Seberapa sering makan masakan rumah?',
+          subtitle: 'Dibandingkan membeli makanan jadi / santap di luar',
           value: _dietInput.homecookedMealsFrequency,
           onChanged: (val) {
             setState(() {
@@ -422,8 +396,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
         // 5. Slider Minum Air > 1 Liter
         DiscreteLevelSlider(
           imagePath: 'assets/images/air.png',
-          title: 'Seberapa sering minum air >1 liter/hari?',
-          subtitle: 'Kebiasaan minum air putih harian',
+          title: 'Seberapa sering minum air > 1 liter/hari?',
+          subtitle: 'Rutinitas kecukupan cairan harian',
           value: _dietInput.oneLiterWaterFrequency,
           onChanged: (val) {
             setState(() {
@@ -445,8 +419,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
         // 1. Slider Daging Merah
         DiscreteLevelSlider(
           imagePath: 'assets/images/daging merah.png',
-          title: 'Seberapa sering makan daging merah?',
-          subtitle: 'Sapi, kambing, domba, dll',
+          title: 'Seberapa sering konsumsi daging merah?',
+          subtitle: 'Sapi, kambing, olahan daging merah lainnya',
           value: _dietInput.redMeatFrequency,
           onChanged: (val) {
             setState(() {
@@ -464,8 +438,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
         // 3. Slider Camilan Asin
         DiscreteLevelSlider(
           imagePath: 'assets/images/camilan asin.png',
-          title: 'Seberapa sering makan camilan asin?',
-          subtitle: 'Kripik, kerupuk, kacang asin, gorengan, dll',
+          title: 'Seberapa sering makan camilan asin / gurih?',
+          subtitle: 'Keripik, gorengan, kacang asin, snack olahan',
           value: _dietInput.saltedSnacksFrequency,
           onChanged: (val) {
             setState(() {
@@ -480,7 +454,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
         DiscreteLevelSlider(
           imagePath: 'assets/images/beku manis.png',
           title: 'Seberapa sering makan makanan beku manis?',
-          subtitle: 'Es krim, dessert dingin olahan',
+          subtitle: 'Es krim, dessert beku, atau minuman manis dingin',
           value: _dietInput.frozenDessertFrequency,
           onChanged: (val) {
             setState(() {
@@ -498,19 +472,19 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.glassCardBackground,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFFE2E8F0),
+          color: const Color(0xFFEBE3D0),
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: const Color(0xFF1C4E68).withValues(alpha: 0.04),
             blurRadius: 10,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -519,41 +493,70 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
         children: [
           // Judul dengan Icon
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Image.asset('assets/images/daging tinggi lemak.png', width: 24, height: 24),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Sering konsumsi daging tinggi lemak?',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primaryDark,
-                    height: 1.25,
+              Container(
+                width: 42,
+                height: 42,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7F5EE),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFEBE3D0),
+                    width: 1.0,
                   ),
+                ),
+                child: Image.asset(
+                  'assets/images/daging tinggi lemak.png',
+                  width: 24,
+                  height: 24,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.warning_amber_rounded,
+                    size: 20,
+                    color: Color(0xFF1C4E68),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Sering Konsumsi Daging Berlemak Tinggi?',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1C4E68),
+                        height: 1.3,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Daging olahan seperti sosis, kornet, bacon, atau jeroan',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF6B8797),
+                        height: 1.25,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 3),
-          const Text(
-            'Daging olahan/berlemak seperti bacon, sosis, jeroan',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: AppColors.brownSubtext,
-              height: 1.2,
-            ),
-          ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
-          // 2 Opsi Toggle: Tidak / Ya
+          // 2 Opsi Toggle: Tidak / Ya (Segmented Modern)
           Row(
             children: [
               Expanded(
                 child: _buildToggleOption(
-                  label: 'Tidak',
+                  label: 'Tidak Sering',
+                  icon: Icons.close_rounded,
                   isSelected: !isYes,
                   onTap: () {
                     setState(() {
@@ -563,10 +566,11 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: _buildToggleOption(
-                  label: 'Ya',
+                  label: 'Ya, Cukup Sering',
+                  icon: Icons.check_rounded,
                   isSelected: isYes,
                   onTap: () {
                     setState(() {
@@ -585,6 +589,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
 
   Widget _buildToggleOption({
     required String label,
+    required IconData icon,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
@@ -596,16 +601,16 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
         padding: const EdgeInsets.symmetric(vertical: 12),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFDCEDF7) : AppColors.glassCardBackground,
+          color: isSelected ? const Color(0xFFF0F6F9) : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+            color: isSelected ? const Color(0xFF276F8F) : const Color(0xFFEBE3D0),
             width: isSelected ? 1.8 : 1.2,
           ),
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.12),
+                color: const Color(0xFF276F8F).withValues(alpha: 0.12),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -614,20 +619,22 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (isSelected) ...[
-              const Icon(
-                Icons.check_circle_rounded,
-                size: 16,
-                color: AppColors.primary,
-              ),
-              const SizedBox(width: 6),
-            ],
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected
+                  ? const Color(0xFF276F8F)
+                  : const Color(0xFF9CB3C2),
+            ),
+            const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 14,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                color: isSelected ? AppColors.primaryDark : const Color(0xFF475569),
+                color: isSelected
+                    ? const Color(0xFF1C4E68)
+                    : const Color(0xFF6B8797),
               ),
             ),
           ],
@@ -646,7 +653,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
         DiscreteLevelSlider(
           imagePath: 'assets/images/susu keju.png',
           title: 'Seberapa sering konsumsi susu & keju?',
-          subtitle: 'Susu, keju, yoghurt, produk olahan susu lainnya',
+          subtitle: 'Susu cair, keju, mentega, atau dairy product lainnya',
           value: _dietInput.milkCheeseFrequency,
           onChanged: (val) {
             setState(() {
@@ -660,8 +667,8 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
         // 2. Slider Konsumsi Alkohol
         DiscreteLevelSlider(
           imagePath: 'assets/images/alkohol.png',
-          title: 'Seberapa sering konsumsi alkohol?',
-          subtitle: 'Bir, anggur, minuman keras beralkohol lainnya',
+          title: 'Seberapa sering konsumsi minuman beralkohol?',
+          subtitle: 'Bir, anggur, atau minuman beralkohol jenis lainnya',
           value: _dietInput.alcoholFrequency,
           onChanged: (val) {
             setState(() {
@@ -675,7 +682,7 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
   }
 
   // =========================================================
-  // FLOATING BOTTOM ACTION BUTTON (TANPA BACKGROUND PUTIH)
+  // FLOATING BOTTOM ACTION BUTTON
   // =========================================================
   Widget _buildBottomActionBar() {
     final isLastStep = _currentStep == 3;
@@ -685,52 +692,79 @@ class _DiseasePredictionScreenState extends State<DiseasePredictionScreen> {
       child: SizedBox(
         width: double.infinity,
         height: 52,
-        child: ElevatedButton(
-          onPressed: _isLoading
-              ? null
-              : isLastStep
-                  ? _submitAnalysis
-                  : _onNext,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            elevation: 2,
-            shadowColor: AppColors.primary.withValues(alpha: 0.35),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: const LinearGradient(
+              colors: [
+                Color(0xFF276F8F),
+                Color(0xFF1C4E68),
+              ],
             ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF1C4E68).withValues(alpha: 0.25),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          child: _isLoading
-              ? const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.2,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(Colors.white),
+          child: ElevatedButton(
+            onPressed: _isLoading
+                ? null
+                : isLastStep
+                    ? _submitAnalysis
+                    : _onNext,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              foregroundColor: Colors.white,
+              shadowColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+            child: _isLoading
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 12),
-                    Text(
-                      'Menganalisis dengan Machine Learning...',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                      SizedBox(width: 12),
+                      Text(
+                        'Memproses Model Prediksi...',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ],
-                )
-              : Text(
-                  isLastStep ? 'Analisis Sekarang' : 'Lanjut',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.3,
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        isLastStep ? 'Analisis Risiko Sekarang' : 'Lanjut ke Langkah Selanjutnya',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        isLastStep ? Icons.analytics_rounded : Icons.arrow_forward_rounded,
+                        size: 18,
+                      ),
+                    ],
                   ),
-                ),
+          ),
         ),
       ),
     );

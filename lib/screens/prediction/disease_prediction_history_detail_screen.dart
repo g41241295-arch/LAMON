@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../models/reflux_prediction_model.dart';
 import '../../providers/app_state.dart';
 import '../../services/prediction_history_repository.dart';
 import '../../utils/app_date_formatter.dart';
-import '../../widgets/app_background.dart';
+import '../../widgets/app_scaffold.dart';
 import 'widgets/factor_contribution_bar.dart';
 
 class DiseasePredictionHistoryDetailScreen extends StatefulWidget {
@@ -121,95 +122,59 @@ class _DiseasePredictionHistoryDetailScreenState
 
   @override
   Widget build(BuildContext context) {
-    return AppBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            final isLargeScreen = constraints.maxWidth > 520;
-            final contentWidget = _buildScreenBody();
+    return AppScaffold(
+      backgroundGradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xFFFCFBF7),
+          Color(0xFFF7F4EB),
+          Color(0xFFF2EEDB),
+        ],
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 1. HEADER (BACK + JUDUL "DETAIL PEMERIKSAAN")
+            _buildHeader(),
 
-            if (isLargeScreen) {
-              final maxH = constraints.maxHeight.isFinite
-                  ? constraints.maxHeight.clamp(0.0, 920.0)
-                  : 880.0;
-              return Center(
-                child: Container(
-                  width: 420,
-                  height: maxH,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(36),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 30,
-                        offset: const Offset(0, 10),
+            // 2. KONTEN DETAIL SNAPSHOT (SCROLLABLE)
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(AppColors.primary),
                       ),
-                    ],
-                    border: Border.all(
-                      color: Colors.black.withValues(alpha: 0.12),
-                      width: 3,
-                    ),
-                  ),
-                  child: contentWidget,
-                ),
-              );
-            }
-
-            return contentWidget;
-          },
+                    )
+                  : (_result == null
+                      ? _buildNotFoundState()
+                      : _buildDetailContent(_result!)),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildScreenBody() {
-    return SafeArea(
-      child: Column(
-        children: [
-          // 1. HEADER (BACK + JUDUL "DETAIL PEMERIKSAAN")
-          _buildHeader(),
-
-          // 2. KONTEN DETAIL SNAPSHOT (SCROLLABLE)
-          Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(AppColors.primary),
-                    ),
-                  )
-                : (_result == null
-                    ? _buildNotFoundState()
-                    : _buildDetailContent(_result!)),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildHeader() {
-    return Container(
-      color: Colors.transparent,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Semantics(
-            label: 'Kembali',
-            button: true,
+          Align(
+            alignment: Alignment.centerLeft,
             child: InkWell(
               onTap: () => Navigator.of(context).pop(),
               borderRadius: BorderRadius.circular(24),
               child: Container(
-                width: 40,
-                height: 40,
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: const Color(0xFFD6E2E8),
+                    color: const Color(0xFFEBE3D0),
                     width: 1.2,
                   ),
                   boxShadow: [
@@ -222,36 +187,36 @@ class _DiseasePredictionHistoryDetailScreenState
                 ),
                 child: const Icon(
                   Icons.arrow_back_rounded,
-                  color: AppColors.primary,
-                  size: 22,
+                  color: Color(0xFF1C4E68),
+                  size: 20,
                 ),
               ),
             ),
           ),
-          // Judul dalam pill / badge krem
+          // Judul dalam pill kuning Catat Makanan
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
             decoration: BoxDecoration(
               color: const Color(0xFFFFF7D6),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: const Color(0xFFE8DCAB),
+                color: const Color(0xFFE8D7A5),
                 width: 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-            child: const Text(
+            child: Text(
               'Detail Pemeriksaan',
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primaryText,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1C4E68),
                 letterSpacing: 0.2,
               ),
             ),
@@ -275,20 +240,20 @@ class _DiseasePredictionHistoryDetailScreenState
               color: Color(0xFF94A3B8),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Data Pemeriksaan Tidak Ditemukan',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
                 color: AppColors.primaryDark,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Data riwayat ini mungkin sudah dihapus atau tidak tersedia pada akunmu.',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
                 color: Color(0xFF64748B),
@@ -304,7 +269,7 @@ class _DiseasePredictionHistoryDetailScreenState
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: const Text('Kembali ke Riwayat'),
+              child: Text('Kembali ke Riwayat'),
             ),
           ],
         ),
@@ -387,15 +352,15 @@ class _DiseasePredictionHistoryDetailScreenState
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       decoration: BoxDecoration(
-        color: bannerBg,
-        borderRadius: BorderRadius.circular(24),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: bannerBorder.withValues(alpha: 0.6),
+          color: const Color(0xFFEBE3D0),
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: const Color(0xFF1C4E68).withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -403,9 +368,9 @@ class _DiseasePredictionHistoryDetailScreenState
       ),
       child: Column(
         children: [
-          const Text(
+          Text(
             'Hasil Estimasi Risiko Refluks',
-            style: TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
               color: Color(0xFF64748B),
@@ -420,7 +385,7 @@ class _DiseasePredictionHistoryDetailScreenState
             children: [
               Text(
                 '${score.toInt()}',
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 48,
                   fontWeight: FontWeight.w900,
                   color: riskColor,
@@ -432,7 +397,7 @@ class _DiseasePredictionHistoryDetailScreenState
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   '%',
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
                     color: riskColor.withValues(alpha: 0.7),
@@ -468,7 +433,7 @@ class _DiseasePredictionHistoryDetailScreenState
                 const SizedBox(width: 6),
                 Text(
                   result.riskCategory,
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: riskColor,
@@ -493,7 +458,7 @@ class _DiseasePredictionHistoryDetailScreenState
                 child: Text(
                   'Diperiksa pada $formattedDate',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF64748B),
@@ -524,15 +489,15 @@ class _DiseasePredictionHistoryDetailScreenState
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.glassCardBackground,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: const Color(0xFFE2E8F0),
+          color: const Color(0xFFEBE3D0),
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: const Color(0xFF1C4E68).withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -558,10 +523,10 @@ class _DiseasePredictionHistoryDetailScreenState
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Flexible(
+                Flexible(
                   child: Text(
                     'Pola makan tercatat',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: AppColors.primaryDark,
@@ -589,7 +554,7 @@ class _DiseasePredictionHistoryDetailScreenState
                 const SizedBox(width: 5),
                 Text(
                   cleanDiet,
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w800,
                     color: AppColors.primaryDark,
@@ -610,7 +575,7 @@ class _DiseasePredictionHistoryDetailScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           children: [
             Icon(
               Icons.assignment_outlined,
@@ -621,7 +586,7 @@ class _DiseasePredictionHistoryDetailScreenState
             Expanded(
               child: Text(
                 'Jawaban yang tersimpan',
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: AppColors.primaryDark,
@@ -635,15 +600,15 @@ class _DiseasePredictionHistoryDetailScreenState
         Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: AppColors.glassCardBackground,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: const Color(0xFFE2E8F0),
+              color: const Color(0xFFEBE3D0),
               width: 1.2,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: const Color(0xFF1C4E68).withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -770,7 +735,7 @@ class _DiseasePredictionHistoryDetailScreenState
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF334155),
@@ -790,7 +755,7 @@ class _DiseasePredictionHistoryDetailScreenState
             ),
             child: Text(
               value,
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w800,
                 color: chipText,
@@ -805,8 +770,8 @@ class _DiseasePredictionHistoryDetailScreenState
   Widget _buildDivider() {
     return const Divider(
       height: 1,
-      thickness: 1,
-      color: Color(0xFFF1F5F9),
+      thickness: 0.5,
+      color: Color(0xFFEBE3D0),
       indent: 16,
       endIndent: 16,
     );
@@ -819,7 +784,7 @@ class _DiseasePredictionHistoryDetailScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           children: [
             Icon(
               Icons.analytics_rounded,
@@ -830,7 +795,7 @@ class _DiseasePredictionHistoryDetailScreenState
             Expanded(
               child: Text(
                 'Faktor paling berpengaruh saat itu',
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: AppColors.primaryDark,
@@ -860,7 +825,7 @@ class _DiseasePredictionHistoryDetailScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           children: [
             Icon(
               Icons.lightbulb_rounded,
@@ -871,7 +836,7 @@ class _DiseasePredictionHistoryDetailScreenState
             Expanded(
               child: Text(
                 'Rekomendasi saat itu',
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: AppColors.primaryDark,
@@ -887,15 +852,15 @@ class _DiseasePredictionHistoryDetailScreenState
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.glassCardBackground,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: const Color(0xFFE2E8F0),
+                color: const Color(0xFFEBE3D0),
                 width: 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
+                  color: const Color(0xFF1C4E68).withValues(alpha: 0.02),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -916,7 +881,7 @@ class _DiseasePredictionHistoryDetailScreenState
                 Expanded(
                   child: Text(
                     rec,
-                    style: const TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                       color: Color(0xFF334155),
@@ -962,7 +927,7 @@ class _DiseasePredictionHistoryDetailScreenState
               Expanded(
                 child: Text(
                   'Data ini adalah salinan jawaban yang kamu isi saat pemeriksaan pada tanggal di atas bukan hasil pemeriksaan baru.',
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w500,
                     color: Colors.grey.shade700,
@@ -991,7 +956,7 @@ class _DiseasePredictionHistoryDetailScreenState
               Expanded(
                 child: Text(
                   'Estimasi ini dihasilkan oleh model machine learning berdasarkan kebiasaan konsumsi dan bukan diagnosis medis. Konsultasikan dengan dokter spesialis untuk evaluasi lebih lanjut.',
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w500,
                     color: Colors.grey.shade700,
