@@ -5,7 +5,6 @@ import '../../constants/app_colors.dart';
 import '../../models/berita_article_model.dart';
 import '../../services/berita/berita_service.dart';
 import '../../widgets/admin/admin_widgets.dart';
-import '../../widgets/app_header_pill.dart';
 import '../../widgets/berita/berita_image.dart';
 import 'berita_form_screen.dart';
 
@@ -59,28 +58,63 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           'Pulihkan Berita Bawaan?',
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF134563)),
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
         ),
         content: Text(
           'Tindakan ini akan membuat kembali artikel dari 9 berita bawaan yang belum ada di Firestore tanpa menimpa atau menghapus artikel lain.',
-          style: GoogleFonts.poppins(fontSize: 13, color: AppColors.primaryText, height: 1.4),
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: AppColors.textSecondary,
+            height: 1.5,
+          ),
         ),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Batal', style: GoogleFonts.poppins(color: AppColors.neutralGray, fontWeight: FontWeight.w600)),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.textPrimary,
+              side: const BorderSide(color: AppColors.textPrimary, width: 1.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+            child: Text(
+              'Batal',
+              style: GoogleFonts.poppins(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF134563),
+              backgroundColor: AppColors.textPrimary,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
-            child: Text('Pulihkan', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+            child: Text(
+              'Pulihkan',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
           ),
         ],
       ),
@@ -98,10 +132,19 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
           children: [
             const Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
             const SizedBox(width: 10),
-            Expanded(child: Text(msg, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600))),
+            Expanded(
+              child: Text(
+                msg,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           ],
         ),
-        backgroundColor: AppColors.successGreen,
+        backgroundColor: AppColors.textPrimary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
@@ -111,8 +154,11 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
       debugPrint('[KelolaBerita] Gagal pulihkan artikel: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Gagal memulihkan berita: $e', style: GoogleFonts.poppins(fontSize: 13)),
-          backgroundColor: AppColors.adminRed,
+          content: Text(
+            'Gagal memulihkan berita: $e',
+            style: GoogleFonts.poppins(fontSize: 13, color: Colors.white),
+          ),
+          backgroundColor: AppColors.textPrimary,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
@@ -182,11 +228,15 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
             Expanded(
               child: Text(
                 'Artikel berhasil dihapus.',
-                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ),
           ]),
-          backgroundColor: AppColors.successGreen,
+          backgroundColor: AppColors.textPrimary,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
@@ -199,9 +249,14 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
           content: Row(children: [
             const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
             const SizedBox(width: 10),
-            Expanded(child: Text('Gagal menghapus artikel: $e', style: GoogleFonts.poppins(fontSize: 13))),
+            Expanded(
+              child: Text(
+                'Gagal menghapus artikel: $e',
+                style: GoogleFonts.poppins(fontSize: 13, color: Colors.white),
+              ),
+            ),
           ]),
-          backgroundColor: AppColors.adminRed,
+          backgroundColor: AppColors.textPrimary,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
@@ -228,13 +283,22 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
 
   Widget _buildHeaderMenu() {
     return PopupMenuButton<String>(
+      padding: EdgeInsets.zero,
+      color: AppColors.surfaceCard,
       icon: _isSeeding
           ? const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF134563)),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.textPrimary,
+              ),
             )
-          : const Icon(Icons.more_vert_rounded, color: Color(0xFF134563), size: 22),
+          : const Icon(
+              Icons.more_vert_rounded,
+              color: AppColors.textPrimary,
+              size: 20,
+            ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       onSelected: (val) {
         if (val == 'restore') {
@@ -246,11 +310,19 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
           value: 'restore',
           child: Row(
             children: [
-              const Icon(Icons.restore_page_outlined, color: Color(0xFF134563), size: 18),
+              const Icon(
+                Icons.restore_page_outlined,
+                color: AppColors.textPrimary,
+                size: 18,
+              ),
               const SizedBox(width: 10),
               Text(
                 'Pulihkan berita bawaan',
-                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ],
           ),
@@ -259,13 +331,113 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
     );
   }
 
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Tombol Kembali (bulat putih)
+          InkWell(
+            onTap: () => Navigator.of(context).pop(),
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceCard,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.softBlue, width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.arrow_back_rounded,
+                  color: AppColors.textPrimary,
+                  size: 22,
+                ),
+              ),
+            ),
+          ),
+
+          // Pill Judul: disamakan persis dengan pill "Catat Makanan" Pengguna
+          Expanded(
+            child: Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7D6),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: const Color(0xFFE8D7A5),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  'Berita Kesehatan',
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1C4E68),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Tombol Menu di kanan (bulat putih)
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceCard,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.softBlue, width: 1.2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Center(child: _buildHeaderMenu()),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AdminScaffold(
-      header: AppHeaderPill(
-        title: 'Kelola Berita',
-        rightAction: _buildHeaderMenu(),
+      backgroundGradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          AppColors.bgGradientTop,
+          AppColors.bgGradientMiddle,
+          AppColors.bgGradientBottom,
+        ],
       ),
+      header: _buildHeader(),
       body: StreamBuilder<List<BeritaArticle>>(
         stream: _service.streamAll(),
         builder: (context, snapshot) {
@@ -277,70 +449,91 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
 
           return Column(
             children: [
-              // ── Search Bar: Cari judul artikel ─────────────────────────────
+              // ── Search Bar & Status Filter Chips ───────────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _searchCtrl,
-                    onChanged: (v) => setState(() => _query = v),
-                    style: GoogleFonts.poppins(fontSize: 14, color: AppColors.primaryText),
-                    decoration: InputDecoration(
-                      hintText: 'Cari judul artikel',
-                      hintStyle: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF94A3B8)),
-                      prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF94A3B8), size: 22),
-                      suffixIcon: _query.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear_rounded, color: Color(0xFF94A3B8), size: 18),
-                              onPressed: () {
-                                _searchCtrl.clear();
-                                setState(() => _query = '');
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // ── Status Filter Pills: Semua / Terbit / Draft ─────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildFilterPill(
-                      label: 'Semua ($totalCount)',
-                      statusKey: 'semua',
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceCard,
+                        borderRadius: BorderRadius.circular(12),
+                        border:
+                            Border.all(color: AppColors.softBlue, width: 1.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchCtrl,
+                        onChanged: (v) => setState(() => _query = v),
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: AppColors.textPrimary,
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          hintText: 'Cari judul artikel...',
+                          hintStyle: GoogleFonts.poppins(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.normal,
+                            color: AppColors.textSecondary,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            color: AppColors.textSecondary,
+                            size: 20,
+                          ),
+                          suffixIcon: _query.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(
+                                    Icons.clear_rounded,
+                                    color: AppColors.textSecondary,
+                                    size: 18,
+                                  ),
+                                  onPressed: () {
+                                    _searchCtrl.clear();
+                                    setState(() => _query = '');
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    _buildFilterPill(
-                      label: 'Terbit ($terbitCount)',
-                      statusKey: 'terbit',
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterPill(
-                      label: 'Draft ($draftCount)',
-                      statusKey: 'draft',
+                    const SizedBox(height: 12),
+
+                    // ── Status Filter Tabs: Semua / Terbit / Draft ───────────
+                    Row(
+                      children: [
+                        _buildFilterPill(
+                          label: 'Semua ($totalCount)',
+                          statusKey: 'semua',
+                        ),
+                        const SizedBox(width: 8),
+                        _buildFilterPill(
+                          label: 'Terbit ($terbitCount)',
+                          statusKey: 'terbit',
+                        ),
+                        const SizedBox(width: 8),
+                        _buildFilterPill(
+                          label: 'Draft ($draftCount)',
+                          statusKey: 'draft',
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
 
               // ── Konten List / Error / Loading ──────────────────────────────
               Expanded(
@@ -366,31 +559,24 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
         onTap: () => setState(() => _activeStatus = statusKey),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isActive ? const Color(0xFF134563) : Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            color: isActive ? AppColors.textPrimary : AppColors.surfaceCard,
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: isActive ? const Color(0xFF134563) : const Color(0xFFE2E8F0),
+              color: isActive ? AppColors.textPrimary : AppColors.softBlue,
               width: 1.2,
             ),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: const Color(0xFF134563).withValues(alpha: 0.2),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : [],
           ),
           child: Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: GoogleFonts.poppins(
               fontSize: 13,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-              color: isActive ? Colors.white : const Color(0xFF134563),
+              color: isActive ? Colors.white : AppColors.textPrimary,
             ),
           ),
         ),
@@ -402,7 +588,9 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
 
   Widget _buildBody(AsyncSnapshot<List<BeritaArticle>> snapshot, List<BeritaArticle> all) {
     if (snapshot.connectionState == ConnectionState.waiting && all.isEmpty) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF134563)));
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.textPrimary),
+      );
     }
 
     if (snapshot.hasError) {
@@ -432,18 +620,28 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
               ? const SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
                 )
               : const Icon(Icons.restore_page_outlined, size: 18),
           label: Text(
             _isSeeding ? 'Memulihkan...' : 'Pulihkan 9 Berita Bawaan',
-            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF134563),
+            backgroundColor: AppColors.textPrimary,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           ),
         ),
       );
@@ -464,9 +662,9 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(0, 4, 0, 110),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       itemCount: filtered.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 10),
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) => _buildArtikelCard(filtered[index]),
     );
   }
@@ -474,69 +672,134 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
   Widget _buildErrorState({String errorCode = '', String errorMessage = ''}) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.cloud_off_rounded, size: 64, color: AppColors.adminRed.withValues(alpha: 0.6)),
-            const SizedBox(height: 16),
-            Text(
-              'Gagal memuat data',
-              style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.adminRed),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Pastikan aturan Firestore sudah di-deploy dan koneksi internet stabil.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(fontSize: 13, color: AppColors.neutralGray),
-            ),
-            if (errorCode.isNotEmpty || errorMessage.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.adminRed.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  errorCode.isNotEmpty ? 'Kode: $errorCode' : errorMessage,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.adminRed,
-                  ),
-                ),
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.softBlue, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
             ],
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () => setState(() {}),
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: Text('Coba Lagi', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF134563),
-                    side: const BorderSide(color: Color(0xFF134563)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: const BoxDecoration(
+                  color: AppColors.softBlue,
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: _isSeeding ? null : _onRestoreArticles,
-                  icon: const Icon(Icons.restore_page_outlined, size: 18),
-                  label: Text('Pulihkan Bawaan', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF134563),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: const Icon(
+                  Icons.cloud_off_rounded,
+                  size: 28,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Gagal memuat data',
+                style: GoogleFonts.poppins(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Pastikan aturan Firestore sudah di-deploy dan koneksi internet stabil.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              if (errorCode.isNotEmpty || errorMessage.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.softBlue.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    errorCode.isNotEmpty ? 'Kode: $errorCode' : errorMessage,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
               ],
-            ),
-          ],
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => setState(() {}),
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(
+                      'Coba Lagi',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textPrimary,
+                      side: const BorderSide(
+                        color: AppColors.textPrimary,
+                        width: 1.4,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: _isSeeding ? null : _onRestoreArticles,
+                    icon: const Icon(Icons.restore_page_outlined, size: 18),
+                    label: Text(
+                      'Pulihkan Bawaan',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: Colors.white,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.textPrimary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -550,26 +813,68 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
   }) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 60, color: const Color(0xFF134563).withValues(alpha: 0.25)),
-            const SizedBox(height: 16),
-            Text(title, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.primaryText)),
-            const SizedBox(height: 6),
-            Text(subtitle, textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: 13, color: AppColors.neutralGray)),
-            if (action != null) ...[
-              const SizedBox(height: 20),
-              action,
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.softBlue, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
             ],
-          ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: const BoxDecoration(
+                  color: AppColors.softBlue,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 28,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              if (action != null) ...[
+                const SizedBox(height: 16),
+                action,
+              ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // ── Artikel Card (Sesuai Layout Figma) ──────────────────────────────────────
+  // ── Artikel Card (Formal & Seragam) ─────────────────────────────────────────
 
   Widget _buildArtikelCard(BeritaArticle artikel) {
     final bool isDraft = artikel.status == 'draft';
@@ -578,17 +883,35 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
     final String dateText = artikel.tanggal != null
         ? _formatDateIndo(artikel.tanggal!)
         : 'Belum tayang';
+    final String metaText = artikel.sumberNama.trim().isNotEmpty
+        ? '$dateText  •  ${artikel.sumberNama.trim()}'
+        : dateText;
 
-    final Widget cardContent = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.softBlue.withOpacity(0.75),
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // ── Thumbnail kotak 64x64 (radius 10) ─────────────────────────
+          // ── Thumbnail gambar sampul (radius 12) ────────────────────────
           _buildThumbnail(artikel, isDraft),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
 
-          // ── Judul + Status Badge + Tanggal ────────────────────────────
+          // ── Judul + Badge Kategori & Status + Tanggal/Ringkasan ───────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -600,27 +923,57 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.left,
                   style: GoogleFonts.poppins(
-                    fontSize: 14,
+                    fontSize: 15.5,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF134563),
-                    height: 1.25,
+                    color: AppColors.textPrimary,
+                    height: 1.3,
                   ),
                 ),
+                if (artikel.ringkasanSingkat.trim().isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    artikel.ringkasanSingkat.trim(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.normal,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 6),
-                Row(
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     _StatusBadge(isDraft: isDraft),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        dateText,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF94A3B8),
+                    if (artikel.kategori.trim().isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
                         ),
+                        decoration: BoxDecoration(
+                          color: AppColors.softBlue,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          artikel.kategori.trim(),
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    Text(
+                      metaText,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.normal,
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
@@ -628,22 +981,26 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
               ],
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 8),
 
-          // ── Action Buttons: Edit (Pensil) & Hapus (Tempat Sampah) ─────
+          // ── Action Buttons: Edit & Hapus (radius 10, ukuran 36x36) ────
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               _ActionIconBerita(
                 icon: Icons.edit_outlined,
-                color: const Color(0xFF134563),
+                backgroundColor: AppColors.softBlue,
+                borderColor: AppColors.softBlue,
+                iconColor: AppColors.textPrimary,
                 tooltip: 'Edit artikel',
                 onTap: () => _onEdit(artikel),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 6),
               _ActionIconBerita(
                 icon: isDeleting ? null : Icons.delete_outline_rounded,
-                color: const Color(0xFFDC2626),
+                backgroundColor: AppColors.surfaceCard,
+                borderColor: AppColors.softBlue,
+                iconColor: AppColors.textPrimary,
                 tooltip: 'Hapus artikel',
                 isLoading: isDeleting,
                 onTap: isDeleting ? null : () => _onDelete(artikel),
@@ -653,43 +1010,9 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
         ],
       ),
     );
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      child: isDraft
-          ? CustomPaint(
-              painter: _DashedBorderPainter(
-                color: const Color(0xFFF59E0B).withValues(alpha: 0.6),
-                strokeWidth: 1.4,
-                radius: 16,
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: cardContent,
-              ),
-            )
-          : Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: cardContent,
-            ),
-    );
   }
 
-  // ── Thumbnail Kotak 64x64 ──────────────────────────────────────────────────
+  // ── Thumbnail Kotak 64x64 (radius 12) ──────────────────────────────────────
 
   Widget _buildThumbnail(BeritaArticle artikel, bool isDraft) {
     return SizedBox(
@@ -698,7 +1021,7 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
       child: BeritaImage(
         gambarUrl: artikel.gambarUrl.isNotEmpty ? artikel.gambarUrl : null,
         gambarAsset: artikel.gambarAsset.isNotEmpty ? artikel.gambarAsset : null,
-        borderRadius: 10,
+        borderRadius: 12,
         width: 64,
         height: 64,
         alignment: artikel.gambarAlignment,
@@ -708,7 +1031,7 @@ class _BeritaListAdminScreenState extends State<BeritaListAdminScreen> {
   }
 }
 
-// ── Status Badge ─────────────────────────────────────────────────────────────
+// ── Status Badge (Radius 10, Palet Kontras Formal) ───────────────────────────
 
 class _StatusBadge extends StatelessWidget {
   final bool isDraft;
@@ -717,86 +1040,42 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: isDraft ? const Color(0xFFFEF3C7) : const Color(0xFFD1FAE5),
-        borderRadius: BorderRadius.circular(6),
+        color: isDraft ? AppColors.bgAccent : AppColors.textPrimary,
+        borderRadius: BorderRadius.circular(10),
+        border: isDraft
+            ? Border.all(color: AppColors.accentGold, width: 1)
+            : null,
       ),
       child: Text(
         isDraft ? 'Draft' : 'Terbit',
         style: GoogleFonts.poppins(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: isDraft ? const Color(0xFFD97706) : const Color(0xFF059669),
+          color: isDraft ? AppColors.textPrimary : Colors.white,
         ),
       ),
     );
   }
 }
 
-// ── Custom Painter untuk Border Putus-putus Kartu Draft ───────────────────────
-
-class _DashedBorderPainter extends CustomPainter {
-  final Color color;
-  final double strokeWidth;
-  final double radius;
-  static const double _dashWidth = 5.0;
-  static const double _dashSpace = 4.0;
-
-  _DashedBorderPainter({
-    required this.color,
-    this.strokeWidth = 1.4,
-    this.radius = 16,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke;
-
-    final rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-        strokeWidth / 2,
-        strokeWidth / 2,
-        size.width - strokeWidth,
-        size.height - strokeWidth,
-      ),
-      Radius.circular(radius),
-    );
-    final path = Path()..addRRect(rrect);
-
-    for (final metric in path.computeMetrics()) {
-      double distance = 0.0;
-      while (distance < metric.length) {
-        final len = (distance + _dashWidth < metric.length)
-            ? _dashWidth
-            : metric.length - distance;
-        final extractPath = metric.extractPath(distance, distance + len);
-        canvas.drawPath(extractPath, paint);
-        distance += _dashWidth + _dashSpace;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.strokeWidth != strokeWidth;
-}
-
-// ── Action Icon Berita (bergaya pill seperti Ensiklopedia) ───────────────────
+// ── Action Icon Berita (Radius 10, Ukuran Konsisten 36x36) ───────────────────
 
 class _ActionIconBerita extends StatelessWidget {
   final IconData? icon;
-  final Color color;
+  final Color backgroundColor;
+  final Color borderColor;
+  final Color iconColor;
   final String tooltip;
   final VoidCallback? onTap;
   final bool isLoading;
 
   const _ActionIconBerita({
     required this.icon,
-    required this.color,
+    required this.backgroundColor,
+    required this.borderColor,
+    required this.iconColor,
     required this.tooltip,
     this.onTap,
     this.isLoading = false,
@@ -807,20 +1086,30 @@ class _ActionIconBerita extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(10),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: isLoading
-                ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: color),
-                  )
-                : Icon(icon, size: 18, color: color),
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: borderColor, width: 1.2),
+            ),
+            child: Center(
+              child: isLoading
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: iconColor,
+                      ),
+                    )
+                  : Icon(icon, size: 18, color: iconColor),
+            ),
           ),
         ),
       ),
