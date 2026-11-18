@@ -1282,7 +1282,7 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: const Color(0xFF1F5C7A).withValues(alpha: 0.42),
+      barrierColor: Colors.transparent,
       builder: (bottomSheetContext) {
         int selectedRating = 0;
         bool isSubmitting = false;
@@ -1303,9 +1303,16 @@ class _RiwayatKonsultasiScreenState extends State<RiwayatKonsultasiScreen> {
 
             return Container(
               padding: EdgeInsets.fromLTRB(20, 12, 20, 24 + bottomInset),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.10),
+                    blurRadius: 18,
+                    offset: const Offset(0, -6),
+                  ),
+                ],
               ),
               child: SafeArea(
                 top: false,
