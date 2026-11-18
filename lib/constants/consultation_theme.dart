@@ -199,7 +199,7 @@ class ConsultationHeader extends StatelessWidget implements PreferredSizeWidget 
               child: Center(
                 child: Container(
                   padding: EdgeInsets.symmetric(
-                    horizontal: 22,
+                    horizontal: isYellowPill ? 16 : 22,
                     vertical: isYellowPill ? 8 : 10,
                   ),
                   decoration: BoxDecoration(
@@ -221,19 +221,21 @@ class ConsultationHeader extends StatelessWidget implements PreferredSizeWidget 
                       ),
                     ],
                   ),
-                  child: Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.poppins(
-                      fontSize: isYellowPill ? 14 : 16,
-                      fontWeight:
-                          isYellowPill ? FontWeight.w700 : FontWeight.w600,
-                      color: isYellowPill
-                          ? ConsultationTheme.titlePillYellowText
-                          : ConsultationTheme.primary,
-                      letterSpacing: isYellowPill ? 0.2 : 0.1,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      style: GoogleFonts.poppins(
+                        fontSize: isYellowPill ? 14 : 16,
+                        fontWeight:
+                            isYellowPill ? FontWeight.w700 : FontWeight.w600,
+                        color: isYellowPill
+                            ? ConsultationTheme.titlePillYellowText
+                            : ConsultationTheme.primary,
+                        letterSpacing: isYellowPill ? 0.2 : 0.1,
+                      ),
                     ),
                   ),
                 ),

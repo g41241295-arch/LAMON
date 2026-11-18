@@ -45,14 +45,13 @@ class _GoogleAuthScreenState extends State<GoogleAuthScreen> {
       if (userCredential.user != null) {
         final uid = userCredential.user!.uid;
         final email = userCredential.user!.email ?? googleUser.email;
-
-        // Simpan riwayat login ke Firestore
+        // Simpan riwayat login ke Firestore (dibalut try-catch agar kegagalan log tidak memblokir login)
         try {
           await FirebaseFirestore.instance.collection('login_history').add({
             'user_id': uid,
             'email': email,
             'waktu_login': Timestamp.now(),
-          });
+          }).timeout(const Duration(seconds: 5));
         } catch (e) {
           debugPrint('Gagal mencatat login history: $e');
         }
@@ -63,31 +62,36 @@ class _GoogleAuthScreenState extends State<GoogleAuthScreen> {
           userName = userName[0].toUpperCase() + userName.substring(1);
         }
 
-        // Cek jika pengguna baru
-        if (userCredential.additionalUserInfo?.isNewUser == true) {
-          await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        // Cek dan ambil dokumen user dari Firestore
+        final userDocRef = FirebaseFirestore.instance.collection('users').doc(uid);
+        DocumentSnapshot<Map<String, dynamic>>? userDoc;
+        try {
+          userDoc = await userDocRef.get().timeout(const Duration(seconds: 10));
+        } catch (e) {
+          debugPrint('Gagal membaca data user dari Firestore: $e');
+        }
+
+        // Jika dokumen belum ada (pengguna baru atau data belum tersimpan)
+        if (userDoc == null || !userDoc.exists) {
+          await userDocRef.set({
             'nama': userName,
             'email': email,
             'role': 'pengguna',
             'tanggal_daftar': Timestamp.now(),
             'hasCompletedScreening': false,
-          });
+          }, SetOptions(merge: true));
         } else {
-          // Ambil dari Firestore
-          final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-          if (userDoc.exists) {
-            final data = userDoc.data();
-            if (data != null) {
-              final rawRole = data['role'] as String?;
-              if (rawRole == 'doctor' || rawRole == 'dokter') {
-                if (!mounted) return;
-                setState(() => _isLoading = false);
-                Navigator.pushNamedAndRemoveUntil(context, '/dokter', (route) => false);
-                return;
-              }
-              hasCompletedScreening = data['hasCompletedScreening'] == true;
-              userName = data['nama'] ?? userName;
+          final data = userDoc.data();
+          if (data != null) {
+            final rawRole = data['role'] as String?;
+            if (rawRole == 'doctor' || rawRole == 'dokter') {
+              if (!mounted) return;
+              setState(() => _isLoading = false);
+              Navigator.pushNamedAndRemoveUntil(context, '/dokter', (route) => false);
+              return;
             }
+            hasCompletedScreening = data['hasCompletedScreening'] == true;
+            userName = data['nama'] ?? userName;
           }
         }
 

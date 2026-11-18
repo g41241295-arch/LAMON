@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../constants/app_colors.dart';
 import '../../constants/consultation_constants.dart';
 import '../../constants/consultation_theme.dart';
 import '../../constants/practice_slot_constants.dart';
@@ -10,6 +11,7 @@ import '../../services/doctor_service.dart';
 import '../../services/payment_service.dart';
 import '../../utils/app_date_formatter.dart';
 import '../../utils/currency_formatter.dart';
+import '../../widgets/app_scaffold.dart';
 import 'widgets/doctor_avatar.dart';
 import 'widgets/payment_method_item.dart';
 
@@ -114,21 +116,19 @@ class _RingkasanPembayaranScreenState extends State<RingkasanPembayaranScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: ConsultationTheme.scaffoldBg,
+    return AppScaffold(
+      backgroundGradient: AppColors.pageGradient,
       appBar: const ConsultationHeader(
         title: 'Ringkasan Pembayaran',
+        isYellowPill: true,
       ),
-      body: SafeArea(
-        top: false,
+      bottomNavigationBar:
+          SafeArea(top: false, child: _buildStickyBottomBar(context)),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
                     // ── 1. Kotak Peringatan Amber Langsung di Bawah Header ─────────────
                     const InfoNotice(
                       text:
@@ -185,14 +185,7 @@ class _RingkasanPembayaranScreenState extends State<RingkasanPembayaranScreen> {
                   ],
                 ),
               ),
-            ),
-
-            // ── Bar Bawah Melekat ──────────────────────────────────────────────
-            _buildStickyBottomBar(context),
-          ],
-        ),
-      ),
-    );
+            );
   }
 
   /// Kartu "Detail Konsultasi": label mikro, baris dokter (DoctorAvatar 48x48 radius 14 + nama bold 15 + spesialis),
