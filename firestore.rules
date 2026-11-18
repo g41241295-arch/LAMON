@@ -50,8 +50,8 @@ service cloud.firestore {
     // ── 1. Users Collection & Sub-collections ──────────────────────────────
     // Path: /users/{userId}
     match /users/{userId} {
-      // Pemilik akun bisa membaca data dirinya
-      allow read: if isSignedIn() && request.auth.uid == userId;
+      // Pemilik akun bisa membaca data dirinya, dan admin dapat membaca profil untuk pemantauan penilaian
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
 
       // Pembuatan user baru (register publik): role tidak boleh langsung di-set ke 'doctor' / 'dokter'
       allow create: if isSignedIn() && request.auth.uid == userId 
@@ -77,8 +77,8 @@ service cloud.firestore {
 
       // Konsultasi dokter (Spesifik per pasien)
       match /consultations/{consultationId} {
-        // Pasien pemilik dapat membaca semua status
-        allow read: if isSignedIn() && request.auth.uid == userId;
+        // Pasien pemilik dapat membaca semua status, dan admin dapat membaca untuk pemantauan penilaian
+        allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
 
         // Pasien membuat konsultasi baru
         allow create: if isSignedIn() && request.auth.uid == userId;
@@ -268,8 +268,9 @@ service cloud.firestore {
 
     // ── 2. Collection Group Query Konsultasi ────────────────────────────────
     // Diperlukan agar dokter dapat melakukan query: collectionGroup('consultations').where('doctorId', '==', myDoctorId())
+    // serta admin untuk memantau penilaian konsultasi dokter (read-only).
     match /{path=**}/consultations/{consultationId} {
-      allow read: if isDoctorForDoc(resource.data);
+      allow read: if isDoctorForDoc(resource.data) || isAdmin();
     }
     
     // ── 3. Riwayat Login (Root level collection) ───────────────────────────
@@ -361,6 +362,25 @@ service cloud.firestore {
         allow read: if isSignedIn();
         allow write: if isDoctor() && myDoctorId() == doctorId;
       }
+    }
+
+    // ── 9. Koleksi Penilaian Gastropedia ───────────────────────────────────
+    // Path: /gastropedia_ratings/{ratingId}
+    // Pengguna hanya dapat membaca & menyimpan penilaian miliknya sendiri.
+    // Admin dapat membaca seluruh penilaian untuk pemantauan (read-only).
+    match /gastropedia_ratings/{ratingId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.userId == request.auth.uid
+      );
+
+      allow create, update: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.rating is int &&
+        request.resource.data.rating >= 1 &&
+        request.resource.data.rating <= 5;
+
+      allow delete: if false;
     }
   }
 }

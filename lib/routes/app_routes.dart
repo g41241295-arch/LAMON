@@ -43,6 +43,7 @@ import '../screens/admin/berita_list_admin_screen.dart';
 import '../screens/admin/berita_form_screen.dart';
 import '../models/berita_article_model.dart';
 import '../screens/admin/admin_profile_screen.dart';
+import '../screens/admin/pemantauan_penilaian_screen.dart';
 import '../screens/user_profile_screen.dart';
 
 class AppRoutes {
@@ -104,6 +105,7 @@ class AppRoutes {
   static const String adminBerita = '/admin/berita';
   static const String adminBeritaForm = '/admin/berita/form';
   static const String adminProfile = '/admin/profil';
+  static const String adminPenilaian = '/admin/penilaian';
 
   /// Widget wrapper guard untuk rute admin.
   /// Jika bukan admin, tampilkan layar yang redirect ke login.
@@ -512,6 +514,11 @@ class AppRoutes {
       case adminProfile:
         return _createSmoothRoute(
           _adminGuard(const AdminProfileScreen()),
+          settings: settings,
+        );
+      case adminPenilaian:
+        return _createSmoothRoute(
+          _adminGuard(const PemantauanPenilaianScreen()),
           settings: settings,
         );
 
