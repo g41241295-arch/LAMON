@@ -17,11 +17,10 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  try {
-    await NotificationService.instance.initialize();
-  } catch (e) {
+  // Jalankan inisialisasi notifikasi di background agar startup aplikasi cepat & instan
+  unawaited(NotificationService.instance.initialize().catchError((e) {
     debugPrint('Gagal inisialisasi notifikasi saat startup: $e');
-  }
+  }));
 
   // Aktifkan edge-to-edge agar latar bisa menembus status bar & navigation bar
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
