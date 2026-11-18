@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../constants/consultation_theme.dart';
 
 /// Layar transisi setelah pembayaran berhasil (SIMULASI).
 /// Menampilkan animasi sukses selama ~2 detik lalu otomatis navigasi ke chat.
-///
-/// TODO(payment-gateway): Layar ini adalah simulasi semata. Dalam implementasi
-/// sungguhan, transisi ke halaman chat hanya boleh terjadi setelah menerima
-/// konfirmasi pembayaran dari webhook payment gateway yang valid.
 class PaymentSuccessScreen extends StatefulWidget {
   final String consultationId;
 
@@ -42,7 +39,6 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
     // Auto-navigate setelah 2.2 detik
     Future.delayed(const Duration(milliseconds: 2200), () {
       if (mounted) {
-        // Replace seluruh stack navigasi konsultasi ke halaman chat
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/konsultasi/chat/${widget.consultationId}',
@@ -61,7 +57,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: ConsultationTheme.scaffoldBg,
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnim,
@@ -72,58 +68,50 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
               ScaleTransition(
                 scale: _scaleAnim,
                 child: Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: AppColors.successGreen.withValues(alpha: 0.12),
+                  width: 110,
+                  height: 110,
+                  decoration: const BoxDecoration(
+                    color: ConsultationTheme.greenBg,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.check_circle_rounded,
-                    size: 80,
-                    color: AppColors.successGreen,
+                    size: 72,
+                    color: ConsultationTheme.green,
                   ),
                 ),
               ),
               const SizedBox(height: 28),
 
               // Teks sukses
-              const Text(
-                'PEMBAYARAN',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.primaryText,
-                  letterSpacing: 2,
+              Text(
+                'PEMBAYARAN BERHASIL',
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: ConsultationTheme.primary,
+                  letterSpacing: 1.2,
                 ),
               ),
-              const Text(
-                'SUKSES',
-                style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.successGreen,
-                  letterSpacing: 4,
-                ),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
 
-              const Text(
+              Text(
                 'Menghubungkan Anda dengan dokter...',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.neutralGray,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: ConsultationTheme.secondaryText,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 24),
 
               const SizedBox(
-                width: 28,
-                height: 28,
+                width: 24,
+                height: 24,
                 child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  strokeWidth: 2,
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(ConsultationTheme.primary),
                 ),
               ),
             ],

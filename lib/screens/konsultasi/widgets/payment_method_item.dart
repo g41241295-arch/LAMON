@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../constants/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../constants/consultation_constants.dart';
+import '../../../constants/consultation_theme.dart';
 
-/// Widget item metode pembayaran yang bisa dipilih (radio-like).
+/// Widget kartu pilihan metode pembayaran bank (gaya radio pill modern).
 class PaymentMethodItem extends StatelessWidget {
   final PaymentMethodData method;
   final bool isSelected;
@@ -31,85 +32,90 @@ class PaymentMethodItem extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          margin: const EdgeInsets.only(bottom: 10),
-          constraints: const BoxConstraints(minHeight: 56),
+          duration: const Duration(milliseconds: 180),
+          margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.primary
-                : AppColors.cardBackground,
-            borderRadius: BorderRadius.circular(14),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isSelected ? AppColors.primaryDark : const Color(0xFFE2ECF2),
-              width: isSelected ? 1.8 : 1.2,
+              color: isSelected
+                  ? ConsultationTheme.primary
+                  : ConsultationTheme.cardBorder,
+              width: isSelected ? 1.8 : 1.0,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            boxShadow: ConsultationTheme.cardShadow,
           ),
           child: Row(
             children: [
-              // Logo bank (40x28, contain, di dalam wadah rounded)
+              // Kotak logo bank 60x40 (latar #F7F3EB)
               Container(
-                width: 44,
-                height: 30,
-                padding: const EdgeInsets.all(3),
+                width: 60,
+                height: 40,
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
+                  color: ConsultationTheme.softBg,
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: const Color(0xFFE8EFF5),
-                    width: 1,
+                    color: ConsultationTheme.cardBorder,
+                    width: 0.8,
                   ),
                 ),
-                child: Image.asset(
-                  _bankAssetPath,
-                  width: 40,
-                  height: 28,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(
-                      Icons.account_balance_rounded,
-                      size: 20,
-                      color: AppColors.primary,
-                    );
-                  },
+                child: Center(
+                  child: Image.asset(
+                    _bankAssetPath,
+                    width: 52,
+                    height: 32,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Text(
+                        method.iconLabel,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: ConsultationTheme.primary,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
 
-              // Nama bank
+              // Nama bank bold
               Expanded(
                 child: Text(
                   method.name,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: isSelected ? Colors.white : AppColors.primaryText,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
+                    color: ConsultationTheme.primary,
                   ),
                 ),
               ),
 
-              // Radio indicator
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
+              // Radio di kanan: terpilih (border & isi biru tua), tidak terpilih (outline #D9CDB8)
+              Container(
                 width: 22,
                 height: 22,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
+                  color: isSelected ? ConsultationTheme.primary : Colors.transparent,
                   border: Border.all(
-                    color: isSelected ? Colors.white : AppColors.lightGray,
-                    width: 2,
+                    color: isSelected
+                        ? ConsultationTheme.primary
+                        : const Color(0xFFD9CDB8),
+                    width: 1.8,
                   ),
-                  color: isSelected ? Colors.white.withValues(alpha: 0.25) : Colors.transparent,
                 ),
                 child: isSelected
-                    ? const Icon(Icons.check, color: Colors.white, size: 14)
+                    ? const Center(
+                        child: Icon(
+                          Icons.circle,
+                          color: Colors.white,
+                          size: 8,
+                        ),
+                      )
                     : null,
               ),
             ],
@@ -119,4 +125,3 @@ class PaymentMethodItem extends StatelessWidget {
     );
   }
 }
-

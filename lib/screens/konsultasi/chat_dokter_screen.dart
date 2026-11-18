@@ -837,51 +837,36 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
   }
 
   Widget _buildDateSeparator(DateTime date) {
-    if (widget.isDoctor) {
-      return Center(
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 10),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE9E2D3),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Text(
-            AppDateFormatter.formatChatDateSeparator(date),
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF6B8190),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Divider(
+              color: Color(0xFFEFE3D0),
+              thickness: 1,
+              height: 1,
             ),
           ),
-        ),
-      );
-    }
-
-    return Center(
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE2ECF2)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              AppDateFormatter.formatChatDateSeparator(date),
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF5E7585),
+              ),
             ),
-          ],
-        ),
-        child: Text(
-          AppDateFormatter.formatChatDateSeparator(date),
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF64748B),
           ),
-        ),
+          const Expanded(
+            child: Divider(
+              color: Color(0xFFEFE3D0),
+              thickness: 1,
+              height: 1,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -922,10 +907,10 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
+      decoration: const BoxDecoration(
+        color: Colors.white,
         border: Border(
-          top: BorderSide(color: Colors.black.withValues(alpha: 0.08)),
+          top: BorderSide(color: Color(0xFFEFE3D0), width: 1.2),
         ),
       ),
       child: SafeArea(
@@ -934,15 +919,15 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.check_circle_rounded,
-                color: AppColors.successGreen, size: 20),
+                color: Color(0xFF2F7A57), size: 18),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
                 text,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
                   fontSize: 13,
-                  color: AppColors.primaryText,
+                  color: const Color(0xFF1F5C7A),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -985,16 +970,11 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     final Widget chatContent = Stack(
       fit: StackFit.expand,
       children: [
-        // ── Background Chat: Solid krem/off-white untuk Dokter, atau pola untuk Pasien ──
+        // ── Background Chat: Polos krem #FAF6F0 solid formal LAMON ──
         Positioned.fill(
-          child: widget.isDoctor
-              ? Container(
-                  color: const Color(0xFFFAF6F0),
-                )
-              : Image.asset(
-                  'assets/images/Background Chat Konsultasi Dokter.png',
-                  fit: BoxFit.cover,
-                ),
+          child: Container(
+            color: const Color(0xFFFAF6F0),
+          ),
         ),
 
         // ── Layar Chat Transparan di atas Background ──
@@ -1156,13 +1136,24 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                       ],
                     )
                   : AppBar(
-                      backgroundColor: Colors.white.withValues(alpha: 0.94),
-                      elevation: 0.5,
-                      surfaceTintColor: Colors.transparent,
-                      shadowColor: Colors.black.withValues(alpha: 0.08),
+                      backgroundColor: Colors.transparent,
+                      elevation: 0,
+                      toolbarHeight: 76,
+                      flexibleSpace: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFF1F5C7A), Color(0xFF2E85A8)],
+                          ),
+                          borderRadius: BorderRadius.vertical(
+                            bottom: Radius.circular(28),
+                          ),
+                        ),
+                      ),
                       leading: IconButton(
                         icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                            color: AppColors.primaryText),
+                            color: Colors.white, size: 20),
                         onPressed: () => Navigator.pop(context),
                         tooltip: 'Kembali',
                       ),
@@ -1173,10 +1164,13 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                             photoUrl: _consultation?.effectiveDoctorPhotoUrl ?? '',
                             doctorId: _consultation?.doctorId,
                             doctorName: _consultation?.doctorName,
-                            size: 36,
-                            borderRadius: 10,
+                            size: 48,
+                            isCircle: true,
+                            showVerificationBadge: true,
+                            isVerified: false, // Disembunyikan aman karena belum ada field verifikasi di DB
+                            badgeSize: 18,
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1184,33 +1178,48 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                               children: [
                                 Text(
                                   titleName,
-                                  style: const TextStyle(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.primaryText,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
+                                const SizedBox(height: 2),
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
+                                    Text(
+                                      '${_consultation?.doctorSpecialty ?? "Dokter Umum"} · ',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFFCFE3EE),
+                                      ),
+                                    ),
                                     Container(
-                                      width: 7,
-                                      height: 7,
+                                      width: 6,
+                                      height: 6,
                                       decoration: BoxDecoration(
-                                        color: statusColor,
+                                        color: isCompleted
+                                            ? Colors.white54
+                                            : (isWaiting
+                                                ? const Color(0xFFF2B544)
+                                                : const Color(0xFF3DAA5C)),
                                         shape: BoxShape.circle,
                                       ),
                                     ),
                                     const SizedBox(width: 5),
                                     Flexible(
                                       child: Text(
-                                        subtitleText,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: statusColor,
-                                          fontWeight: FontWeight.w600,
+                                        isCompleted
+                                            ? 'Selesai'
+                                            : (isWaiting ? 'Menunggu Konfirmasi' : 'Aktif'),
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFFCFE3EE),
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -1229,44 +1238,134 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
             onTap: () => FocusScope.of(context).unfocus(),
             child: Column(
               children: [
-                // ── Banner Menunggu Konfirmasi Dokter ──
-                if (!isCompleted && isWaiting)
+                // ── Banner Status di Bawah Header ──
+                if (!widget.isDoctor && isWaiting)
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF8EA),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFFF2D9B0),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.hourglass_top_rounded,
+                          size: 20,
+                          color: Color(0xFFE0913A),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Menunggu konfirmasi dokter',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF8A5A1E),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                schedStr.isNotEmpty
+                                    ? 'Anda tetap dapat mengirim pesan · $schedStr'
+                                    : 'Anda tetap dapat mengirim pesan ke dokter.',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w400,
+                                  color: const Color(0xFF8A5A1E),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (!widget.isDoctor && isCompleted)
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1FAF5),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFFBFE3CE),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 20,
+                          color: Color(0xFF2F7A57),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Konsultasi Selesai',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF2F7A57),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Sesi konsultasi telah berakhir.',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w400,
+                                  color: const Color(0xFF5E7585),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (widget.isDoctor && !isCompleted && isWaiting)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                    decoration: BoxDecoration(
-                      color: widget.isDoctor
-                          ? const Color(0xFFFCFBF7)
-                          : const Color(0xFFFFFBEA),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFCFBF7),
                       border: Border(
                         bottom: BorderSide(
-                          color: widget.isDoctor
-                              ? const Color(0xFFEBE3D0)
-                              : AppColors.warningYellow.withValues(alpha: 0.4),
+                          color: Color(0xFFEBE3D0),
                         ),
                       ),
                     ),
                     child: Row(
-                      children: [
+                      children: const [
                         Icon(
                           Icons.hourglass_top_rounded,
                           size: 16,
-                          color: widget.isDoctor
-                              ? const Color(0xFF9E652B)
-                              : const Color(0xFFB45309),
+                          color: Color(0xFF9E652B),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            widget.isDoctor
-                                ? 'Permintaan konsultasi ini belum dikonfirmasi aktif.'
-                                : 'Menunggu konfirmasi dokter. Anda tetap dapat mengirim pesan.',
+                            'Permintaan konsultasi ini belum dikonfirmasi aktif.',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: widget.isDoctor
-                                  ? const Color(0xFF9E652B)
-                                  : const Color(0xFFB45309),
+                              color: Color(0xFF9E652B),
                             ),
                           ),
                         ),
@@ -1833,30 +1932,29 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
           if (widget.isDoctor && !isEditing && !widget.readOnly)
             _buildDoctorQuickActionChips(),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: widget.isDoctor ? const Color(0xFFFAF6F0) : Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                top: BorderSide(color: Color(0xFFEFE3D0), width: 1.2),
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: Color(0x0A1F5C7A),
                   blurRadius: 8,
-                  offset: const Offset(0, -2),
+                  offset: Offset(0, -2),
                 ),
               ],
             ),
             child: Row(
               children: [
-                // Tombol Lampiran (+)
+                // Tombol Tambah (+) Biru Tua
                 IconButton(
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
-                  icon: Icon(
+                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  icon: const Icon(
                     Icons.add_circle_outline_rounded,
-                    color: isEditing
-                        ? AppColors.neutralGray
-                        : (widget.isDoctor
-                            ? const Color(0xFF1F5C7A)
-                            : AppColors.primary),
+                    color: Color(0xFF1F5C7A),
                     size: 26,
                   ),
                   onPressed: (_isSending || _isUploading || isEditing)
@@ -1868,20 +1966,18 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                 ),
                 const SizedBox(width: 4),
 
-                // Input Teks
+                // Kolom Teks Pill berlatar #F7F3EB bergaris krem
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: const Color(0xFFF7F3EB),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: widget.isDoctor
-                            ? const Color(0xFFEFE3D0)
-                            : const Color(0xFFE2EDF3),
+                        color: const Color(0xFFEFE3D0),
                         width: 1.2,
                       ),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: TextField(
                       controller: _inputController,
                       focusNode: _focusNode,
@@ -1890,43 +1986,37 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
                       textCapitalization: TextCapitalization.sentences,
                       style: GoogleFonts.poppins(
                         fontSize: 13.5,
-                        color: widget.isDoctor
-                            ? const Color(0xFF24435A)
-                            : AppColors.primaryText,
+                        color: const Color(0xFF1F5C7A),
                       ),
                       decoration: InputDecoration(
-                        hintText: isEditing ? 'Edit pesan...' : 'Tulis pesan...',
+                        hintText: isEditing ? 'Edit pesan...' : 'Tulis pesan…',
                         hintStyle: GoogleFonts.poppins(
-                          color: widget.isDoctor
-                              ? const Color(0xFF6B8190)
-                              : AppColors.neutralGray,
-                          fontSize: 13.5,
+                          color: const Color(0xFF5E7585),
+                          fontSize: 13,
                         ),
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding:
-                            const EdgeInsets.symmetric(vertical: 10),
+                            const EdgeInsets.symmetric(vertical: 11),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
 
-                // Tombol Kirim / Simpan Perubahan (46px bulat biru tua untuk dokter)
+                // Tombol Kirim Bulat 46 Biru Tua dengan Ikon Putih
                 Container(
-                  width: widget.isDoctor ? 46 : 42,
-                  height: widget.isDoctor ? 46 : 42,
+                  width: 46,
+                  height: 46,
                   decoration: BoxDecoration(
                     color: isEditing
-                        ? AppColors.successGreen
-                        : (widget.isDoctor
-                            ? const Color(0xFF1F5C7A)
-                            : AppColors.primary),
+                        ? const Color(0xFF2F7A57)
+                        : const Color(0xFF1F5C7A),
                     shape: BoxShape.circle,
                   ),
                   child: _isSending || _isUploading
                       ? const Padding(
-                          padding: EdgeInsets.all(10),
+                          padding: EdgeInsets.all(12),
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor:
@@ -1955,13 +2045,15 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
     );
   }
 
-  /// Widget strip template pesan cepat (Bagian B - Chip melayang tanpa latar rectangle di belakang)
+  /// Baris chip saran pesan di atas input: scroll horizontal, chip putih, border #D9CDB8, teks biru tua semi-bold 12, radius pill
   Widget _buildTemplateSuggestions() {
-    return SizedBox(
+    return Container(
       height: 44,
+      margin: const EdgeInsets.only(bottom: 6),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         itemCount: _patientTemplates.length,
         itemBuilder: (context, index) {
           final template = _patientTemplates[index];
@@ -1977,32 +2069,33 @@ class _ChatDokterScreenState extends State<ChatDokterScreen> {
               },
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.35),
+                    color: const Color(0xFFD9CDB8),
+                    width: 1.2,
                   ),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 3,
-                      offset: const Offset(0, 1),
+                      color: Color(0x081F5C7A),
+                      blurRadius: 4,
+                      offset: Offset(0, 1),
                     ),
                   ],
                 ),
-                child: Text(
-                  template.length > 40
-                      ? '${template.substring(0, 38)}…'
-                      : template,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
+                child: Center(
+                  child: Text(
+                    template,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1F5C7A),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.clip,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
