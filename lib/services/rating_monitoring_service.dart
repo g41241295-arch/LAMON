@@ -24,15 +24,17 @@ class RatingHistoryEntry {
   });
 
   factory RatingHistoryEntry.fromMap(Map<String, dynamic> map) {
-    final rawTs = map['ratedAt'] ?? map['updatedAt'];
+    final rawTs = map['ratedAt'] ?? map['createdAt'] ?? map['updatedAt'];
     final DateTime dt = rawTs is Timestamp
         ? rawTs.toDate()
         : (rawTs is String
             ? (DateTime.tryParse(rawTs) ?? DateTime.now())
             : DateTime.now());
+    final rawRating = map['newRating'] ?? map['rating'];
+    final rawPrev = map['oldRating'] ?? map['previousRating'];
     return RatingHistoryEntry(
-      rating: (map['rating'] as num?)?.toInt() ?? 0,
-      previousRating: (map['previousRating'] as num?)?.toInt(),
+      rating: (rawRating as num?)?.toInt() ?? 0,
+      previousRating: (rawPrev as num?)?.toInt(),
       ratedAt: dt,
     );
   }
@@ -236,13 +238,39 @@ class RatingMonitoringService {
   // 1. PENYIMPANAN ADITIF PENILAIAN GASTROPEDIA (SISI PENGGUNA)
   // ─────────────────────────────────────────────────────────────────────────
 
-  /// Menyimpan penilaian bintang Gastropedia ke koleksi `gastropedia_ratings`
-  /// secara aditif tanpa mengubah perilaku lokal SharedPreferences.
-  /// Jika pengguna mengubah penilaian pada item yang sama, riwayat perubahan
-  /// tetap tercatat di field `history`.
+  /// Mengambil dokumen penilaian aktif milik pengguna `uid` untuk `itemId`
+  /// menggunakan query `where('userId', isEqualTo: uid)` agar kompatibel penuh
+  /// dengan aturan keamanan Firestore `resource.data.userId == request.auth.uid`
+  /// bahkan ketika dokumen belum ada (`resource == null`).
+  Future<QueryDocumentSnapshot<Map<String, dynamic>>?>
+      _findExistingUserRatingDoc(String uid, String itemId) async {
+    try {
+      final expectedDocId = '${uid}_$itemId';
+      final querySnap = await _gastropediaRatingsRef
+          .where('userId', isEqualTo: uid)
+          .get();
+      for (final doc in querySnap.docs) {
+        if (doc.id == expectedDocId ||
+            (doc.data()['itemId']?.toString().trim() == itemId)) {
+          return doc;
+        }
+      }
+    } catch (e) {
+      debugPrint(
+        '[RatingMonitoringService] _findExistingUserRatingDoc error: $e',
+      );
+    }
+    return null;
+  }
+
+  /// Menyimpan penilaian bintang Gastropedia ke koleksi `gastropedia_ratings/{uid}_{itemId}`
+  /// beserta riwayat perubahan nilainya (append-only di subkoleksi `history` dan array `history`).
+  /// Menggunakan ID dokumen deterministik `{userId}_{itemId}` sehingga satu pengguna
+  /// hanya memiliki tepat satu penilaian aktif per item Gastropedia.
   Future<void> saveGastropediaRating({
     required GastropediaItem item,
     required int rating,
+    int? knownPreviousRating,
   }) async {
     if (rating < 1 || rating > 5) return;
     final user = _auth.currentUser;
@@ -253,19 +281,32 @@ class RatingMonitoringService {
       final profile = await _fetchUserBriefProfile(uid, fallbackAuthUser: user);
       final docId = '${uid}_${item.id}';
       final docRef = _gastropediaRatingsRef.doc(docId);
-
-      final existingSnap = await docRef.get();
       final nowTs = Timestamp.now();
 
-      List<Map<String, dynamic>> historyList = [];
-      int? previousRating;
-      Timestamp? existingCreatedAt;
+      final existingSnap = await _findExistingUserRatingDoc(uid, item.id);
 
-      if (existingSnap.exists && existingSnap.data() != null) {
-        final oldData = existingSnap.data()!;
+      List<Map<String, dynamic>> historyList = [];
+      int? previousRating = (knownPreviousRating != null &&
+              knownPreviousRating >= 1 &&
+              knownPreviousRating <= 5 &&
+              knownPreviousRating != rating)
+          ? knownPreviousRating
+          : null;
+      Timestamp? existingCreatedAt;
+      bool isSameAsExisting = false;
+
+      if (existingSnap != null) {
+        final oldData = existingSnap.data();
         existingCreatedAt = oldData['createdAt'] as Timestamp?;
         final oldRating = (oldData['rating'] as num?)?.toInt();
-        previousRating = oldRating;
+        if (oldRating != null && oldRating >= 1 && oldRating <= 5) {
+          if (oldRating == rating) {
+            isSameAsExisting = true;
+            previousRating = (oldData['previousRating'] as num?)?.toInt();
+          } else {
+            previousRating = oldRating;
+          }
+        }
 
         final rawHistory = oldData['history'];
         if (rawHistory is Iterable) {
@@ -276,20 +317,43 @@ class RatingMonitoringService {
           }
         } else if (oldRating != null && oldRating >= 1 && oldRating <= 5) {
           historyList.add({
+            'oldRating': null,
+            'previousRating': null,
+            'newRating': oldRating,
             'rating': oldRating,
-            'ratedAt': oldData['ratedAt'] ?? oldData['updatedAt'] ?? existingCreatedAt ?? nowTs,
+            'createdAt': oldData['createdAt'] ??
+                oldData['ratedAt'] ??
+                oldData['updatedAt'] ??
+                nowTs,
+            'ratedAt': oldData['ratedAt'] ??
+                oldData['updatedAt'] ??
+                existingCreatedAt ??
+                nowTs,
           });
         }
+      } else if (previousRating != null) {
+        historyList.add({
+          'oldRating': null,
+          'previousRating': null,
+          'newRating': previousRating,
+          'rating': previousRating,
+          'createdAt': nowTs,
+          'ratedAt': nowTs,
+        });
       }
 
-      historyList.add({
-        'rating': rating,
-        if (previousRating != null && previousRating != rating)
+      if (!isSameAsExisting || historyList.isEmpty) {
+        historyList.add({
+          'oldRating': previousRating,
           'previousRating': previousRating,
-        'ratedAt': nowTs,
-      });
+          'newRating': rating,
+          'rating': rating,
+          'createdAt': nowTs,
+          'ratedAt': nowTs,
+        });
+      }
 
-      await docRef.set({
+      final activePayload = <String, dynamic>{
         'userId': uid,
         'userName': profile.name,
         if (profile.photoUrl != null && profile.photoUrl!.isNotEmpty)
@@ -302,15 +366,52 @@ class RatingMonitoringService {
         'itemImage': item.imageAsset,
         if (item.imageBase64.isNotEmpty) 'itemImageBase64': item.imageBase64,
         'rating': rating,
-        if (previousRating != null && previousRating != rating)
-          'previousRating': previousRating,
+        'previousRating': previousRating,
         'createdAt': existingCreatedAt ?? FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'ratedAt': FieldValue.serverTimestamp(),
         'history': historyList,
-      }, SetOptions(merge: true));
+      };
+
+      // Tulis dokumen penilaian aktif + subkoleksi history secara atomik dalam satu WriteBatch
+      try {
+        final batch = _db.batch();
+        batch.set(docRef, activePayload, SetOptions(merge: true));
+
+        if (!isSameAsExisting) {
+          final historyDocRef = docRef.collection('history').doc();
+          batch.set(historyDocRef, {
+            'userId': uid,
+            'itemId': item.id,
+            'oldRating': previousRating,
+            'previousRating': previousRating,
+            'newRating': rating,
+            'rating': rating,
+            'createdAt': FieldValue.serverTimestamp(),
+            'ratedAt': FieldValue.serverTimestamp(),
+          });
+        }
+
+        await batch.commit();
+      } catch (batchErr) {
+        // Fallback jika rules subkoleksi /history belum di-deploy ke server Firebase:
+        // tetap simpan dokumen utama beserta array history-nya agar penilaian tidak pernah hilang.
+        debugPrint(
+          '[RatingMonitoringService] Batch subkoleksi history dilewati ($batchErr), menyimpan langsung ke dokumen utama...',
+        );
+        await docRef.set(activePayload, SetOptions(merge: true));
+      }
+
+      // Sinkronkan juga cache SharedPreferences per-user dan legacy
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('gastropedia_user_rating_${uid}_${item.id}', rating);
+        await prefs.setInt('gastropedia_user_rating_${item.id}', rating);
+      } catch (_) {}
     } catch (e) {
-      debugPrint('[RatingMonitoringService] Gagal simpan rating Gastropedia ke Firestore: $e');
+      debugPrint(
+        '[RatingMonitoringService] Gagal simpan rating Gastropedia ke Firestore: $e',
+      );
     }
   }
 
@@ -325,14 +426,14 @@ class RatingMonitoringService {
     if (user == null || user.uid.isEmpty) return;
 
     try {
-      final docId = '${user.uid}_${item.id}';
-      final docRef = _gastropediaRatingsRef.doc(docId);
-      final snap = await docRef.get();
-      if (!snap.exists) {
+      final existing = await _findExistingUserRatingDoc(user.uid, item.id);
+      if (existing == null) {
         await saveGastropediaRating(item: item, rating: localRating);
       }
     } catch (e) {
-      debugPrint('[RatingMonitoringService] ensureLocalGastropediaRatingSynced error: $e');
+      debugPrint(
+        '[RatingMonitoringService] ensureLocalGastropediaRatingSynced error: $e',
+      );
     }
   }
 
@@ -344,9 +445,11 @@ class RatingMonitoringService {
 
     try {
       final prefs = await SharedPreferences.getInstance();
+      final uid = user.uid;
       for (final item in GastropediaData.items) {
-        final key = 'gastropedia_user_rating_${item.id}';
-        final saved = prefs.getInt(key);
+        final userKey = 'gastropedia_user_rating_${uid}_${item.id}';
+        final legacyKey = 'gastropedia_user_rating_${item.id}';
+        final saved = prefs.getInt(userKey) ?? prefs.getInt(legacyKey);
         if (saved != null && saved >= 1 && saved <= 5) {
           await ensureLocalGastropediaRatingSynced(
             item: item,
@@ -355,19 +458,20 @@ class RatingMonitoringService {
         }
       }
     } catch (e) {
-      debugPrint('[RatingMonitoringService] syncAllLocalGastropediaRatings error: $e');
+      debugPrint(
+        '[RatingMonitoringService] syncAllLocalGastropediaRatings error: $e',
+      );
     }
   }
 
-  /// Mengambil nilai bintang Gastropedia milik pengguna yang sedang login dari Firestore
-  /// jika di SharedPreferences lokal belum ada (misal ganti perangkat).
+  /// Mengambil nilai bintang aktif Gastropedia milik pengguna yang sedang login dari Firestore.
   Future<int?> fetchUserGastropediaRating(String itemId) async {
     final user = _auth.currentUser;
     if (user == null || user.uid.isEmpty) return null;
     try {
-      final doc = await _gastropediaRatingsRef.doc('${user.uid}_$itemId').get();
-      if (doc.exists && doc.data() != null) {
-        final rating = (doc.data()!['rating'] as num?)?.toInt();
+      final existing = await _findExistingUserRatingDoc(user.uid, itemId);
+      if (existing != null) {
+        final rating = (existing.data()['rating'] as num?)?.toInt();
         if (rating != null && rating >= 1 && rating <= 5) {
           return rating;
         }
@@ -399,21 +503,68 @@ class RatingMonitoringService {
             ? rawTs.toDate()
             : DateTime.fromMillisecondsSinceEpoch(0);
 
-        // Riwayat perubahan nilai pada item ini
+        // Riwayat perubahan nilai pada item ini (prioritas subkoleksi history, fallback array history)
         final historyEntries = <RatingHistoryEntry>[];
-        final rawHistory = data['history'];
-        if (rawHistory is Iterable) {
-          for (final h in rawHistory) {
-            if (h is Map) {
-              final parsed =
-                  RatingHistoryEntry.fromMap(Map<String, dynamic>.from(h));
+        try {
+          final historySubSnap =
+              await doc.reference.collection('history').get();
+          if (historySubSnap.docs.isNotEmpty) {
+            for (final hDoc in historySubSnap.docs) {
+              final parsed = RatingHistoryEntry.fromMap(hDoc.data());
               if (parsed.rating >= 1 && parsed.rating <= 5) {
                 historyEntries.add(parsed);
               }
             }
           }
-          historyEntries.sort((a, b) => b.ratedAt.compareTo(a.ratedAt));
+        } catch (_) {}
+
+        if (historyEntries.isEmpty) {
+          final rawHistory = data['history'];
+          if (rawHistory is Iterable) {
+            for (final h in rawHistory) {
+              if (h is Map) {
+                final parsed =
+                    RatingHistoryEntry.fromMap(Map<String, dynamic>.from(h));
+                if (parsed.rating >= 1 && parsed.rating <= 5) {
+                  historyEntries.add(parsed);
+                }
+              }
+            }
+          }
         }
+
+        // Untuk data lama yang belum memiliki riwayat, tampilkan nilainya sebagai penilaian awal
+        if (historyEntries.isEmpty) {
+          final createdTs = data['createdAt'];
+          final initialDate =
+              createdTs is Timestamp ? createdTs.toDate() : ratedAt;
+          historyEntries.add(
+            RatingHistoryEntry(
+              rating: rating,
+              previousRating: null,
+              ratedAt: initialDate,
+            ),
+          );
+        }
+
+        // Urutkan kronologis dari terlama ke terbaru terlebih dahulu untuk melengkapi previousRating,
+        // lalu balikkan dari terbaru ke terlama untuk tampilan Admin.
+        historyEntries.sort((a, b) => a.ratedAt.compareTo(b.ratedAt));
+        final normalizedHistory = <RatingHistoryEntry>[];
+        for (int i = 0; i < historyEntries.length; i++) {
+          final entry = historyEntries[i];
+          final prevVal = i == 0
+              ? null
+              : (entry.previousRating ?? normalizedHistory.last.rating);
+          normalizedHistory.add(
+            RatingHistoryEntry(
+              rating: entry.rating,
+              previousRating: prevVal,
+              ratedAt: entry.ratedAt,
+            ),
+          );
+        }
+        final newestFirstHistory = normalizedHistory.reversed.toList();
 
         // Fallback metadata item Gastropedia jika data lama belum lengkap
         String itemName = (data['itemName'] ?? '').toString().trim();
@@ -454,7 +605,7 @@ class RatingMonitoringService {
           itemCategory: itemCategory.isNotEmpty ? itemCategory : 'Makanan',
           itemImage: itemImage,
           itemImageBase64: itemImageBase64,
-          changeHistory: historyEntries,
+          changeHistory: newestFirstHistory,
         );
 
         // Lengkapi nama/foto pengguna dari koleksi users/{userId} jika belum lengkap

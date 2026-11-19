@@ -1270,8 +1270,8 @@ class _PemantauanPenilaianScreenState extends State<PemantauanPenilaianScreen> {
             ),
           ],
 
-          // Jika pengguna pernah mengubah nilai pada item Gastropedia yang sama
-          if (isGastro && item.changeHistory.length > 1) ...[
+          // Riwayat perubahan nilai & penilaian awal pada item Gastropedia
+          if (isGastro && item.changeHistory.isNotEmpty) ...[
             const SizedBox(height: 10),
             Container(
               width: double.infinity,
@@ -1288,7 +1288,9 @@ class _PemantauanPenilaianScreenState extends State<PemantauanPenilaianScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Riwayat Perubahan Nilai (${item.changeHistory.length}x)',
+                    item.changeHistory.length > 1
+                        ? 'Riwayat Perubahan Nilai (${item.changeHistory.length}x)'
+                        : 'Riwayat Penilaian',
                     style: GoogleFonts.poppins(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w700,
@@ -1297,46 +1299,54 @@ class _PemantauanPenilaianScreenState extends State<PemantauanPenilaianScreen> {
                   ),
                   const SizedBox(height: 6),
                   for (int i = 0; i < item.changeHistory.length; i++) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
+                    Builder(
+                      builder: (context) {
+                        final entry = item.changeHistory[i];
+                        final isFirstGive =
+                            entry.previousRating == null ||
+                            i == item.changeHistory.length - 1;
+                        final labelText =
+                            (!isFirstGive && entry.previousRating != null)
+                                ? '${entry.previousRating} menjadi ${entry.rating} bintang'
+                                : (item.changeHistory.length == 1
+                                    ? 'Penilaian awal: ${entry.rating} bintang'
+                                    : 'Penilaian pertama: ${entry.rating} bintang');
+
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              i == 0
-                                  ? Icons.check_circle_rounded
-                                  : Icons.history_rounded,
-                              size: 13,
-                              color: i == 0
-                                  ? AppColors.textPrimary
-                                  : AppColors.textSecondary,
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Icon(
+                                i == 0
+                                    ? Icons.check_circle_rounded
+                                    : Icons.history_rounded,
+                                size: 13,
+                                color: i == 0
+                                    ? AppColors.textPrimary
+                                    : AppColors.textSecondary,
+                              ),
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              i == 0
-                                  ? 'Nilai saat ini: ${item.changeHistory[i].rating} ★'
-                                  : 'Penilaian sebelumnya: ${item.changeHistory[i].rating} ★',
-                              style: GoogleFonts.poppins(
-                                fontSize: 11.5,
-                                fontWeight: i == 0
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
-                                color: AppColors.textPrimary,
+                            Expanded(
+                              child: Text(
+                                '$labelText, ${_formatDateTime(entry.ratedAt)}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.5,
+                                  fontWeight: i == 0
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                  color: AppColors.textPrimary,
+                                  height: 1.35,
+                                ),
                               ),
                             ),
                           ],
-                        ),
-                        Text(
-                          _formatDateTime(item.changeHistory[i].ratedAt),
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
+                        );
+                      },
                     ),
                     if (i < item.changeHistory.length - 1)
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 5),
                   ],
                 ],
               ),
