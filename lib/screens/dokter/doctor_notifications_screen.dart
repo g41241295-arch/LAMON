@@ -169,22 +169,41 @@ class _DoctorNotificationsScreenState extends State<DoctorNotificationsScreen> {
     bool hasUnread,
   ) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
       decoration: const BoxDecoration(
         color: DoctorTheme.scaffoldBg,
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(
-              Icons.chevron_left_rounded,
-              size: 32,
-              color: DoctorTheme.primary,
+          InkWell(
+            onTap: () => Navigator.pop(context),
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFFD6E2E8),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.arrow_back_rounded,
+                color: Color(0xFF1C4E68),
+                size: 22,
+              ),
             ),
-            splashRadius: 24,
-            tooltip: 'Kembali',
           ),
+          const SizedBox(width: 14),
           Text(
             'Notifikasi',
             style: GoogleFonts.poppins(

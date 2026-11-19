@@ -364,6 +364,9 @@ class BerandaScreenState extends State<BerandaScreen>
                                 _loadUserPhoto();
                               }
                             },
+                            onNotificationTap: () {
+                              Navigator.pushNamed(context, AppRoutes.userNotifications);
+                            },
                           ),
                         ),
                         const SizedBox(height: 18),

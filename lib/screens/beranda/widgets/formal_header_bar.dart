@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../constants/app_colors.dart';
+import '../../../routes/app_routes.dart';
 import '../../../services/profile_photo_service.dart';
 
 class FormalHeaderBar extends StatelessWidget {
@@ -180,13 +181,7 @@ class FormalHeaderBar extends StatelessWidget {
         GestureDetector(
           onTap: onNotificationTap ??
               () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Belum ada notifikasi baru hari ini.'),
-                    behavior: SnackBarBehavior.floating,
-                    duration: Duration(seconds: 2),
-                  ),
-                );
+                Navigator.pushNamed(context, AppRoutes.userNotifications);
               },
           child: Container(
             width: 38,
