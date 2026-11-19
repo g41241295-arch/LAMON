@@ -697,9 +697,7 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
           // Baris Metode
           _buildDetailRow(
             label: 'Metode Pembayaran',
-            value: c.paymentType != null && c.paymentType!.isNotEmpty
-                ? c.paymentType!.toUpperCase()
-                : 'Pembayaran Digital Otomatis',
+            value: _getDisplayPaymentMethod(c),
           ),
           const SectionDivider(verticalPadding: 8),
 
@@ -717,15 +715,30 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
     );
   }
 
+  String _getDisplayPaymentMethod(ConsultationModel c) {
+    if (c.isPaid && c.paymentType != null && c.paymentType!.isNotEmpty) {
+      return c.paymentType!.replaceAll('_', ' ').toUpperCase();
+    }
+    if (c.paymentMethodName.isNotEmpty && c.paymentMethodName != 'Midtrans Snap') {
+      final name = c.paymentMethodName.trim();
+      if (name.toLowerCase().startsWith('bank ') || name.toLowerCase().contains('transfer')) {
+        return name;
+      }
+      return 'Bank $name';
+    }
+    return 'Transfer Bank';
+  }
+
   Widget _buildDetailRow({
     required String label,
     required String value,
     Color? valueColor,
     bool isBold = false,
     Widget? trailingAction,
+    bool allowWrap = true,
   }) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
@@ -745,8 +758,8 @@ class _VirtualAccountScreenState extends State<VirtualAccountScreen>
                 child: Text(
                   value,
                   textAlign: TextAlign.end,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: allowWrap ? 2 : 1,
+                  overflow: allowWrap ? null : TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
                     fontSize: label == 'Order ID' ? 12 : 13,
                     fontWeight: isBold ? FontWeight.w700 : FontWeight.w600,

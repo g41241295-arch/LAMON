@@ -166,9 +166,8 @@ async function handleCreateTransaction(req, res) {
       email: customerEmail,
     },
     expiry: {
-      start_time: formatMidtransTime(now),
       unit: 'minutes',
-      duration: remainingMinutes,
+      duration: Math.max(15, remainingMinutes),
     },
     callbacks: {
       finish: 'https://lamon.app/payment-finish',
@@ -192,11 +191,14 @@ async function handleCreateTransaction(req, res) {
   });
 
   // 7. Perbarui status consultation menjadi 'pending' dengan paymentOrderId
-  await consultRef.update({
+  const consultUpdate = {
     paymentStatus: 'pending',
     paymentOrderId: orderId,
-    paymentMethodName: 'Midtrans Snap',
-  });
+  };
+  if (!consultData.paymentMethodName || consultData.paymentMethodName === 'Midtrans Snap') {
+    consultUpdate.paymentMethodName = consultData.paymentMethodName || 'Transfer / VA';
+  }
+  await consultRef.update(consultUpdate);
 
   return res.status(200).json({
     success: true,
