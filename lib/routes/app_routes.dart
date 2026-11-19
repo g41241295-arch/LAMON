@@ -45,6 +45,7 @@ import '../models/berita_article_model.dart';
 import '../screens/admin/admin_profile_screen.dart';
 import '../screens/admin/pemantauan_penilaian_screen.dart';
 import '../screens/user_profile_screen.dart';
+import '../screens/user_notifications_screen.dart';
 
 class AppRoutes {
   static const String initial = '/splash';
@@ -53,6 +54,8 @@ class AppRoutes {
   static const String register = '/register';
   static const String googleAuth = '/google-auth';
   static const String beranda = '/beranda';
+  static const String userNotifications = '/notifikasi';
+  static const String notifikasi = '/notifikasi';
   static const String dokter = '/dokter';
   static const String doctorDashboard = '/doctor-dashboard';
   static const String adminDashboard = '/admin-dashboard';
@@ -332,6 +335,11 @@ class AppRoutes {
           const BerandaScreen(),
           settings: settings,
           isFadeOnly: true,
+        );
+      case userNotifications:
+        return _createSmoothRoute(
+          const UserNotificationsScreen(),
+          settings: settings,
         );
       case dokter:
       case doctorDashboard:
