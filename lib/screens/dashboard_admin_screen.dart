@@ -455,18 +455,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // ── C. SATU KARTU HIGHLIGHT STATISTIK BERWARNA NAVY KONTRAS (INFORMASI SAJA) ─
+  // ── C. SATU KARTU HIGHLIGHT STATISTIK (DISAMAKAN DENGAN CARD JADWAL PENGGUNA) ─
   Widget _buildStatCards() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       decoration: BoxDecoration(
-        color: AppColors.textPrimary,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF1B556E), // Deep Teal LAMON
+            Color(0xFF276F8F), // Primary Teal LAMON
+            Color(0xFF3885A8), // Light Teal LAMON
+          ],
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: const Color(0xFF1B556E).withValues(alpha: 0.32),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -484,7 +492,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     iconBgColor: AppColors.softBlue,
                     count: count,
                     label: 'Artikel Berita',
-                    accentColor: AppColors.softBlue,
+                    accentColor: Colors.white,
                   );
                 },
               ),
@@ -494,7 +502,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Container(
               width: 1,
               margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-              color: Colors.white.withOpacity(0.18),
+              color: Colors.white.withValues(alpha: 0.18),
             ),
 
             // Kanan: Gastropedia (hanya tampilan informasi, tanpa tap)
@@ -508,7 +516,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     iconBgColor: AppColors.bgAccent,
                     count: count,
                     label: 'Gastropedia',
-                    accentColor: AppColors.accentGold,
+                    accentColor: Colors.white,
                   );
                 },
               ),

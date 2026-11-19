@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
@@ -655,37 +656,57 @@ class _DetailRatingCardState extends State<_DetailRatingCard> {
   Future<void> _loadRating() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final saved = prefs.getInt('gastropedia_user_rating_${widget.item.id}');
-      if (saved != null && mounted) {
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      final userKey = uid.isNotEmpty
+          ? 'gastropedia_user_rating_${uid}_${widget.item.id}'
+          : 'gastropedia_user_rating_${widget.item.id}';
+      final legacyKey = 'gastropedia_user_rating_${widget.item.id}';
+
+      final saved = prefs.getInt(userKey) ?? prefs.getInt(legacyKey);
+      if (saved != null && saved >= 1 && saved <= 5 && mounted) {
         setState(() {
           _rating = saved;
         });
-        RatingMonitoringService.instance.ensureLocalGastropediaRatingSynced(
-          item: widget.item,
-          localRating: saved,
-        );
-      } else {
-        final remoteRating = await RatingMonitoringService.instance
-            .fetchUserGastropediaRating(widget.item.id);
-        if (remoteRating != null && mounted) {
+      }
+
+      // Ambil penilaian aktif terbaru dari Firestore agar selalu konsisten
+      final remoteRating = await RatingMonitoringService.instance
+          .fetchUserGastropediaRating(widget.item.id);
+      if (remoteRating != null && remoteRating >= 1 && remoteRating <= 5) {
+        if (mounted && _rating != remoteRating) {
           setState(() {
             _rating = remoteRating;
           });
-          await prefs.setInt(
-              'gastropedia_user_rating_${widget.item.id}', remoteRating);
         }
+        await prefs.setInt(userKey, remoteRating);
+        await prefs.setInt(legacyKey, remoteRating);
+      } else if (saved != null && saved >= 1 && saved <= 5) {
+        // Jika di Firestore belum ada tetapi lokal sudah ada, sinkronkan ke Firestore
+        await RatingMonitoringService.instance.saveGastropediaRating(
+          item: widget.item,
+          rating: saved,
+        );
       }
+
       RatingMonitoringService.instance
           .syncAllLocalGastropediaRatingsForCurrentUser();
     } catch (_) {}
   }
 
   Future<void> _saveRating(int star) async {
+    final int? prevRating = (_rating >= 1 && _rating <= 5) ? _rating : null;
     setState(() {
       _rating = star;
     });
     try {
       final prefs = await SharedPreferences.getInstance();
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      if (uid.isNotEmpty) {
+        await prefs.setInt(
+          'gastropedia_user_rating_${uid}_${widget.item.id}',
+          star,
+        );
+      }
       await prefs.setInt('gastropedia_user_rating_${widget.item.id}', star);
     } catch (_) {}
 
@@ -693,6 +714,7 @@ class _DetailRatingCardState extends State<_DetailRatingCard> {
     RatingMonitoringService.instance.saveGastropediaRating(
       item: widget.item,
       rating: star,
+      knownPreviousRating: prevRating,
     );
 
     if (mounted) {
