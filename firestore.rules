@@ -364,13 +364,14 @@ service cloud.firestore {
       }
     }
 
-    // ── 9. Koleksi Penilaian Gastropedia ───────────────────────────────────
+    // ── 9. Koleksi Penilaian Gastropedia & Subkoleksi Riwayat ──────────────
     // Path: /gastropedia_ratings/{ratingId}
     // Pengguna hanya dapat membaca & menyimpan penilaian miliknya sendiri.
-    // Admin dapat membaca seluruh penilaian untuk pemantauan (read-only).
+    // Admin dapat membaca seluruh penilaian dan riwayat untuk pemantauan (read-only).
     match /gastropedia_ratings/{ratingId} {
       allow read: if isSignedIn() && (
         isAdmin() ||
+        resource == null ||
         resource.data.userId == request.auth.uid
       );
 
@@ -381,6 +382,23 @@ service cloud.firestore {
         request.resource.data.rating <= 5;
 
       allow delete: if false;
+
+      // Subkoleksi riwayat perubahan nilai (append-only / hanya-tambah)
+      match /history/{historyId} {
+        allow read: if isSignedIn() && (
+          isAdmin() ||
+          resource == null ||
+          resource.data.userId == request.auth.uid
+        );
+
+        allow create: if isSignedIn() &&
+          request.resource.data.userId == request.auth.uid &&
+          request.resource.data.newRating is int &&
+          request.resource.data.newRating >= 1 &&
+          request.resource.data.newRating <= 5;
+
+        allow update, delete: if false;
+      }
     }
   }
 }
