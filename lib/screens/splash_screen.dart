@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../auth/biometric_service.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_assets.dart';
 
@@ -195,10 +196,13 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
-  void _skipToLogin() {
+  Future<void> _skipToLogin() async {
     if (_navigated || !mounted) return;
     _navigated = true;
     _masterCtrl.stop();
+
+    final handled = await BiometricService.instance.handleSplashNavigation(context);
+    if (handled || !mounted) return;
 
     // Navigasi ke halaman login seketika tanpa jeda
     Navigator.pushReplacementNamed(context, '/login');

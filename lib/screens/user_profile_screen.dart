@@ -10,6 +10,8 @@ import '../widgets/app_scaffold.dart';
 import '../widgets/app_header_pill.dart';
 import '../routes/app_routes.dart';
 import '../services/fcm_service.dart';
+import '../auth/biometric_service.dart';
+import '../pengingat_jam_makan/services/meal_reminder_service.dart';
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
@@ -786,7 +788,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       try {
         if (uid != null) {
           await FcmService.instance.cleanUpBeforeLogout(uid);
+          await BiometricService.instance.clearBiometricForUser(uid);
         }
+        await MealReminderService.instance.cancelAlarmsForLogout();
         await FirebaseAuth.instance.signOut();
         await GoogleSignIn.instance.signOut();
       } catch (_) {}
