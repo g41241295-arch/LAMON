@@ -538,53 +538,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  Widget _buildInfoTile({
-    required IconData icon,
-    required String label,
-    required String value,
-    Widget? trailing,
-  }) {
-    return Row(
-      children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: const Color(0xFF276F8F).withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, size: 18, color: const Color(0xFF276F8F)),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF7A8B99),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: GoogleFonts.poppins(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1C4E68),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (trailing != null) trailing,
-      ],
-    );
-  }
-
   Widget _buildGenderChip({
     required String label,
     required IconData icon,
@@ -1032,49 +985,115 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-
-                        // Nama Lengkap Tile
-                        _buildInfoTile(
-                          icon: Icons.badge_outlined,
-                          label: 'Nama Lengkap',
-                          value: _displayName,
+                        // Nama Lengkap
+                        Text(
+                          'Nama Lengkap',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF5A7184),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFBFBFD),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.badge_outlined,
+                                size: 18,
+                                color: Color(0xFF276F8F),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  _displayName,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF1C4E68),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 14),
                           child: Divider(height: 1, color: Color(0xFFF0EBE1), thickness: 1),
                         ),
 
-                        // Email Akun Tile
-                        _buildInfoTile(
-                          icon: Icons.mail_outline_rounded,
-                          label: 'Email Akun Terdaftar',
-                          value: _userEmail,
-                          trailing: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEBF5F9),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFD0E4EE)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.lock_outline_rounded,
-                                  size: 13,
-                                  color: Color(0xFF276F8F),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Terkunci',
+                        // Email Akun (Read-only)
+                        Text(
+                          'Email Akun Terdaftar',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF5A7184),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.mail_outline_rounded,
+                                size: 18,
+                                color: Color(0xFF276F8F),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  _userEmail.isNotEmpty ? _userEmail : '-',
                                   style: GoogleFonts.poppins(
-                                    fontSize: 10.5,
+                                    fontSize: 13.5,
                                     fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF276F8F),
+                                    color: const Color(0xFF5A7184),
                                   ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEBF5F9),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFD0E4EE)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.lock_outline_rounded,
+                                      size: 12,
+                                      color: Color(0xFF276F8F),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Terkunci',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF276F8F),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -1143,13 +1162,45 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           child: Divider(height: 1, color: Color(0xFFF0EBE1), thickness: 1),
                         ),
 
-                        // Tanggal Lahir Tile
-                        _buildInfoTile(
-                          icon: Icons.cake_outlined,
-                          label: 'Tanggal Lahir',
-                          value: _formatIndonesianDate(_rawBirthDate),
-                          trailing: _calculatedAgeString != null
-                              ? Container(
+                        // Tanggal Lahir
+                        Text(
+                          'Tanggal Lahir',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF5A7184),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.cake_outlined,
+                                size: 18,
+                                color: Color(0xFF276F8F),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  _formatIndonesianDate(_rawBirthDate),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF1C4E68),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (_calculatedAgeString != null) ...[
+                                const SizedBox(width: 8),
+                                Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFFFF7D6),
@@ -1164,15 +1215,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                       color: const Color(0xFF1C4E68),
                                     ),
                                   ),
-                                )
-                              : null,
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 14),
                           child: Divider(height: 1, color: Color(0xFFF0EBE1), thickness: 1),
                         ),
 
-                        // Riwayat Penyakit
+                        // Riwayat Penyakit Lambung
                         Text(
                           'Riwayat Penyakit Lambung',
                           style: GoogleFonts.poppins(

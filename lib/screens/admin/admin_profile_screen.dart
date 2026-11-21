@@ -815,7 +815,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                                   color: const Color(0xFF1C4E68),
                                 ),
                                 decoration: InputDecoration(
-                                  prefixIcon: const Icon(Icons.badge_outlined, size: 18, color: Color(0xFF276F8F)),
+                                  prefixIcon: const Padding(
+                                    padding: EdgeInsets.only(left: 14, right: 10),
+                                    child: Icon(Icons.badge_outlined, size: 18, color: Color(0xFF276F8F)),
+                                  ),
+                                  prefixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 18),
                                   hintText: 'Nama admin...',
                                   hintStyle: GoogleFonts.poppins(color: const Color(0xFF94A3B8), fontSize: 13),
                                   filled: true,

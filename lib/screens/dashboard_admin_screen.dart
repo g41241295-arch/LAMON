@@ -291,7 +291,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         children: [
           // ── KONTEN SCROLLABLE ─────────────────────────────────────────────
           SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -302,11 +302,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                 // B. Welcome Section
                 _buildWelcomeBanner(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-                // C. Card Highlight Statistik (1 Card Navy Kontras)
+                // C. Card Highlight Statistik (Executive Dashboard Hero Card)
                 _buildStatCards(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 22),
 
                 // D. Tambah Konten
                 _buildSectionHeader(
@@ -315,7 +315,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
                 const SizedBox(height: 12),
                 _buildQuickActions(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 22),
 
                 // E. Kelola Konten
                 _buildSectionHeader(
@@ -324,7 +324,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
                 const SizedBox(height: 12),
                 _buildManageContent(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 22),
 
                 // F. Aktivitas Terbaru
                 _buildActivitySectionHeader(),
@@ -332,7 +332,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 _buildRecentActivity(),
 
                 // Padding bawah rapi sebelum akhir scroll
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
               ],
             ),
           ),
@@ -474,7 +474,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // ── B. KARTU SAPAAN (DISAMAKAN DENGAN FORMALSAPAANCARD PENGGUNA) ──────────
+  // ── B. KARTU SAPAAN (EXECUTIVE ADMIN WELCOME BANNER) ──────────────────────
   Widget _buildWelcomeBanner() {
     return Container(
       width: double.infinity,
@@ -496,7 +496,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(22),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -511,53 +511,95 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Teks sapaan sebelah kiri
+              // Teks sapaan sebelah kiri (lengkap, berimbang, & tidak kosong)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Badge Peran Administrator
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF9E652B).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'PANEL ADMINISTRATOR',
+                        style: GoogleFonts.poppins(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF9E652B),
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                     Text(
-                      'Halo, $_displayAdminName !',
+                      'Halo, $_displayAdminName 👋',
                       style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF9E652B),
-                        height: 1.2,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF1C4E68),
+                        letterSpacing: -0.2,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Kelola Konten, Jaga\nLambung Pengguna',
+                      'Kelola Konten & Edukasi Lambung',
                       style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primaryText,
-                        height: 1.2,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF276F8F),
+                        height: 1.25,
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 4),
                     Text(
-                      'Pantau dan kelola berita serta gastropedia',
+                      'Pantau artikel berita, kelola data gastropedia, dan awasi evaluasi layanan secara terpadu.',
                       style: GoogleFonts.poppins(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w500,
-                        color: const Color(0xFF6B5839),
-                        height: 1.25,
+                        color: const Color(0xFF5A7184),
+                        height: 1.35,
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Indikator status sistem aktif
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF22C55E),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Sistem Siap Digunakan',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF2E7D32),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
 
-              // Maskot sebelah kanan (110x110)
+              // Maskot sebelah kanan (proporsional 105x105)
               Image.asset(
                 'assets/images/mascot-header.png',
-                width: 110,
-                height: 110,
+                width: 105,
+                height: 105,
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) => const Icon(
                   Icons.shield_rounded,
@@ -572,68 +614,73 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // ── C. SATU KARTU HIGHLIGHT STATISTIK (DISAMAKAN DENGAN CARD JADWAL PENGGUNA) ─
+  // ── C. SATU KARTU HIGHLIGHT STATISTIK (EXECUTIVE DASHBOARD HERO CARD) ─────
   Widget _buildStatCards() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF1B556E), // Deep Teal LAMON
+            Color(0xFF134563), // Deep Teal
+            Color(0xFF1D5A7A), // Mid Teal
             Color(0xFF276F8F), // Primary Teal LAMON
-            Color(0xFF3885A8), // Light Teal LAMON
           ],
+        ),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.16),
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1B556E).withValues(alpha: 0.32),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: const Color(0xFF134563).withValues(alpha: 0.25),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: IntrinsicHeight(
         child: Row(
           children: [
-            // Kiri: Artikel Berita (hanya tampilan informasi, tanpa tap)
+            // Kiri: Artikel Berita
             Expanded(
               child: StreamBuilder<List<BeritaArticle>>(
                 stream: _beritaService.streamAll(),
                 builder: (context, snapshot) {
                   final count = snapshot.hasData ? snapshot.data!.length : null;
                   return _buildHighlightStatItem(
-                    iconImg: 'assets/images/admin-berita-kesehatan.png',
-                    iconBgColor: AppColors.softBlue,
+                    icon: Icons.newspaper_rounded,
                     count: count,
                     label: 'Artikel Berita',
-                    accentColor: Colors.white,
+                    tagLabel: 'Publikasi',
+                    tagColor: const Color(0xFFBCE3F5),
                   );
                 },
               ),
             ),
 
-            // Garis pemisah vertikal tipis putih transparan di tengah
+            // Garis pemisah vertikal elegan
             Container(
               width: 1,
-              margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-              color: Colors.white.withValues(alpha: 0.18),
+              margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+              color: Colors.white.withValues(alpha: 0.20),
             ),
 
-            // Kanan: Gastropedia (hanya tampilan informasi, tanpa tap)
+            // Kanan: Gastropedia
             Expanded(
               child: StreamBuilder<List<GastropediaItem>>(
                 stream: _ensiklopediaService.streamPublishedGastropedia(),
                 builder: (context, snapshot) {
                   final count = snapshot.hasData ? snapshot.data!.length : null;
                   return _buildHighlightStatItem(
-                    iconImg: 'assets/images/admin-data-gastropedia.png',
-                    iconBgColor: AppColors.bgAccent,
+                    icon: Icons.menu_book_rounded,
                     count: count,
                     label: 'Gastropedia',
-                    accentColor: Colors.white,
+                    tagLabel: 'Ensiklopedia',
+                    tagColor: const Color(0xFFFFE8A3),
                   );
                 },
               ),
@@ -645,32 +692,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildHighlightStatItem({
-    required String iconImg,
-    required Color iconBgColor,
+    required IconData icon,
     required int? count,
     required String label,
-    required Color accentColor,
+    required String tagLabel,
+    required Color tagColor,
   }) {
     return Row(
       children: [
         Container(
-          width: 42,
-          height: 42,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
-            color: iconBgColor,
-            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.28),
+              width: 1.2,
+            ),
           ),
           child: Center(
-            child: Image.asset(
-              iconImg,
-              width: 24,
-              height: 24,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const Icon(
-                Icons.analytics_rounded,
-                size: 22,
-                color: AppColors.textPrimary,
-              ),
+            child: Icon(
+              icon,
+              size: 22,
+              color: Colors.white,
             ),
           ),
         ),
@@ -694,21 +739,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       style: GoogleFonts.poppins(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
-                        color: accentColor,
+                        color: Colors.white,
                         height: 1.1,
                       ),
                     ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 2),
               Text(
                 label,
                 style: GoogleFonts.poppins(
                   fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                   color: Colors.white,
                   height: 1.2,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  tagLabel,
+                  style: GoogleFonts.poppins(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w600,
+                    color: tagColor,
+                  ),
+                ),
               ),
             ],
           ),
@@ -717,70 +778,69 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // ── HEADER SEKSI UMUM (IKON DENGAN LINGKARAN SOFT BLUE) ───────────────────
-  Widget _buildSectionHeader({required IconData icon, required String title}) {
+  // ── HEADER SEKSI UMUM (KONSISTEN DENGAN PENGGUNA & DOKTER) ─────────────────
+  Widget _buildSectionHeader({
+    required IconData icon,
+    required String title,
+    Widget? trailing,
+  }) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 32,
-          height: 32,
-          decoration: const BoxDecoration(
-            color: AppColors.softBlue,
-            shape: BoxShape.circle,
+          width: 30,
+          height: 30,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: const Color(0xFF276F8F).withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(9),
           ),
-          child: Icon(icon, size: 18, color: AppColors.primaryText),
+          child: Icon(icon, size: 16, color: const Color(0xFF276F8F)),
         ),
-        const SizedBox(width: 10),
-        Text(
-          title,
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: AppColors.primaryText,
+        const SizedBox(width: 9),
+        Expanded(
+          child: Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 15.5,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1C4E68),
+              letterSpacing: -0.2,
+            ),
           ),
         ),
+        if (trailing != null) trailing,
       ],
     );
   }
 
-  // ── D. TOMBOL TAMBAH KONTEN ───────────────────────────────────────────────
+  // ── D. TOMBOL TAMBAH KONTEN (AKSI CEPAT ADMINISTRATOR) ────────────────────
   Widget _buildQuickActions() {
     return Row(
       children: [
-        // Tambah Berita: Tetap Putih + border softBlue
+        // 1. Tambah Berita
         Expanded(
-          child: _QuickActionButton(
-            iconImg: 'assets/images/admin-berita-kesehatan.png',
-            label: 'Tambah\nBerita',
-            backgroundColor: AppColors.surfaceCard,
-            borderColor: AppColors.softBlue,
-            borderWidth: 1.5,
-            iconBgColor: AppColors.softBlue,
-            badgeColor: AppColors.softBlue,
+          child: _QuickActionCard(
+            title: 'Tambah Berita',
+            subtitle: 'Tulis artikel baru',
+            badgeText: '+ Artikel',
+            icon: Icons.post_add_rounded,
+            iconColor: const Color(0xFF276F8F),
+            iconBgColor: const Color(0xFFEBF5F9),
             onTap: _openAddBerita,
           ),
         ),
         const SizedBox(width: 12),
 
-        // Tambah Gastropedia: Disamakan persis dengan Card Sapaan Admin
+        // 2. Tambah Gastropedia
         Expanded(
-          child: _QuickActionButton(
-            iconImg: 'assets/images/admin-data-gastropedia.png',
-            label: 'Tambah\nGastropedia',
-            backgroundColor: Colors.white,
-            backgroundGradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFFFFFDF5),
-                Color(0xFFFFFBE8),
-                Color(0xFFFAF3D4),
-              ],
-            ),
-            borderColor: const Color(0xFFEBE3D0),
-            borderWidth: 1.2,
-            iconBgColor: AppColors.bgAccent,
-            badgeColor: AppColors.accentGold,
+          child: _QuickActionCard(
+            title: 'Tambah Gastropedia',
+            subtitle: 'Entri edukasi baru',
+            badgeText: '+ Edukasi',
+            icon: Icons.bookmark_add_outlined,
+            iconColor: const Color(0xFF9E652B),
+            iconBgColor: const Color(0xFFFFF8E7),
             onTap: _openAddEnsiklopedia,
           ),
         ),
@@ -788,99 +848,91 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // ── E. KELOLA KONTEN ──────────────────────────────────────────────────────
+  // ── E. KELOLA KONTEN (MANAJEMEN KONTEN BERSIH & PROFESIONAL) ─────────────
   Widget _buildManageContent() {
     return Column(
       children: [
-        // Kartu Berita Kesehatan: Tetap putih (surfaceCard) + border softBlue
+        // 1. Berita Kesehatan
         StreamBuilder<List<BeritaArticle>>(
           stream: _beritaService.streamAll(),
           builder: (context, snapshot) {
-            String subtitle;
-            if (snapshot.connectionState == ConnectionState.waiting &&
-                !snapshot.hasData) {
-              subtitle = 'Memuat data...';
-            } else if (snapshot.hasError) {
-              subtitle = 'Gagal memuat data';
-            } else {
-              final articles = snapshot.data ?? [];
-              final total = articles.length;
-              final draft = articles.where((a) => a.status == 'draft').length;
-              subtitle = '$total artikel  •  $draft draft';
-            }
+            final articles = snapshot.data ?? [];
+            final total = articles.length;
+            final draft = articles.where((a) => a.status == 'draft').length;
+            final published = total - draft;
 
-            return _ManageCard(
-              iconImg: 'assets/images/admin-berita-kesehatan.png',
+            return _ManageContentCard(
               title: 'Berita Kesehatan',
-              subtitle: subtitle,
-              cardBackgroundColor: AppColors.surfaceCard,
-              borderColor: AppColors.softBlue,
-              iconCircleColor: AppColors.softBlue,
+              icon: Icons.newspaper_rounded,
+              iconColor: const Color(0xFF276F8F),
+              iconBgColor: const Color(0xFFEBF5F9),
+              badgeWidget: Row(
+                children: [
+                  _buildStatusPill(
+                    label: '$published Terbit',
+                    bgColor: const Color(0xFFE8F5E9),
+                    textColor: const Color(0xFF2E7D32),
+                  ),
+                  const SizedBox(width: 6),
+                  _buildStatusPill(
+                    label: '$draft Draft',
+                    bgColor: draft > 0 ? const Color(0xFFFFF3E0) : const Color(0xFFF1F5F9),
+                    textColor: draft > 0 ? const Color(0xFFD97706) : const Color(0xFF64748B),
+                  ),
+                ],
+              ),
               onTap: _openKelolaBerita,
             );
           },
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
 
-        // Kartu Gastropedia: Disamakan persis dengan Card Sapaan Admin
+        // 2. Gastropedia
         StreamBuilder<List<GastropediaItem>>(
           stream: _ensiklopediaService.streamPublishedGastropedia(),
           builder: (context, snapshot) {
-            String subtitle;
-            if (snapshot.connectionState == ConnectionState.waiting &&
-                !snapshot.hasData) {
-              subtitle = 'Memuat data...';
-            } else if (snapshot.hasError) {
-              subtitle = 'Gagal memuat data';
-            } else {
-              final total = snapshot.data?.length ?? 0;
-              subtitle = '$total data gastropedia';
-            }
+            final total = snapshot.data?.length ?? 0;
 
-            return _ManageCard(
-              iconImg: 'assets/images/admin-data-gastropedia.png',
+            return _ManageContentCard(
               title: 'Gastropedia',
-              subtitle: subtitle,
-              cardBackgroundColor: Colors.white,
-              cardBackgroundGradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFFFFDF5),
-                  Color(0xFFFFFBE8),
-                  Color(0xFFFAF3D4),
+              icon: Icons.menu_book_rounded,
+              iconColor: const Color(0xFF9E652B),
+              iconBgColor: const Color(0xFFFFF8E7),
+              badgeWidget: Row(
+                children: [
+                  _buildStatusPill(
+                    label: '$total Data Terdaftar',
+                    bgColor: const Color(0xFFFFF8E7),
+                    textColor: const Color(0xFF9E652B),
+                  ),
                 ],
               ),
-              borderColor: const Color(0xFFEBE3D0),
-              iconCircleColor: AppColors.bgAccent,
               onTap: _openKelolaGastropedia,
             );
           },
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
 
-        // Kartu Pemantauan Penilaian: Mengikuti gaya kartu Berita Kesehatan
+        // 3. Pemantauan Penilaian
         StreamBuilder<int>(
           stream: _ratingMonitoringService.watchTotalCombinedRatingsCount(),
           builder: (context, snapshot) {
-            final String subtitle;
-            if (snapshot.connectionState == ConnectionState.waiting &&
-                !snapshot.hasData) {
-              subtitle = 'Pantau penilaian gastropedia & konsultasi';
-            } else if (snapshot.hasError) {
-              subtitle = 'Pantau penilaian gastropedia & konsultasi';
-            } else {
-              final total = snapshot.data ?? 0;
-              subtitle = '$total penilaian';
-            }
+            final total = snapshot.data ?? 0;
 
-            return _ManageCard(
-              iconData: Icons.star_rounded,
+            return _ManageContentCard(
               title: 'Pemantauan Penilaian',
-              subtitle: subtitle,
-              cardBackgroundColor: AppColors.surfaceCard,
-              borderColor: AppColors.softBlue,
-              iconCircleColor: AppColors.softBlue,
+              icon: Icons.star_rounded,
+              iconColor: const Color(0xFFD97706),
+              iconBgColor: const Color(0xFFFEF3C7),
+              badgeWidget: Row(
+                children: [
+                  _buildStatusPill(
+                    label: '$total Penilaian Masuk',
+                    bgColor: const Color(0xFFFEF3C7),
+                    textColor: const Color(0xFFB45309),
+                  ),
+                ],
+              ),
               onTap: _openPemantauanPenilaian,
             );
           },
@@ -889,75 +941,87 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildStatusPill({
+    required String label,
+    required Color bgColor,
+    required Color textColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.poppins(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
+      ),
+    );
+  }
+
   // ── F. HEADER AKTIVITAS TERBARU + LIHAT SEMUA ─────────────────────────────
   Widget _buildActivitySectionHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                color: AppColors.softBlue,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.history_rounded,
-                size: 18,
-                color: AppColors.primaryText,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'Aktivitas Terbaru',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primaryText,
-              ),
-            ),
-          ],
-        ),
-        GestureDetector(
+    return _buildSectionHeader(
+      icon: Icons.history_rounded,
+      title: 'Aktivitas Terbaru',
+      trailing: Material(
+        color: Colors.transparent,
+        child: InkWell(
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) => const ActivityHistoryScreen()),
+                builder: (context) => const ActivityHistoryScreen(),
+              ),
             );
           },
-          child: Row(
-            children: [
-              Text(
-                'Lihat semua',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Lihat semua',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF276F8F),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right_rounded,
-                  size: 18, color: AppColors.textSecondary),
-            ],
+                const SizedBox(width: 2),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 16,
+                  color: Color(0xFF276F8F),
+                ),
+              ],
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 
-  // ── F. LIST AKTIVITAS TERBARU (KARTU PUTIH BERSIH) ────────────────────────
+  // ── F. LIST AKTIVITAS TERBARU (AUDIT TRAIL MINIMALIS & BERSIH) ───────────
   Widget _buildRecentActivity() {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFFEBE3D0),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -971,11 +1035,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               padding: EdgeInsets.all(16),
               child: Center(
                 child: SizedBox(
-                  width: 24,
-                  height: 24,
+                  width: 22,
+                  height: 22,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: AppColors.primaryText,
+                    color: Color(0xFF276F8F),
                   ),
                 ),
               ),
@@ -984,13 +1048,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           final logs = snapshot.data!.take(3).toList();
           if (logs.isEmpty) {
             return Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               child: Center(
                 child: Text(
                   'Belum ada aktivitas',
                   style: GoogleFonts.poppins(
-                    color: AppColors.textSecondary,
+                    color: const Color(0xFF8C9BA5),
                     fontSize: 13,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
@@ -999,16 +1064,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           return Column(
             children: [
               for (int i = 0; i < logs.length; i++) ...[
-                _buildActivityRow(
-                  logs[i],
-                  isFirst: i == 0,
-                  isLast: i == logs.length - 1,
-                ),
+                _buildActivityRow(logs[i]),
                 if (i < logs.length - 1)
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: Colors.grey.shade200,
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Color(0xFFF0EBE1),
+                    ),
                   ),
               ],
             ],
@@ -1018,58 +1082,52 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildActivityRow(
-    ActivityLogModel log, {
-    bool isFirst = false,
-    bool isLast = false,
-  }) {
+  Widget _buildActivityRow(ActivityLogModel log) {
     final desc = _buildLogDescription(log);
     final time = _formatRelativeTime(log.createdAt);
 
-    return Padding(
-      padding: EdgeInsets.only(
-        top: isFirst ? 0 : 12,
-        bottom: isLast ? 0 : 12,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 2),
-            child: Icon(
-              Icons.history_rounded,
-              size: 18,
-              color: AppColors.textSecondary,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Subtle dot indicator alih-alih kotak warna mencolok
+        Padding(
+          padding: const EdgeInsets.only(top: 5),
+          child: Container(
+            width: 7,
+            height: 7,
+            decoration: const BoxDecoration(
+              color: Color(0xFF276F8F),
+              shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  desc,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primaryText,
-                    height: 1.4,
-                  ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                desc,
+                style: GoogleFonts.poppins(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1C4E68),
+                  height: 1.35,
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  time,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textSecondary,
-                  ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                time,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF8C9BA5),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1100,111 +1158,108 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// WIDGET BANTU: KARTU STATISTIK (SEKSI C)
+// WIDGET BANTU: TOMBOL TAMBAH KONTEN (SEKSI D) - AKSI CEPAT ADMINISTRATOR
 // ═══════════════════════════════════════════════════════════════════════════════
-// ignore: unused_element
-class _StatCard extends StatelessWidget {
-  final String imageBg;
-  final String iconImg;
-  final int? count;
-  final String label;
+class _QuickActionCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String badgeText;
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBgColor;
   final VoidCallback onTap;
 
-  const _StatCard({
-    required this.imageBg,
-    required this.iconImg,
-    required this.count,
-    required this.label,
+  const _QuickActionCard({
+    required this.title,
+    required this.subtitle,
+    required this.badgeText,
+    required this.icon,
+    required this.iconColor,
+    required this.iconBgColor,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 62,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: const Color(0xFFEBE3D0),
+              width: 1.2,
             ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Gambar latar belakang
-              Image.asset(
-                imageBg,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    Container(color: const Color(0xFFD9EAF7)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
-
-              // Konten kartu
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                child: Row(
-                  children: [
-                    Image.asset(
-                      iconImg,
-                      width: 34,
-                      height: 34,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Icon(Icons.analytics_rounded, size: 28, color: _kNavy),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Baris atas: Icon tunggal di kiri & Badge kecil di kanan
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: iconBgColor,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          count == null
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: _kNavy,
-                                  ),
-                                )
-                              : Text(
-                                  count.toString(),
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w800,
-                                    color: _kNavy,
-                                    height: 1.1,
-                                  ),
-                                ),
-                          Text(
-                            label,
-                            style: GoogleFonts.poppins(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w500,
-                              color: _kNavy,
-                              height: 1.1,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                    child: Center(
+                      child: Icon(icon, size: 20, color: iconColor),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: iconBgColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      badgeText,
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: iconColor,
                       ),
                     ),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      color: _kNavy,
-                      size: 20,
-                    ),
-                  ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Judul & subjudul
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1C4E68),
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: GoogleFonts.poppins(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF7A8B99),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -1215,236 +1270,96 @@ class _StatCard extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// WIDGET BANTU: TOMBOL TAMBAH KONTEN (SEKSI D)
+// WIDGET BANTU: KARTU KELOLA KONTEN (SEKSI E) - MANAJEMEN KONTEN PROFESIONAL
 // ═══════════════════════════════════════════════════════════════════════════════
-class _QuickActionButton extends StatelessWidget {
-  final String iconImg;
-  final String label;
-  final Color backgroundColor;
-  final Gradient? backgroundGradient;
-  final Color borderColor;
-  final double borderWidth;
-  final Color iconBgColor;
-  final Color badgeColor;
-  final VoidCallback onTap;
-
-  const _QuickActionButton({
-    required this.iconImg,
-    required this.label,
-    required this.backgroundColor,
-    this.backgroundGradient,
-    required this.borderColor,
-    this.borderWidth = 1.2,
-    required this.iconBgColor,
-    required this.badgeColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: backgroundGradient == null ? backgroundColor : null,
-          gradient: backgroundGradient,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: borderColor, width: borderWidth),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Ikon kategori dalam bingkai lingkaran + indikator "+" berwarna di pojok
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: iconBgColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Image.asset(
-                      iconImg,
-                      width: 24,
-                      height: 24,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.article_outlined,
-                        size: 22,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: -3,
-                  bottom: -3,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      color: badgeColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.textPrimary,
-                        width: 1.4,
-                      ),
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.add_rounded,
-                        size: 12,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryText,
-                  height: 1.2,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.primaryText,
-              size: 20,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// WIDGET BANTU: KARTU KELOLA KONTEN (SEKSI E)
-// ═══════════════════════════════════════════════════════════════════════════════
-class _ManageCard extends StatelessWidget {
-  final String iconImg;
-  final IconData? iconData;
+class _ManageContentCard extends StatelessWidget {
   final String title;
-  final String subtitle;
-  final Color cardBackgroundColor;
-  final Gradient? cardBackgroundGradient;
-  final Color borderColor;
-  final Color iconCircleColor;
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBgColor;
+  final Widget badgeWidget;
   final VoidCallback onTap;
 
-  const _ManageCard({
-    this.iconImg = '',
-    this.iconData,
+  const _ManageContentCard({
     required this.title,
-    required this.subtitle,
-    required this.cardBackgroundColor,
-    this.cardBackgroundGradient,
-    required this.borderColor,
-    required this.iconCircleColor,
+    required this.icon,
+    required this.iconColor,
+    required this.iconBgColor,
+    required this.badgeWidget,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: cardBackgroundGradient == null ? cardBackgroundColor : null,
-          gradient: cardBackgroundGradient,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: borderColor, width: 1.2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: const Color(0xFFEBE3D0),
+              width: 1.2,
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Lingkaran kecil berbackground berbeda untuk tiap kategori
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: iconCircleColor,
-                shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
-              child: Center(
-                child: iconData != null
-                    ? Icon(
-                        iconData,
-                        size: 24,
-                        color: AppColors.primaryText,
-                      )
-                    : Image.asset(
-                        iconImg,
-                        width: 24,
-                        height: 24,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(
-                          Icons.folder_open_rounded,
-                          size: 22,
-                          color: AppColors.primaryText,
-                        ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Single clean category icon box
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Center(
+                  child: Icon(
+                    icon,
+                    size: 22,
+                    color: iconColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              // Content: Title & Text Status Pills
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1C4E68),
                       ),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primaryText,
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.neutralGray,
-                    ),
-                  ),
-                ],
+                    const SizedBox(height: 5),
+                    badgeWidget,
+                  ],
+                ),
               ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.textSecondary,
-              size: 22,
-            ),
-          ],
+              const SizedBox(width: 8),
+              // Clean subtle chevron
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 22,
+                color: Color(0xFF94A3B8),
+              ),
+            ],
+          ),
         ),
       ),
     );
