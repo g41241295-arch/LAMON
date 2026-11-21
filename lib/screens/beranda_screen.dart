@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/app_state.dart';
-import '../pengingat_jam_makan/models/meal_reminder_plan.dart';
 import '../pengingat_jam_makan/services/meal_reminder_service.dart';
 import 'beranda/models/meal_schedule_model.dart';
 import 'beranda/services/beranda_meal_service.dart';
@@ -14,6 +13,7 @@ import 'beranda/widgets/formal_hero_card.dart';
 import 'beranda/widgets/formal_menu_grid.dart';
 import 'beranda/widgets/formal_info_section.dart';
 import '../routes/app_routes.dart';
+import '../constants/app_colors.dart';
 
 /// Konstanta padding horizontal seragam untuk seluruh bagian Beranda
 const double kHPad = 20.0;
@@ -308,12 +308,10 @@ class BerandaScreenState extends State<BerandaScreen>
       statusText = 'Semua jam makan hari ini sudah selesai';
     }
 
-    const formalBgStart = Color(0xFFFCFBF7);
-    const formalBgEnd = Color(0xFFF7F4EB);
     final viewPadding = MediaQuery.viewPaddingOf(context);
 
     return Scaffold(
-      backgroundColor: formalBgStart,
+      backgroundColor: AppColors.bgGradientTop,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isLargeScreen = constraints.maxWidth > 520;
@@ -331,14 +329,7 @@ class BerandaScreenState extends State<BerandaScreen>
 
           final mainBody = Container(
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  formalBgStart,
-                  formalBgEnd,
-                ],
-              ),
+              gradient: AppColors.pageGradient,
             ),
             child: CustomScrollView(
               physics: const BouncingScrollPhysics(),
@@ -422,7 +413,7 @@ class BerandaScreenState extends State<BerandaScreen>
 
           if (isLargeScreen) {
             return Scaffold(
-              backgroundColor: const Color(0xFFECE7BE),
+              backgroundColor: AppColors.desktopBackground,
               body: Center(
                 child: Container(
                   width: effectiveWidth,
