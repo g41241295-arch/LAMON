@@ -400,5 +400,13 @@ service cloud.firestore {
         allow update, delete: if false;
       }
     }
+
+    // ── 10. Status Baca Notifikasi Admin (Per Admin) ───────────────────────
+    // Path: /admin_notification_state/{adminId}
+    // Hanya admin pemilik akun yang boleh membaca & menulis status baca miliknya sendiri.
+    // Pengguna biasa tidak boleh mengakses dokumen ini.
+    match /admin_notification_state/{adminId} {
+      allow read, write: if isAdmin() && request.auth.uid == adminId;
+    }
   }
 }
