@@ -14,6 +14,7 @@ import '../widgets/admin/activity_item.dart';
 import '../widgets/admin/admin_widgets.dart';
 import '../services/profile_photo_service.dart';
 import '../services/rating_monitoring_service.dart';
+import '../services/admin_notification_service.dart';
 
 // ─── Warna Utama Beranda Admin (Mengacu pada AppColors) ────────────────────
 const Color _kNavy = AppColors.textPrimary;
@@ -34,6 +35,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final _ensiklopediaService = EnsiklopediaService();
   final _beritaService = BeritaService();
   final _ratingMonitoringService = RatingMonitoringService();
+  final _notificationService = AdminNotificationService.instance;
   bool _snackBarCleared = false;
 
   @override
@@ -115,10 +117,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildDefaultAvatar() {
-    return const CircleAvatar(
-      radius: 14,
-      backgroundColor: Color(0xFF276F8F),
-      child: Icon(Icons.person, size: 16, color: Colors.white),
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: const Icon(Icons.person, size: 20, color: Colors.white),
     );
   }
 
@@ -128,8 +142,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       return RealtimeHeaderAvatar(
         collection: 'users',
         docId: uid,
-        size: 28,
-        borderRadius: 14,
+        size: 38,
+        borderRadius: 19,
         fallback: _buildLegacyAvatar(),
       );
     }
@@ -143,8 +157,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (_photoUrl != null && _photoUrl!.isNotEmpty) {
       imageContent = Image.network(
         _photoUrl!,
-        width: 28,
-        height: 28,
+        width: 38,
+        height: 38,
         fit: BoxFit.cover,
         alignment: Alignment.topCenter,
         filterQuality: FilterQuality.high,
@@ -152,8 +166,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           if (assetPath != null) {
             return Image.asset(
               assetPath,
-              width: 28,
-              height: 28,
+              width: 38,
+              height: 38,
               fit: BoxFit.cover,
               alignment: Alignment.topCenter,
               filterQuality: FilterQuality.high,
@@ -166,8 +180,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     } else if (assetPath != null) {
       imageContent = Image.asset(
         assetPath,
-        width: 28,
-        height: 28,
+        width: 38,
+        height: 38,
         fit: BoxFit.cover,
         alignment: Alignment.topCenter,
         filterQuality: FilterQuality.high,
@@ -178,8 +192,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (imageContent != null) {
       return ClipOval(
         child: SizedBox(
-          width: 28,
-          height: 28,
+          width: 38,
+          height: 38,
           child: imageContent,
         ),
       );
@@ -220,6 +234,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     Navigator.pushNamed(context, AppRoutes.adminPenilaian);
   }
 
+  void _openAdminNotifications() {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.adminNotifikasi,
+      arguments: {'adminName': _adminName, 'adminId': _adminId},
+    );
+  }
+
+  String _formatTodayHeaderDate() {
+    const months = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+    final now = DateTime.now();
+    return 'Hari Ini, ${now.day} ${months[now.month]}';
+  }
+
   Future<void> _openAdminProfile() async {
     await Navigator.pushNamed(context, AppRoutes.adminProfile);
     if (mounted) {
@@ -254,9 +296,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 16),
-                // A. Header & Profil
+                // A. Header & Profil (Disamakan dengan Beranda Pengguna)
                 _buildHeader(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
 
                 // B. Welcome Section
                 _buildWelcomeBanner(),
@@ -299,61 +341,136 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // ── A. PROFIL HEADER ──────────────────────────────────────────────────────
+  // ── A. HEADER BERANDA ADMIN (DISAMAKAN DENGAN FORMALHEADERBAR PENGGUNA) ───
   Widget _buildHeader() {
-    return GestureDetector(
-      onTap: _openAdminProfile,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceCard,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.softBlue, width: 1.2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
+    return Row(
+      children: [
+        // Kiri: Avatar Profil Admin (dengan ripple saat ditekan) + Teks LAMON
+        Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _buildAvatar(),
-            const SizedBox(width: 10),
-            _loadingAdmin
-                ? Container(
-                    width: 60,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: AppColors.softBlue,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  )
-                : ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 220),
-                    child: Text(
-                      _displayAdminName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primaryText,
-                      ),
-                    ),
-                  ),
-            const SizedBox(width: 6),
-            const Icon(
-              Icons.keyboard_arrow_down_rounded,
-              color: AppColors.primaryText,
-              size: 20,
+            Material(
+              color: Colors.transparent,
+              shape: const CircleBorder(),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: _openAdminProfile,
+                customBorder: const CircleBorder(),
+                child: _buildAvatar(),
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: _openAdminProfile,
+              child: Text(
+                'LAMON',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.primary,
+                  letterSpacing: 0.8,
+                ),
+              ),
             ),
           ],
         ),
-      ),
+
+        const Spacer(),
+
+        // Kanan: Pill Tanggal Hari Ini (hanya informasi, tanpa panah & tanpa tap)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: const Color(0xFFEBE3D0),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.calendar_today_rounded,
+                size: 13,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                _formatTodayHeaderDate(),
+                style: GoogleFonts.poppins(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryText,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(width: 10),
+
+        // Paling Kanan: Tombol Lonceng Bulat + Titik Oranye jika ada notifikasi belum dibaca
+        StreamBuilder<bool>(
+          stream: _notificationService.watchHasUnreadNotifications(),
+          builder: (context, snapshot) {
+            final hasUnread = snapshot.data == true;
+            return GestureDetector(
+              onTap: _openAdminNotifications,
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFEBE3D0),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    const Icon(
+                      Icons.notifications_none_rounded,
+                      size: 20,
+                      color: AppColors.primaryText,
+                    ),
+                    if (hasUnread)
+                      Positioned(
+                        top: 8,
+                        right: 9,
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                            color: AppColors.orangeAccent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
