@@ -7,6 +7,7 @@ import '../constants/app_colors.dart';
 import '../constants/app_assets.dart';
 import '../providers/app_state.dart';
 import '../services/consultation_retention_service.dart';
+import '../auth/biometric_service.dart';
 
 enum AuthView { welcome, login, register }
 
@@ -180,6 +181,8 @@ class _LoginScreenState extends State<LoginScreen> {
         } else if (role == 'admin') {
           Navigator.pushNamedAndRemoveUntil(context, '/admin-dashboard', (route) => false);
         } else {
+          await BiometricService.instance.maybeOfferBiometricAfterLogin(context, uid: uid);
+          if (!mounted) return;
           if (!hasCompletedScreening) {
             Navigator.pushNamedAndRemoveUntil(context, '/screening/gender', (route) => false);
           } else {

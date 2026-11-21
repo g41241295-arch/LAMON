@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_assets.dart';
 import '../providers/app_state.dart';
+import '../auth/biometric_service.dart';
 
 class GoogleAuthScreen extends StatefulWidget {
   const GoogleAuthScreen({super.key});
@@ -103,6 +104,9 @@ class _GoogleAuthScreenState extends State<GoogleAuthScreen> {
         setState(() {
           _isLoading = false;
         });
+
+        await BiometricService.instance.maybeOfferBiometricAfterLogin(context, uid: uid);
+        if (!mounted) return;
 
         if (!hasCompletedScreening) {
           Navigator.pushNamedAndRemoveUntil(context, '/screening/gender', (route) => false);

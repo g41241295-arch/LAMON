@@ -47,6 +47,7 @@ import '../screens/admin/admin_notification_screen.dart';
 import '../screens/admin/pemantauan_penilaian_screen.dart';
 import '../screens/user_profile_screen.dart';
 import '../screens/user_notifications_screen.dart';
+import '../auth/biometric_gate.dart';
 
 class AppRoutes {
   static const String initial = '/splash';
@@ -334,7 +335,7 @@ class AppRoutes {
         );
       case beranda:
         return _createSmoothRoute(
-          const BerandaScreen(),
+          const ExitConfirmScope(child: BerandaScreen()),
           settings: settings,
           isFadeOnly: true,
         );
