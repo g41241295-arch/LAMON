@@ -12,23 +12,18 @@ import 'pengingat_jam_makan/services/notification_service.dart';
 import 'services/fcm_service.dart';
 import 'services/notification_service.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  // Jalankan inisialisasi notifikasi di background agar startup aplikasi cepat & instan
-  unawaited(NotificationService.instance.initialize().catchError((e) {
-    debugPrint('Gagal inisialisasi notifikasi saat startup: $e');
-  }));
 
   // Aktifkan edge-to-edge agar latar bisa menembus status bar & navigation bar
-  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     systemNavigationBarColor: Colors.transparent,
     systemNavigationBarContrastEnforced: false,
   ));
+
+  // Jalankan aplikasi langsung agar layar native splash pertama tidak tertahan lama
   runApp(const LamonApp());
 }
 
@@ -46,8 +41,27 @@ class _LamonAppState extends State<LamonApp> {
   @override
   void initState() {
     super.initState();
-    FcmService.instance.setupNotificationClickHandlers();
-    _initChatNotificationListener();
+    _initAppServices();
+  }
+
+  /// Inisialisasi Firebase & notifikasi secara asinkron di latar belakang
+  /// agar tampilan splash screen langsung muncul seketika tanpa delay
+  Future<void> _initAppServices() async {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+
+      // Jalankan inisialisasi notifikasi di background agar startup aplikasi cepat & instan
+      unawaited(NotificationService.instance.initialize().catchError((e) {
+        debugPrint('Gagal inisialisasi notifikasi saat startup: $e');
+      }));
+
+      FcmService.instance.setupNotificationClickHandlers();
+      _initChatNotificationListener();
+    } catch (e) {
+      debugPrint('[LamonApp] Gagal inisialisasi Firebase/Services: $e');
+    }
   }
 
   void _initChatNotificationListener() {
