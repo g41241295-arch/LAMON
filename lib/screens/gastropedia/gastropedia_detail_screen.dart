@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
 import '../../models/gastropedia_item_model.dart';
 import '../../services/rating_monitoring_service.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/gastropedia/gastropedia_accordion.dart';
+import '../../widgets/gastropedia/gastropedia_header.dart';
 
 class GastropediaDetailScreen extends StatelessWidget {
   final GastropediaItem item;
@@ -90,83 +92,9 @@ class GastropediaDetailScreen extends StatelessWidget {
             const SizedBox(height: 6),
 
             // ═══════════════════════════════════════════
-            // 1. Header Top Bar (Back Button + Judul Pill Tengah + Balancer)
+            // 1. Header Top Bar (Back Button + Judul Pill Kuning Tengah)
             // ═══════════════════════════════════════════
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  InkWell(
-                    onTap: () => Navigator.maybePop(context),
-                    borderRadius: BorderRadius.circular(24),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFFEBE3D0),
-                          width: 1.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF1C4E68).withValues(alpha: 0.06),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.arrow_back_rounded,
-                          color: Color(0xFF1C4E68),
-                          size: 22,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Judul Pill Tengah
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: const Color(0xFFEBE3D0),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF1C4E68).withValues(alpha: 0.04),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const Text(
-                      'Detail Pangan',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF1C4E68),
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                  ),
-
-                  // Penyeimbang Lebar di Sisi Kanan
-                  const SizedBox(
-                    width: 40,
-                    height: 40,
-                  ),
-                ],
-              ),
-            ),
+            const GastropediaHeader(title: 'Detail Pangan'),
 
             const SizedBox(height: 12),
 
@@ -349,7 +277,7 @@ class GastropediaDetailScreen extends StatelessWidget {
                         const Row(
                           children: [
                             Icon(
-                              Icons.analytics_outlined,
+                              Icons.description_outlined,
                               size: 18,
                               color: Color(0xFF276F8F),
                             ),
@@ -386,7 +314,7 @@ class GastropediaDetailScreen extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: _buildNutrientStatBox(
-                            icon: Icons.set_meal_rounded,
+                            icon: Icons.featured_play_list_outlined,
                             iconColor: const Color(0xFF276F8F),
                             bgColor: const Color(0xFFF0F8FA),
                             borderColor: const Color(0xFFCFE8EE),
@@ -398,7 +326,7 @@ class GastropediaDetailScreen extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: _buildNutrientStatBox(
-                            icon: Icons.grass_rounded,
+                            icon: Icons.bakery_dining_outlined,
                             iconColor: const Color(0xFF38B249),
                             bgColor: const Color(0xFFF2F9F4),
                             borderColor: const Color(0xFFD1EEDB),
@@ -410,7 +338,7 @@ class GastropediaDetailScreen extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: _buildNutrientStatBox(
-                            icon: Icons.water_drop_rounded,
+                            icon: Icons.water_drop_outlined,
                             iconColor: const Color(0xFF4A90E2),
                             bgColor: const Color(0xFFF0F5FB),
                             borderColor: const Color(0xFFD3E4F6),
@@ -457,58 +385,80 @@ class GastropediaDetailScreen extends StatelessWidget {
                     title: 'Manfaat untuk Lambung',
                     content: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: item.manfaat.asMap().entries.map((entry) {
-                        final text = entry.value;
-                        final isLast = entry.key == item.manfaat.length - 1;
+                      children: () {
+                        final parsedManfaat = _parseManfaat(item.manfaat);
+                        return parsedManfaat.asMap().entries.map((entry) {
+                          final point = entry.value;
+                          final isLast = entry.key == parsedManfaat.length - 1;
 
-                        return Padding(
-                          padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFDFDFB),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0xFFEBE3D0),
-                                width: 1,
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFDFDFB),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(0xFFEBE3D0),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 24,
+                                    height: 24,
+                                    margin: const EdgeInsets.only(top: 1),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFDEF7EA),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.check_rounded,
+                                        size: 14,
+                                        color: Color(0xFF27AE60),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          point.title,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 13,
+                                            height: 1.35,
+                                            color: const Color(0xFF1C4E68),
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        if (point.description.isNotEmpty) ...[
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            point.description,
+                                            textAlign: TextAlign.justify,
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 12,
+                                              height: 1.45,
+                                              color: const Color(0xFF2C495E),
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFDEF7EA),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.check_rounded,
-                                      size: 14,
-                                      color: Color(0xFF27AE60),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    text,
-                                    textAlign: TextAlign.justify,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      height: 1.5,
-                                      color: Color(0xFF2C495E),
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }).toList();
+                      }(),
                     ),
                   ),
 
@@ -809,4 +759,71 @@ class _DetailRatingCardState extends State<_DetailRatingCard> {
       ),
     );
   }
+}
+
+class _ManfaatPoint {
+  final String title;
+  final String description;
+
+  const _ManfaatPoint({required this.title, required this.description});
+}
+
+List<_ManfaatPoint> _parseManfaat(List<String> rawList) {
+  final List<_ManfaatPoint> results = [];
+  if (rawList.isEmpty) return results;
+
+  // Flatten any multiline items in rawList
+  final lines = rawList
+      .expand((m) => m.split('\n'))
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .toList();
+
+  final numberRegex = RegExp(r'^\d+[\.\)]\s*');
+  final bool hasNumberedLines = lines.any((l) => numberRegex.hasMatch(l));
+
+  if (hasNumberedLines) {
+    String? currentTitle;
+    final List<String> currentDescLines = [];
+
+    for (final line in lines) {
+      if (numberRegex.hasMatch(line)) {
+        if (currentTitle != null) {
+          results.add(_ManfaatPoint(
+            title: currentTitle,
+            description: currentDescLines.join(' '),
+          ));
+        }
+        currentTitle = line;
+        currentDescLines.clear();
+      } else {
+        if (currentTitle != null) {
+          currentDescLines.add(line);
+        } else {
+          results.add(_ManfaatPoint(title: line, description: ''));
+        }
+      }
+    }
+    if (currentTitle != null) {
+      results.add(_ManfaatPoint(
+        title: currentTitle,
+        description: currentDescLines.join(' '),
+      ));
+    }
+  } else {
+    for (final item in rawList) {
+      final parts = item
+          .split('\n')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      if (parts.isEmpty) continue;
+      results.add(_ManfaatPoint(
+        title: parts.first,
+        description: parts.skip(1).join(' '),
+      ));
+    }
+  }
+
+  return results;
 }

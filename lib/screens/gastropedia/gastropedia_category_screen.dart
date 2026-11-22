@@ -44,6 +44,7 @@ class GastropediaCategoryScreen extends StatelessWidget {
     }
 
     return AppScaffold(
+      backgroundGradient: AppColors.pageGradient,
       body: StreamBuilder<List<GastropediaItem>>(
         stream: EnsiklopediaService().streamPublishedGastropedia(),
         builder: (context, snapshot) {

@@ -26,6 +26,7 @@ dependencies:
   url_launcher: ^6.3.2
   firebase_messaging: ^16.7.1
   percent_indicator: ^4.2.3
+  local_auth: 3.0.0
 
 dependency_overrides:
   shared_preferences_android: 2.4.1

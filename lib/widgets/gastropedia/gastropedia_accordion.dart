@@ -20,7 +20,7 @@ class GastropediaAccordion extends StatelessWidget {
   IconData _resolveIcon() {
     if (icon != null) return icon!;
     final lower = title.toLowerCase();
-    if (lower.contains('deskripsi')) return Icons.article_outlined;
+    if (lower.contains('deskripsi')) return Icons.description_outlined;
     if (lower.contains('manfaat')) return Icons.health_and_safety_outlined;
     if (lower.contains('kandungan')) return Icons.science_outlined;
     return Icons.info_outline_rounded;

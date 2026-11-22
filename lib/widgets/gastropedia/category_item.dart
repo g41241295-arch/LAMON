@@ -192,8 +192,8 @@ class _CategoryItemState extends State<CategoryItem>
                         ),
                         child: const Center(
                           child: Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 10,
+                            Icons.chevron_right_rounded,
+                            size: 16,
                             color: Color(0xFF276F8F),
                           ),
                         ),

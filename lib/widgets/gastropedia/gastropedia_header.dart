@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../constants/app_colors.dart';
 
 /// Header bergaya pill krem-emas dengan tombol kembali lingkaran putih.
 /// Dipakai di Profil Admin, Kelola Gastropedia, Tambah/Edit Gastropedia.
@@ -62,10 +64,10 @@ class GastropediaHeader extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.titlePillYellowBg,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: const Color(0xFFEBE3D0),
+                    color: AppColors.titlePillYellowBorder,
                     width: 1.2,
                   ),
                   boxShadow: [
@@ -81,10 +83,10 @@ class GastropediaHeader extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF1E5D7D),
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.titlePillYellowText,
                     letterSpacing: -0.2,
                   ),
                 ),

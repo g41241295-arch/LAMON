@@ -287,7 +287,7 @@ class _GastropediaScreenState extends State<GastropediaScreen> {
                           ),
                           child: const Center(
                             child: Icon(
-                              Icons.restaurant_rounded,
+                              Icons.flatware_rounded,
                               size: 26,
                               color: Color(0xFF276F8F),
                             ),
@@ -551,8 +551,8 @@ class _GastropediaScreenState extends State<GastropediaScreen> {
                                 ),
                                 SizedBox(width: 3),
                                 Icon(
-                                  Icons.arrow_forward_ios_rounded,
-                                  size: 11,
+                                  Icons.chevron_right_rounded,
+                                  size: 16,
                                   color: Color(0xFF276F8F),
                                 ),
                               ],

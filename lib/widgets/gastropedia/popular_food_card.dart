@@ -464,12 +464,6 @@ class _PopularFoodCardState extends State<PopularFoodCard> {
                                         color: Color(0xFF8BA7B8),
                                       ),
                                     ),
-                                    const SizedBox(width: 3),
-                                    const Icon(
-                                      Icons.touch_app_outlined,
-                                      size: 11,
-                                      color: Color(0xFF9E652B),
-                                    ),
                                   ],
                                 ),
                               ),
@@ -561,8 +555,8 @@ class _PopularFoodCardState extends State<PopularFoodCard> {
                     ),
                     child: const Center(
                       child: Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 12,
+                        Icons.chevron_right_rounded,
+                        size: 16,
                         color: Color(0xFF276F8F),
                       ),
                     ),
