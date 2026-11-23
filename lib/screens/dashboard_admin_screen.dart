@@ -1457,39 +1457,350 @@ class _ManageCard extends StatelessWidget {
 class ActivityHistoryScreen extends StatelessWidget {
   const ActivityHistoryScreen({super.key});
 
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Tombol Kembali (bulat putih)
+          InkWell(
+            onTap: () => Navigator.of(context).pop(),
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceCard,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.softBlue, width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.arrow_back_rounded,
+                  color: AppColors.textPrimary,
+                  size: 22,
+                ),
+              ),
+            ),
+          ),
+
+          // Pill Judul: disamakan persis dengan pill "Catat Makanan" & halaman admin lainnya
+          Expanded(
+            child: Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7D6),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: const Color(0xFFE8D7A5),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  'Riwayat Aktivitas',
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1C4E68),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Penyeimbang kanan agar pill judul tetap berada tepat di tengah
+          const SizedBox(width: 40, height: 40),
+        ],
+      ),
+    );
+  }
+
+  /// Mengelompokkan aktivitas berdasarkan tanggal ("HARI INI", "KEMARIN", "MINGGU INI", "SEBELUMNYA")
+  /// tanpa mengubah urutan data dari stream Firestore.
+  List<({String label, List<ActivityLogModel> items})> _groupLogsByTime(
+    List<ActivityLogModel> logs,
+  ) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final todayItems = <ActivityLogModel>[];
+    final yesterdayItems = <ActivityLogModel>[];
+    final thisWeekItems = <ActivityLogModel>[];
+    final olderItems = <ActivityLogModel>[];
+
+    for (final log in logs) {
+      final dt = log.createdAt;
+      if (dt == null) {
+        olderItems.add(log);
+        continue;
+      }
+      final logDay = DateTime(dt.year, dt.month, dt.day);
+      final diffDays = today.difference(logDay).inDays;
+
+      if (diffDays <= 0) {
+        todayItems.add(log);
+      } else if (diffDays == 1) {
+        yesterdayItems.add(log);
+      } else if (diffDays <= 7) {
+        thisWeekItems.add(log);
+      } else {
+        olderItems.add(log);
+      }
+    }
+
+    final groups = <({String label, List<ActivityLogModel> items})>[];
+    if (todayItems.isNotEmpty) {
+      groups.add((label: 'HARI INI', items: todayItems));
+    }
+    if (yesterdayItems.isNotEmpty) {
+      groups.add((label: 'KEMARIN', items: yesterdayItems));
+    }
+    if (thisWeekItems.isNotEmpty) {
+      groups.add((label: 'MINGGU INI', items: thisWeekItems));
+    }
+    if (olderItems.isNotEmpty) {
+      groups.add((label: 'SEBELUMNYA', items: olderItems));
+    }
+    return groups;
+  }
+
+  Widget _buildGroupHeader(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10, left: 2),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Container(
+              height: 1,
+              color: AppColors.softBlue.withValues(alpha: 0.8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityCard(ActivityLogModel log) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.softBlue.withValues(alpha: 0.75),
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ActivityItem(
+        log: log,
+        showIconCircle: true,
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.softBlue, width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: const BoxDecoration(
+                  color: AppColors.softBlue,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.history_rounded,
+                  size: 28,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Belum ada aktivitas',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Riwayat perubahan konten berita dan gastropedia oleh admin akan tampil di sini.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 12.5,
+                  color: AppColors.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.softBlue, width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: const BoxDecoration(
+                  color: AppColors.softBlue,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.info_outline_rounded,
+                  size: 28,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Gagal memuat aktivitas',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AdminScaffold(
-      header: AdminAppBar(title: 'Riwayat Aktivitas'),
+      backgroundGradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          AppColors.bgGradientTop,
+          AppColors.bgGradientMiddle,
+          AppColors.bgGradientBottom,
+        ],
+      ),
+      header: _buildHeader(context),
       body: StreamBuilder<List<ActivityLogModel>>(
         stream: EnsiklopediaService().streamRecentActivity(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final logs = snapshot.data!;
-          if (logs.isEmpty) {
-            return Center(
-              child: Text(
-                'Belum ada aktivitas',
-                style: GoogleFonts.poppins(color: Colors.grey),
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(
+                color: AppColors.textPrimary,
+                strokeWidth: 2.5,
               ),
             );
           }
+
+          if (snapshot.hasError) {
+            return _buildErrorState();
+          }
+
+          final logs = snapshot.data ?? [];
+          if (logs.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          final groups = _groupLogsByTime(logs);
+
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: logs.length,
-            itemBuilder: (context, index) {
-              final log = logs[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-                color: AdminTheme.cardColor,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: ActivityItem(log: log),
-                ),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            itemCount: groups.length,
+            itemBuilder: (context, groupIndex) {
+              final group = groups[groupIndex];
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (groupIndex > 0) const SizedBox(height: 22),
+                  _buildGroupHeader(group.label),
+                  for (int i = 0; i < group.items.length; i++) ...[
+                    _buildActivityCard(group.items[i]),
+                    if (i < group.items.length - 1) const SizedBox(height: 12),
+                  ],
+                ],
               );
             },
           );
