@@ -6,12 +6,13 @@
 
 class SatuSehatService {
   constructor() {
-    this.baseUrl =
+    this.baseUrl = (
       process.env.SATUSEHAT_BASE_URL ||
-      'https://api-satusehat-stg.dto.kemkes.go.id';
-    this.clientId = process.env.SATUSEHAT_CLIENT_ID || '';
-    this.clientSecret = process.env.SATUSEHAT_CLIENT_SECRET || '';
-    this.orgId = process.env.SATUSEHAT_ORG_ID || '';
+      'https://api-satusehat-stg.dto.kemkes.go.id'
+    ).trim().replace(/\/+$/, '');
+    this.clientId = (process.env.SATUSEHAT_CLIENT_ID || '').trim();
+    this.clientSecret = (process.env.SATUSEHAT_CLIENT_SECRET || '').trim();
+    this.orgId = (process.env.SATUSEHAT_ORG_ID || '').trim();
 
     this.cachedToken = null;
     this.tokenExpiresAt = null;
@@ -46,10 +47,12 @@ class SatuSehatService {
     }
 
     try {
-      const authUrl = `${this.baseUrl}/oauth2/v1/accesstoken`;
+      // Endpoint otentikasi SatuSehat DTO mewajibkan parameter grant_type=client_credentials
+      const authUrl = `${this.baseUrl}/oauth2/v1/accesstoken?grant_type=client_credentials`;
       const formParams = new URLSearchParams();
       formParams.append('client_id', this.clientId);
       formParams.append('client_secret', this.clientSecret);
+      formParams.append('grant_type', 'client_credentials');
 
       const res = await fetch(authUrl, {
         method: 'POST',
@@ -62,7 +65,12 @@ class SatuSehatService {
       const data = await res.json();
 
       if (!res.ok) {
-        const errorDetail = data?.message || data?.error_description || res.statusText;
+        const errorDetail =
+          data?.message ||
+          data?.error_description ||
+          data?.fault?.faultstring ||
+          (typeof data === 'string' ? data : JSON.stringify(data)) ||
+          res.statusText;
         console.error('[SatuSehat Auth Error]', data);
         throw new Error(`Autentikasi SatuSehat gagal (${res.status}): ${errorDetail}`);
       }
