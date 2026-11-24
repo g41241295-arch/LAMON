@@ -6,6 +6,12 @@ const {
   handleWebhook,
   handleCheckPayment,
 } = require('./paymentHandler');
+const {
+  handleVerifyPatient,
+  handleGetPatientStatus,
+  handleUnlinkPatient,
+} = require('./satusehatHandler');
+const satuSehatService = require('./satusehatService');
 
 const app = express();
 
@@ -74,6 +80,7 @@ app.get('/api/health', (req, res) => {
     env: {
       midtransKey,
       firebaseAdmin,
+      satusehat: satuSehatService.isConfigured(),
     },
   });
 });
@@ -87,6 +94,11 @@ const asyncHandler = (fn) => (req, res, next) => {
 app.post('/api/create-transaction', asyncHandler(handleCreateTransaction));
 app.post('/api/midtrans-webhook', asyncHandler(handleWebhook));
 app.post('/api/check-payment', asyncHandler(handleCheckPayment));
+
+// Routes Integrasi SatuSehat FHIR (Patient Resource)
+app.post('/api/satusehat/verify-patient', asyncHandler(handleVerifyPatient));
+app.get('/api/satusehat/patient-status/:uid', asyncHandler(handleGetPatientStatus));
+app.post('/api/satusehat/unlink-patient', asyncHandler(handleUnlinkPatient));
 
 // Error handling middleware terpusat (tidak membocorkan stack trace / rahasia)
 app.use((err, req, res, next) => {

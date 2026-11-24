@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,8 +7,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import '../constants/app_colors.dart';
 import '../services/profile_photo_service.dart';
+import '../services/satusehat_service.dart';
 import '../widgets/app_scaffold.dart';
-import '../widgets/app_header_pill.dart';
 import '../routes/app_routes.dart';
 import '../services/fcm_service.dart';
 import '../auth/biometric_service.dart';
@@ -32,6 +33,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   dynamic _rawBirthDate; // Timestamp, String, atau null
   dynamic _rawHistory; // bool, String, List, atau null
 
+  // Field Integrasi SatuSehat Kemenkes
+  String? _nik;
+  String? _ihsNumber;
+  bool _satusehatLinked = false;
+  String? _satusehatVerifiedName;
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +60,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     String? gender;
     dynamic rawBirthDate;
     dynamic history;
+    String? nik;
+    String? ihsNumber;
+    bool satusehatLinked = false;
+    String? satusehatVerifiedName;
 
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
@@ -94,6 +105,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         } else if (data['screeningData'] != null && data['screeningData'] is Map) {
           history = data['screeningData']['hasHistory'] ?? data['screeningData']['riwayat_penyakit'];
         }
+
+        // Data SatuSehat FHIR
+        nik = data['nik']?.toString();
+        ihsNumber = data['ihsNumber']?.toString();
+        satusehatLinked = data['satusehatLinked'] == true;
+        satusehatVerifiedName = data['satusehatVerifiedName']?.toString();
       }
     } catch (e) {
       debugPrint('[UserProfileScreen] Gagal memuat data pengguna: $e');
@@ -114,6 +131,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         _gender = gender;
         _rawBirthDate = rawBirthDate;
         _rawHistory = history;
+        _nik = nik;
+        _ihsNumber = ihsNumber;
+        _satusehatLinked = satusehatLinked;
+        _satusehatVerifiedName = satusehatVerifiedName;
         _isLoading = false;
       });
     }
@@ -704,6 +725,604 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
+  void _showSatuSehatVerificationDialog() {
+    final controller = TextEditingController(text: _nik ?? '');
+    String? errorMessage;
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (dCtx, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0288D1).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.verified_user_rounded,
+                      color: Color(0xFF0288D1),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Verifikasi SatuSehat',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1C4E68),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Masukkan 16 digit Nomor Induk Kependudukan (NIK) KTP Anda untuk menyinkronkan data pasien dengan platform SatuSehat Kemenkes (HL7 FHIR).',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12.5,
+                        color: const Color(0xFF5A7184),
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: controller,
+                      keyboardType: TextInputType.number,
+                      maxLength: 16,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.2,
+                        color: const Color(0xFF1C4E68),
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Nomor Induk Kependudukan (NIK)',
+                        labelStyle: GoogleFonts.poppins(fontSize: 12),
+                        hintText: '3171012345670001',
+                        prefixIcon: const Icon(Icons.badge_outlined, size: 20),
+                        counterText: '',
+                        errorText: errorMessage,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF0288D1),
+                            width: 1.6,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F8FB),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFD3E7F3)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            size: 16,
+                            color: Color(0xFF0288D1),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Data NIK hanya digunakan untuk query resource Patient Kemenkes dan tidak dibagikan ke pihak ketiga lainnya.',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                color: const Color(0xFF335C6D),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () => Navigator.pop(dialogCtx),
+                  child: Text(
+                    'Batal',
+                    style: GoogleFonts.poppins(color: Colors.grey),
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0288D1),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final nikInput = controller.text.trim();
+                          if (nikInput.length != 16) {
+                            setDialogState(() {
+                              errorMessage = 'NIK harus terdiri dari 16 digit';
+                            });
+                            return;
+                          }
+
+                          setDialogState(() {
+                            errorMessage = null;
+                            isSubmitting = true;
+                          });
+
+                          try {
+                            final result = await SatuSehatService.instance.verifyPatient(nikInput);
+                            if (dialogCtx.mounted) {
+                              Navigator.pop(dialogCtx);
+                            }
+                            if (!mounted) return;
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Berhasil terhubung ke SatuSehat! IHS Pasien: ${result.ihsNumber ?? '-'}',
+                                ),
+                                backgroundColor: AppColors.successGreen,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+
+                            await _loadUserData();
+                          } catch (e) {
+                            if (!dCtx.mounted) return;
+                            setDialogState(() {
+                              isSubmitting = false;
+                              errorMessage = e.toString().replaceAll('Exception: ', '').trim();
+                            });
+                          }
+                        },
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          'Verifikasi',
+                          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                        ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmUnlinkSatuSehat() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Lepas Tautan SatuSehat?',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Dengan melepas tautan, data konsultasi Anda sementara tidak disinkronkan ke rekam medis nasional SatuSehat.',
+          style: GoogleFonts.poppins(fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: Text('Batal', style: GoogleFonts.poppins(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD32F2F),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('Lepas'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await SatuSehatService.instance.unlinkPatient();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tautan SatuSehat berhasil dilepas'),
+          backgroundColor: AppColors.primaryText,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      await _loadUserData();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal melepas tautan: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildSatuSehatSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(Icons.verified_user_outlined, 'Integrasi SatuSehat Kemenkes'),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: const Color(0xFFEBE3D0),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Status Row
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _satusehatLinked
+                          ? const Color(0xFFE8F5E9)
+                          : const Color(0xFFFFF3E0),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      _satusehatLinked
+                          ? Icons.health_and_safety_rounded
+                          : Icons.healing_rounded,
+                      color: _satusehatLinked
+                          ? const Color(0xFF2E7D32)
+                          : const Color(0xFFE65100),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Platform SatuSehat FHIR',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1C4E68),
+                          ),
+                        ),
+                        Text(
+                          'Kemenkes RI Interoperabilitas',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF5A7184),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _satusehatLinked
+                          ? const Color(0xFFE8F5E9)
+                          : const Color(0xFFFFF3E0),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _satusehatLinked
+                            ? const Color(0xFFA5D6A7)
+                            : const Color(0xFFFFCC80),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _satusehatLinked
+                              ? Icons.check_circle_rounded
+                              : Icons.warning_amber_rounded,
+                          size: 13,
+                          color: _satusehatLinked
+                              ? const Color(0xFF2E7D32)
+                              : const Color(0xFFE65100),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _satusehatLinked ? 'Terhubung' : 'Belum Terhubung',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: _satusehatLinked
+                                ? const Color(0xFF2E7D32)
+                                : const Color(0xFFE65100),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 14),
+                child: Divider(height: 1, color: Color(0xFFF0EBE1), thickness: 1),
+              ),
+
+              if (_satusehatLinked) ...[
+                // IHS Number Card
+                Text(
+                  'Indonesia Health Services (IHS) Pasien',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF5A7184),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F8FB),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFC7E2F1)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.fingerprint_rounded,
+                        size: 20,
+                        color: Color(0xFF0288D1),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _ihsNumber ?? '-',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                            color: const Color(0xFF1C4E68),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (_ihsNumber != null)
+                        InkWell(
+                          onTap: () {
+                            Clipboard.setData(ClipboardData(text: _ihsNumber!));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Nomor IHS berhasil disalin'),
+                                duration: Duration(seconds: 2),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: const Padding(
+                            padding: EdgeInsets.all(4.0),
+                            child: Icon(
+                              Icons.copy_rounded,
+                              size: 16,
+                              color: Color(0xFF0288D1),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // NIK Terdaftar
+                Text(
+                  'NIK Terdaftar (Dukcapil)',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF5A7184),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.credit_card_rounded, size: 18, color: Color(0xFF5A7184)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _nik ?? '-',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF1C4E68),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                if (_satusehatVerifiedName != null && _satusehatVerifiedName!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Nama Resmi di SatuSehat',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF5A7184),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.person_outline_rounded, size: 18, color: Color(0xFF5A7184)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _satusehatVerifiedName!,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF1C4E68),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          side: const BorderSide(color: Color(0xFF0288D1)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: _showSatuSehatVerificationDialog,
+                        icon: const Icon(Icons.sync_rounded, size: 16, color: Color(0xFF0288D1)),
+                        label: Text(
+                          'Sinkron Ulang',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF0288D1),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      ),
+                      onPressed: _confirmUnlinkSatuSehat,
+                      child: Text(
+                        'Lepas Tautan',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFFD32F2F),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                // Unlinked state
+                Text(
+                  'Tautkan NIK KTP Anda untuk menyinkronkan profil pasien dan riwayat konsultasi lambung ke sistem Rekam Medis Elektronik (RME) SatuSehat Kementerian Kesehatan RI.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF5A7184),
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0288D1),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    onPressed: _showSatuSehatVerificationDialog,
+                    icon: const Icon(Icons.link_rounded, size: 18),
+                    label: Text(
+                      'Hubungkan dengan NIK KTP',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _confirmLogout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1103,6 +1722,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 20),
+
+                  // ── SECTION: INTEGRASI SATUSEHAT KEMENKES (FHIR PATIENT) ──
+                  _buildSatuSehatSection(),
                   const SizedBox(height: 20),
 
                   // ── SECTION 2: DATA KESEHATAN & SKRINING ──
