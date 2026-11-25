@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "ss": "node payment-backend/cli.js",
+    "ss:token": "node payment-backend/cli.js token",
+    "ss:get": "node payment-backend/cli.js get",
+    "ss:post": "node payment-backend/cli.js post",
+    "ss:patch": "node payment-backend/cli.js patch"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

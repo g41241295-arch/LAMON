@@ -8,7 +8,12 @@
   },
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "ss": "node cli.js",
+    "ss:token": "node cli.js token",
+    "ss:get": "node cli.js get",
+    "ss:post": "node cli.js post",
+    "ss:patch": "node cli.js patch"
   },
   "dependencies": {
     "cors": "^2.8.5",

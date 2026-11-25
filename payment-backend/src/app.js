@@ -10,6 +10,9 @@ const {
   handleVerifyPatient,
   handleGetPatientStatus,
   handleUnlinkPatient,
+  handlePostPatientRaw,
+  handlePatchPatientRaw,
+  handleGetPatientRaw,
 } = require('./satusehatHandler');
 const satuSehatService = require('./satusehatService');
 
@@ -99,6 +102,9 @@ app.post('/api/check-payment', asyncHandler(handleCheckPayment));
 app.post('/api/satusehat/verify-patient', asyncHandler(handleVerifyPatient));
 app.get('/api/satusehat/patient-status/:uid', asyncHandler(handleGetPatientStatus));
 app.post('/api/satusehat/unlink-patient', asyncHandler(handleUnlinkPatient));
+app.post('/api/satusehat/patient', asyncHandler(handlePostPatientRaw));
+app.patch('/api/satusehat/patient/:id', asyncHandler(handlePatchPatientRaw));
+app.get('/api/satusehat/patient-fhir/:nik', asyncHandler(handleGetPatientRaw));
 
 // Error handling middleware terpusat (tidak membocorkan stack trace / rahasia)
 app.use((err, req, res, next) => {

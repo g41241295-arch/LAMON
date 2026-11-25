@@ -168,6 +168,88 @@ class SatuSehatService {
   }
 
   /**
+   * Mengambil raw FHIR bundle Patient berdasarkan NIK
+   */
+  async getRawPatientByNik(nik) {
+    const cleanNik = String(nik || '').trim();
+    const token = await this.getAccessToken();
+    const queryUrl = `${this.baseUrl}/fhir-r4/v1/Patient?identifier=https://fhir.kemkes.go.id/id/nik|${encodeURIComponent(cleanNik)}`;
+    const res = await fetch(queryUrl, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
+    const data = await res.json();
+    return { status: res.status, ok: res.ok, data };
+  }
+
+  /**
+   * Mengambil raw FHIR Patient berdasarkan IHS Number
+   */
+  async getRawPatientByIhs(ihsNumber) {
+    const cleanIhs = String(ihsNumber || '').trim();
+    const token = await this.getAccessToken();
+    const queryUrl = `${this.baseUrl}/fhir-r4/v1/Patient/${encodeURIComponent(cleanIhs)}`;
+    const res = await fetch(queryUrl, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
+    const data = await res.json();
+    return { status: res.status, ok: res.ok, data };
+  }
+
+  /**
+   * Mengunggah Resource Patient baru (FHIR POST)
+   * Berguna untuk upload data pasien / audit trail jika ada kesalahan NIK
+   */
+  async postPatient(patientPayload) {
+    const token = await this.getAccessToken();
+    const postUrl = `${this.baseUrl}/fhir-r4/v1/Patient`;
+
+    const res = await fetch(postUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(patientPayload),
+    });
+
+    const data = await res.json();
+    return {
+      status: res.status,
+      ok: res.ok,
+      data,
+    };
+  }
+
+  /**
+   * Memperbarui Resource Patient (FHIR PATCH)
+   * Format payload berupa JSON Patch RFC 6902
+   */
+  async patchPatient(ihsNumber, patchOperations) {
+    const token = await this.getAccessToken();
+    const patchUrl = `${this.baseUrl}/fhir-r4/v1/Patient/${encodeURIComponent(ihsNumber)}`;
+
+    const res = await fetch(patchUrl, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json-patch+json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(patchOperations),
+    });
+
+    const data = await res.json();
+    return {
+      status: res.status,
+      ok: res.ok,
+      data,
+    };
+  }
+
+  /**
    * Helper normalisasi resource FHIR Patient ke representasi objek JSON yang bersih
    */
   formatPatientData(fhir) {

@@ -190,8 +190,54 @@ async function handleUnlinkPatient(req, res) {
   }
 }
 
+/**
+ * Handler POST /api/satusehat/patient
+ * Mengunggah data Resource Patient ke SatuSehat FHIR
+ */
+async function handlePostPatientRaw(req, res) {
+  try {
+    const payload = req.body;
+    const result = await satuSehatService.postPatient(payload);
+    return res.status(result.status).json(result.data);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * Handler PATCH /api/satusehat/patient/:id
+ * Mengupdate data Resource Patient di SatuSehat FHIR
+ */
+async function handlePatchPatientRaw(req, res) {
+  try {
+    const { id } = req.params;
+    const patchOps = req.body;
+    const result = await satuSehatService.patchPatient(id, patchOps);
+    return res.status(result.status).json(result.data);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * Handler GET /api/satusehat/patient-fhir/:nik
+ * Mengambil data mentah (raw JSON) Resource FHIR Patient berdasarkan NIK
+ */
+async function handleGetPatientRaw(req, res) {
+  try {
+    const { nik } = req.params;
+    const result = await satuSehatService.getRawPatientByNik(nik);
+    return res.status(result.status).json(result.data);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   handleVerifyPatient,
   handleGetPatientStatus,
   handleUnlinkPatient,
+  handlePostPatientRaw,
+  handlePatchPatientRaw,
+  handleGetPatientRaw,
 };
