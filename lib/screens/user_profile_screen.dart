@@ -738,7 +738,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   void _showSatuSehatVerificationDialog() {
-    final controller = TextEditingController(text: _nik ?? '');
+    final nikCtrl = TextEditingController(text: _nik ?? '');
+    final nameCtrl = TextEditingController(text: _displayName);
+    String selectedGender = _isFemale ? 'female' : 'male';
+
+    DateTime selectedBirthDate = DateTime(2000, 1, 1);
+    if (_formattedBirthDateIso != null) {
+      final parsed = DateTime.tryParse(_formattedBirthDateIso!);
+      if (parsed != null) selectedBirthDate = parsed;
+    } else if (_rawBirthDate is Timestamp) {
+      selectedBirthDate = (_rawBirthDate as Timestamp).toDate();
+    } else if (_rawBirthDate is DateTime) {
+      selectedBirthDate = _rawBirthDate as DateTime;
+    }
+
     String? errorMessage;
     bool isSubmitting = false;
 
@@ -748,6 +761,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       builder: (dialogCtx) {
         return StatefulBuilder(
           builder: (dCtx, setDialogState) {
+            final birthDateIso =
+                "${selectedBirthDate.year.toString().padLeft(4, '0')}-${selectedBirthDate.month.toString().padLeft(2, '0')}-${selectedBirthDate.day.toString().padLeft(2, '0')}";
+
             return AlertDialog(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -785,32 +801,33 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Masukkan 16 digit Nomor Induk Kependudukan (NIK) KTP Anda untuk menyinkronkan data pasien dengan platform SatuSehat Kemenkes (HL7 FHIR).',
+                      'Masukkan data pasien untuk disinkronkan ke platform SatuSehat Kemenkes (HL7 FHIR Patient Resource). Anda bebas mengubah data di bawah untuk pengujian.',
                       style: GoogleFonts.poppins(
-                        fontSize: 12.5,
+                        fontSize: 11.5,
                         color: const Color(0xFF5A7184),
                         height: 1.4,
                       ),
                     ),
                     const SizedBox(height: 14),
+
+                    // 1. NIK Input
                     TextField(
-                      controller: controller,
+                      controller: nikCtrl,
                       keyboardType: TextInputType.number,
                       maxLength: 16,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       style: GoogleFonts.poppins(
-                        fontSize: 14,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w600,
-                        letterSpacing: 1.2,
+                        letterSpacing: 1.1,
                         color: const Color(0xFF1C4E68),
                       ),
                       decoration: InputDecoration(
                         labelText: 'Nomor Induk Kependudukan (NIK)',
                         labelStyle: GoogleFonts.poppins(fontSize: 12),
-                        hintText: '3171012345670001',
+                        hintText: 'e.g. 1234567890123456',
                         prefixIcon: const Icon(Icons.badge_outlined, size: 20),
                         counterText: '',
-                        errorText: errorMessage,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -823,7 +840,223 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
+
+                    // 2. Nama Pasien (Editable)
+                    TextField(
+                      controller: nameCtrl,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF1C4E68),
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Nama Lengkap Pasien',
+                        labelStyle: GoogleFonts.poppins(fontSize: 12),
+                        hintText: 'Nama pasien sesuai KTP',
+                        prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF0288D1),
+                            width: 1.6,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // 3. Jenis Kelamin (Radio / ChoiceChips)
+                    Text(
+                      'Jenis Kelamin Pasien',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF5A7184),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => setDialogState(() => selectedGender = 'male'),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: selectedGender == 'male'
+                                    ? const Color(0xFF0288D1).withValues(alpha: 0.12)
+                                    : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: selectedGender == 'male'
+                                      ? const Color(0xFF0288D1)
+                                      : const Color(0xFFE2E8F0),
+                                  width: selectedGender == 'male' ? 1.5 : 1.0,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.male_rounded,
+                                    size: 18,
+                                    color: selectedGender == 'male'
+                                        ? const Color(0xFF0288D1)
+                                        : Colors.grey,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Laki-laki',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: selectedGender == 'male'
+                                          ? const Color(0xFF0288D1)
+                                          : const Color(0xFF5A7184),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => setDialogState(() => selectedGender = 'female'),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: selectedGender == 'female'
+                                    ? const Color(0xFFE91E63).withValues(alpha: 0.12)
+                                    : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: selectedGender == 'female'
+                                      ? const Color(0xFFE91E63)
+                                      : const Color(0xFFE2E8F0),
+                                  width: selectedGender == 'female' ? 1.5 : 1.0,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.female_rounded,
+                                    size: 18,
+                                    color: selectedGender == 'female'
+                                        ? const Color(0xFFE91E63)
+                                        : Colors.grey,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Perempuan',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: selectedGender == 'female'
+                                          ? const Color(0xFFE91E63)
+                                          : const Color(0xFF5A7184),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // 4. Tanggal Lahir (Tap to pick)
+                    Text(
+                      'Tanggal Lahir Pasien',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF5A7184),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedBirthDate,
+                          firstDate: DateTime(1920),
+                          lastDate: DateTime.now(),
+                          helpText: 'Pilih Tanggal Lahir Pasien',
+                        );
+                        if (picked != null) {
+                          setDialogState(() => selectedBirthDate = picked);
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.calendar_month_outlined,
+                              size: 18,
+                              color: Color(0xFF0288D1),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _formatIndonesianDate(selectedBirthDate),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1C4E68),
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (errorMessage != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.red.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline, size: 16, color: Colors.red),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                errorMessage!,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.5,
+                                  color: Colors.red.shade900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+
+                    // Info box
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
@@ -842,7 +1075,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Data NIK hanya digunakan untuk query resource Patient Kemenkes dan tidak dibagikan ke pihak ketiga lainnya.',
+                              'Data di atas dikirim ke endpoint GET & POST HL7 FHIR SatuSehat Kemenkes dan terekam di audit trail.',
                               style: GoogleFonts.poppins(
                                 fontSize: 11,
                                 color: const Color(0xFF335C6D),
@@ -857,9 +1090,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: isSubmitting
-                      ? null
-                      : () => Navigator.pop(dialogCtx),
+                  onPressed: isSubmitting ? null : () => Navigator.pop(dialogCtx),
                   child: Text(
                     'Batal',
                     style: GoogleFonts.poppins(color: Colors.grey),
@@ -876,10 +1107,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   onPressed: isSubmitting
                       ? null
                       : () async {
-                          final nikInput = controller.text.trim();
+                          final nikInput = nikCtrl.text.trim();
+                          final nameInput = nameCtrl.text.trim();
+
                           if (nikInput.length != 16) {
                             setDialogState(() {
                               errorMessage = 'NIK harus terdiri dari 16 digit';
+                            });
+                            return;
+                          }
+
+                          if (nameInput.isEmpty) {
+                            setDialogState(() {
+                              errorMessage = 'Nama pasien tidak boleh kosong';
                             });
                             return;
                           }
@@ -892,11 +1132,22 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           try {
                             final result = await SatuSehatService.instance.verifyPatient(
                               nikInput,
-                              name: _displayName,
-                              gender: _isMale ? 'male' : (_isFemale ? 'female' : 'unknown'),
-                              birthDate: _formattedBirthDateIso,
+                              name: nameInput,
+                              gender: selectedGender,
+                              birthDate: birthDateIso,
                               email: _userEmail,
                             );
+
+                            // Sinkronkan juga perubahan nama, gender, tgl lahir ke Firestore profil
+                            final user = FirebaseAuth.instance.currentUser;
+                            if (user != null) {
+                              await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+                                'nama': nameInput,
+                                'jenis_kelamin': selectedGender == 'male' ? 'Laki-laki' : 'Perempuan',
+                                'tanggal_lahir': selectedBirthDate,
+                              }, SetOptions(merge: true));
+                            }
+
                             if (dialogCtx.mounted) {
                               Navigator.pop(dialogCtx);
                             }
