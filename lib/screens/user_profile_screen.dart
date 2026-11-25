@@ -1310,6 +1310,26 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       ],
                     ),
                   ),
+                  if (_satusehatLinked) ...[
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: _showSatuSehatVerificationDialog,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F8FB),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFD3E7F3)),
+                        ),
+                        child: const Icon(
+                          Icons.edit_outlined,
+                          size: 16,
+                          color: Color(0xFF0288D1),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
               const Padding(
