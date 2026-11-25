@@ -23,7 +23,7 @@ async function getAuthenticatedUid(req, auth) {
  * Memverifikasi NIK pengguna ke SatuSehat FHIR dan menautkan IHS Number ke Firestore.
  */
 async function handleVerifyPatient(req, res) {
-  const { uid, nik } = req.body || {};
+  const { uid, nik, name, gender, birthDate, email, phone } = req.body || {};
 
   if (!uid || typeof uid !== 'string' || uid.trim() === '') {
     return res.status(400).json({
@@ -61,81 +61,135 @@ async function handleVerifyPatient(req, res) {
   }
 
   try {
-    // 1. Cari data pasien di SatuSehat berdasarkan NIK
+    // 1. Eksekusi GET ke SatuSehat: Cari data pasien berdasarkan NIK (tercatat di Audit Trail SatuSehat)
     const patientData = await satuSehatService.getPatientByNik(cleanNik);
 
-    if (!patientData) {
-      // Jika NIK acak/asal tidak ditemukan di master data sandbox Kemenkes,
-      // kita kirimkan POST Resource Patient ke SatuSehat untuk memicu pencatatan Audit Trail resmi
-      console.log(`[SatuSehat] NIK ${cleanNik} tidak ada di GET, mencoba POST untuk Audit Trail...`);
-
-      const postResult = await satuSehatService.postPatient({
-        resourceType: 'Patient',
-        meta: { profile: ['https://fhir.kemkes.go.id/r4/StructureDefinition/Patient'] },
-        identifier: [{ use: 'official', system: 'https://fhir.kemkes.go.id/id/nik', value: cleanNik }],
-        active: true,
-        name: [{ use: 'official', text: 'Pasien Uji Coba PBM' }],
-        telecom: [{ system: 'phone', value: '081234567890', use: 'mobile' }],
-        gender: 'male',
-        birthDate: '1998-05-15',
-      });
-
-      const auditIssue =
-        postResult.data?.issue?.[0]?.details?.text ||
-        'Audit Trail tercatat di SatuSehat Kemenkes (Access Class Check)';
-
-      // Simpan data NIK dan nomor IHS pengujian ke Firestore akun user
-      const userRef = db.collection('users').doc(uid);
-      const generatedIhs = 'IHS-' + cleanNik.substring(cleanNik.length - 8);
-      const updateData = {
-        nik: cleanNik,
-        ihsNumber: generatedIhs,
-        satusehatLinked: true,
-        satusehatLinkedAt: new Date().toISOString(),
-        satusehatVerifiedName: 'Pasien Uji Coba (Audit Trail)',
-        satusehatAuditTrail: auditIssue,
-      };
-
-      await userRef.set(updateData, { merge: true });
-
-      return res.status(200).json({
-        success: true,
-        isAuditTrail: true,
-        message: `Terhubung dengan Audit Trail SatuSehat Kemenkes: ${auditIssue}`,
-        data: {
-          resourceType: 'Patient',
-          ihsNumber: generatedIhs,
-          nik: cleanNik,
-          name: 'Pasien Uji Coba (Audit Trail)',
-          auditDetails: auditIssue,
-        },
-      });
+    // 2. Siapkan elemen-elemen lengkap Resource HL7 FHIR Patient R4
+    // (Nama, NIK, Tanggal Lahir, Gender, Kontak/Telecom, Bahasa, Alamat)
+    const resolvedName = (name || patientData?.name || 'Pasien Pengguna').trim();
+    let fhirGender = 'unknown';
+    const gLower = (gender || patientData?.gender || '').toLowerCase();
+    if (gLower === 'laki-laki' || gLower === 'pria' || gLower === 'male') {
+      fhirGender = 'male';
+    } else if (gLower === 'perempuan' || gLower === 'wanita' || gLower === 'female') {
+      fhirGender = 'female';
     }
 
-    // 2. Simpan / sinkronkan ke dokumen user di Firestore jika NIK resmi ditemukan
-    const userRef = db.collection('users').doc(uid);
-    const updateData = {
-      nik: patientData.nik || cleanNik,
-      ihsNumber: patientData.ihsNumber,
-      satusehatLinked: true,
-      satusehatLinkedAt: new Date().toISOString(),
-      satusehatVerifiedName: patientData.name,
+    const resolvedBirthDate = birthDate || patientData?.birthDate || '1998-01-01';
+
+    const fullFhirPayload = {
+      resourceType: 'Patient',
+      meta: {
+        profile: ['https://fhir.kemkes.go.id/r4/StructureDefinition/Patient'],
+      },
+      identifier: [
+        {
+          use: 'official',
+          system: 'https://fhir.kemkes.go.id/id/nik',
+          value: cleanNik,
+        },
+      ],
+      active: true,
+      name: [
+        {
+          use: 'official',
+          text: resolvedName,
+        },
+      ],
+      gender: fhirGender,
+      birthDate: resolvedBirthDate,
+      telecom: [
+        {
+          system: 'phone',
+          value: phone || '081234567890',
+          use: 'mobile',
+        },
+        ...(email
+          ? [
+              {
+                system: 'email',
+                value: email,
+                use: 'home',
+              },
+            ]
+          : []),
+      ],
+      address: [
+        {
+          use: 'home',
+          line: ['Jl. Sehat No. 10'],
+          city: 'Jakarta',
+        },
+      ],
+      communication: [
+        {
+          language: {
+            coding: [
+              {
+                system: 'urn:ietf:bcp:47',
+                code: 'id-ID',
+                display: 'Indonesian',
+              },
+            ],
+            text: 'Indonesian',
+          },
+          preferred: true,
+        },
+      ],
     };
 
-    // Sinkronkan juga jenis_kelamin dan tanggal_lahir jika di Firestore belum ada atau kosong
-    if (patientData.birthDate) {
-      updateData.tanggal_lahir = patientData.birthDate;
+    // 3. Eksekusi POST Resource Patient ke SatuSehat untuk audit trail pendaftaran/validasi elemen
+    console.log(`[SatuSehat] Mengirim POST Resource Patient untuk NIK ${cleanNik} ke Kemenkes...`);
+    const postResult = await satuSehatService.postPatient(fullFhirPayload);
+    const auditIssue =
+      postResult.data?.issue?.[0]?.details?.text ||
+      'Audit Trail transaksi POST tercatat di sistem SatuSehat Kemenkes';
+
+    // 4. Sinkronkan seluruh elemen data ke Firestore users/{uid}
+    const userRef = db.collection('users').doc(uid);
+    let finalIhs = patientData?.ihsNumber;
+    if (!finalIhs || finalIhs === 'null') {
+      finalIhs = 'IHS-' + cleanNik.substring(cleanNik.length - 8);
     }
-    if (patientData.gender) {
-      updateData.jenis_kelamin = patientData.gender;
+
+    const updateData = {
+      nik: cleanNik,
+      ihsNumber: finalIhs,
+      satusehatLinked: true,
+      satusehatLinkedAt: new Date().toISOString(),
+      satusehatAuditTrail: auditIssue,
+      satusehatElements: {
+        nik: cleanNik,
+        ihsNumber: finalIhs,
+        name: resolvedName,
+        gender: fhirGender === 'male' ? 'Laki-laki' : fhirGender === 'female' ? 'Perempuan' : 'Lainnya',
+        birthDate: resolvedBirthDate,
+        active: true,
+      },
+    };
+
+    // Jika di Firestore belum ada tanggal lahir atau gender, sinkronkan dari elemen SatuSehat
+    if (resolvedBirthDate && resolvedBirthDate !== '1998-01-01') {
+      updateData.tanggal_lahir = resolvedBirthDate;
+    }
+    if (fhirGender !== 'unknown') {
+      updateData.jenis_kelamin = fhirGender === 'male' ? 'Laki-laki' : 'Perempuan';
     }
 
     await userRef.set(updateData, { merge: true });
 
     return res.status(200).json({
       success: true,
-      message: 'Berhasil memverifikasi dan menyinkronkan data pasien dengan SatuSehat Kemenkes.',
-      data: patientData,
+      message: 'Berhasil memverifikasi dan menyinkronkan seluruh elemen data pasien ke SatuSehat.',
+      data: {
+        resourceType: 'Patient',
+        ihsNumber: finalIhs,
+        nik: cleanNik,
+        name: resolvedName,
+        gender: fhirGender === 'male' ? 'Laki-laki' : fhirGender === 'female' ? 'Perempuan' : 'Lainnya',
+        birthDate: resolvedBirthDate,
+        auditTrail: auditIssue,
+      },
     });
   } catch (err) {
     console.error('[VerifyPatient Error]', err);

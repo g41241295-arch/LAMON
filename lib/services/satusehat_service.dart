@@ -152,7 +152,13 @@ class SatuSehatService {
   }
 
   /// Verifikasi NIK pasien dan tautkan dengan SatuSehat FHIR
-  Future<SatuSehatVerificationResult> verifyPatient(String nik) async {
+  Future<SatuSehatVerificationResult> verifyPatient(
+    String nik, {
+    String? name,
+    String? gender,
+    String? birthDate,
+    String? email,
+  }) async {
     final user = _auth.currentUser;
     if (user == null) {
       throw Exception('Sesi pengguna tidak valid.');
@@ -164,6 +170,10 @@ class SatuSehatService {
       body: {
         'uid': user.uid,
         'nik': nik.trim(),
+        if (name != null && name.isNotEmpty) 'name': name.trim(),
+        if (gender != null && gender.isNotEmpty) 'gender': gender.trim(),
+        if (birthDate != null && birthDate.isNotEmpty) 'birthDate': birthDate.trim(),
+        if (email != null && email.isNotEmpty) 'email': email.trim(),
       },
     );
 
