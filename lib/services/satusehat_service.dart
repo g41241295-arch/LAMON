@@ -198,4 +198,65 @@ class SatuSehatService {
 
     return result['success'] == true;
   }
+
+  /// [Mode Uji/Postman] GET Raw Resource FHIR Patient berdasarkan NIK
+  Future<Map<String, dynamic>> testGetPatientRaw(String nik) async {
+    return _sendRequest('GET', '/api/satusehat/patient-fhir/${nik.trim()}');
+  }
+
+  /// [Mode Uji/Postman] POST Raw Resource FHIR Patient (Upload Pasien NIK Asal/Custom)
+  Future<Map<String, dynamic>> testPostPatient({
+    required String nik,
+    required String name,
+  }) async {
+    final payload = {
+      'resourceType': 'Patient',
+      'meta': {
+        'profile': ['https://fhir.kemkes.go.id/r4/StructureDefinition/Patient'],
+      },
+      'identifier': [
+        {
+          'use': 'official',
+          'system': 'https://fhir.kemkes.go.id/id/nik',
+          'value': nik.trim(),
+        },
+      ],
+      'active': true,
+      'name': [
+        {'use': 'official', 'text': name.trim()},
+      ],
+      'telecom': [
+        {'system': 'phone', 'value': '081234567890', 'use': 'mobile'},
+      ],
+      'gender': 'male',
+      'birthDate': '1995-08-17',
+      'address': [
+        {
+          'use': 'home',
+          'line': ['Jl. Kampus No. 1'],
+          'city': 'Jakarta',
+        },
+      ],
+    };
+    return _sendRequest('POST', '/api/satusehat/patient', body: payload);
+  }
+
+  /// [Mode Uji/Postman] PATCH Raw Resource FHIR Patient
+  Future<Map<String, dynamic>> testPatchPatient({
+    required String ihsNumber,
+    required String phone,
+  }) async {
+    final patchOps = [
+      {
+        'op': 'replace',
+        'path': '/telecom/0/value',
+        'value': phone.trim(),
+      },
+    ];
+    return _sendRequest(
+      'POST', // endpoint express menerima PATCH via handler
+      '/api/satusehat/patient/${ihsNumber.trim()}',
+      body: patchOps.first, // or array
+    );
+  }
 }

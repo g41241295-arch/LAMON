@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -984,6 +985,317 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
+  /// Membuka lembar pengujian API SatuSehat (Mode Postman / Terminal langsung di HP)
+  void _showSatuSehatTerminalTesterSheet() {
+    String selectedMethod = 'GET';
+    final nikController = TextEditingController(text: _nik ?? '1234567890123456');
+    final nameController = TextEditingController(text: 'Pasien Uji Coba PBM');
+    String? rawJsonResponse;
+    bool isLoading = false;
+    String? errorMsg;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return DraggableScrollableSheet(
+              initialChildSize: 0.85,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              expand: false,
+              builder: (scrollCtx, scrollController) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                  child: ListView(
+                    controller: scrollController,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E1E1E),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.terminal_rounded,
+                              color: Color(0xFF4CAF50),
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Mode Postman / Uji API SatuSehat',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF1C4E68),
+                                  ),
+                                ),
+                                Text(
+                                  'Eksekusi GET & POST langsung ke Kemenkes',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Pilihan Method: GET vs POST
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ChoiceChip(
+                              label: Center(
+                                child: Text(
+                                  'GET /Patient',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                    color: selectedMethod == 'GET'
+                                        ? Colors.white
+                                        : const Color(0xFF1C4E68),
+                                  ),
+                                ),
+                              ),
+                              selected: selectedMethod == 'GET',
+                              selectedColor: const Color(0xFF0288D1),
+                              backgroundColor: const Color(0xFFF1F8FB),
+                              onSelected: (val) {
+                                if (val) {
+                                  setSheetState(() {
+                                    selectedMethod = 'GET';
+                                    rawJsonResponse = null;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ChoiceChip(
+                              label: Center(
+                                child: Text(
+                                  'POST /Patient',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                    color: selectedMethod == 'POST'
+                                        ? Colors.white
+                                        : const Color(0xFF1C4E68),
+                                  ),
+                                ),
+                              ),
+                              selected: selectedMethod == 'POST',
+                              selectedColor: const Color(0xFFE65100),
+                              backgroundColor: const Color(0xFFFFF3E0),
+                              onSelected: (val) {
+                                if (val) {
+                                  setSheetState(() {
+                                    selectedMethod = 'POST';
+                                    rawJsonResponse = null;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Input NIK
+                      TextField(
+                        controller: nikController,
+                        keyboardType: TextInputType.number,
+                        maxLength: 16,
+                        style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+                        decoration: InputDecoration(
+                          labelText: 'Nomor Induk Kependudukan (NIK)',
+                          labelStyle: GoogleFonts.poppins(fontSize: 12),
+                          hintText: 'Bisa NIK resmi atau NIK asal buatanmu',
+                          counterText: '',
+                          prefixIcon: const Icon(Icons.badge_outlined, size: 18),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                      if (selectedMethod == 'POST') ...[
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: nameController,
+                          style: GoogleFonts.poppins(fontSize: 13),
+                          decoration: InputDecoration(
+                            labelText: 'Nama Pasien',
+                            labelStyle: GoogleFonts.poppins(fontSize: 12),
+                            prefixIcon: const Icon(Icons.person_outline_rounded, size: 18),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+
+                      // Tombol Eksekusi
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: selectedMethod == 'GET'
+                              ? const Color(0xFF0288D1)
+                              : const Color(0xFFE65100),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: isLoading
+                            ? null
+                            : () async {
+                                final nik = nikController.text.trim();
+                                if (nik.isEmpty) return;
+
+                                setSheetState(() {
+                                  isLoading = true;
+                                  errorMsg = null;
+                                  rawJsonResponse = null;
+                                });
+
+                                try {
+                                  Map<String, dynamic> res;
+                                  if (selectedMethod == 'GET') {
+                                    res = await SatuSehatService.instance.testGetPatientRaw(nik);
+                                  } else {
+                                    res = await SatuSehatService.instance.testPostPatient(
+                                      nik: nik,
+                                      name: nameController.text.trim().isNotEmpty
+                                          ? nameController.text.trim()
+                                          : 'Pasien Uji Coba PBM',
+                                    );
+                                  }
+
+                                  final encoder = const JsonEncoder.withIndent('  ');
+                                  final pretty = encoder.convert(res);
+
+                                  setSheetState(() {
+                                    isLoading = false;
+                                    rawJsonResponse = pretty;
+                                  });
+                                } catch (e) {
+                                  setSheetState(() {
+                                    isLoading = false;
+                                    errorMsg = e.toString().replaceAll('Exception: ', '').trim();
+                                  });
+                                }
+                              },
+                        icon: isLoading
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Icon(Icons.play_arrow_rounded, size: 20),
+                        label: Text(
+                          isLoading ? 'Mengirim ke SatuSehat...' : 'Kirim Request ($selectedMethod)',
+                          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Tampilan Terminal JSON Response
+                      if (errorMsg != null)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEBEE),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Text(
+                            'Error: $errorMsg',
+                            style: GoogleFonts.poppins(color: Colors.red.shade900, fontSize: 12),
+                          ),
+                        ),
+
+                      if (rawJsonResponse != null) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Respon JSON dari SatuSehat:',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF1C4E68),
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: () {
+                                Clipboard.setData(ClipboardData(text: rawJsonResponse!));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('JSON disalin ke clipboard'),
+                                    duration: Duration(seconds: 2),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.copy_rounded, size: 14),
+                              label: Text('Salin', style: GoogleFonts.poppins(fontSize: 11)),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E1E1E),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: SelectableText(
+                            rawJsonResponse!,
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 11.5,
+                              color: Color(0xFF4CAF50),
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildSatuSehatSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1316,6 +1628,32 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   ),
                 ),
               ],
+
+              const SizedBox(height: 14),
+              // Tombol Mode Postman / Uji API Langsung di HP
+              SizedBox(
+                width: double.infinity,
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    backgroundColor: const Color(0xFFF1F8FB),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: const BorderSide(color: Color(0xFFD0E4EE)),
+                    ),
+                  ),
+                  onPressed: _showSatuSehatTerminalTesterSheet,
+                  icon: const Icon(Icons.terminal_rounded, size: 16, color: Color(0xFF0288D1)),
+                  label: Text(
+                    'Uji API Kemenkes (Mode Postman di HP)',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF0288D1),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
